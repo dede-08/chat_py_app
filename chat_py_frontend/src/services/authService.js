@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8080/api/auth'; // Ajusta el puerto y ruta si es necesario
+const API_URL = 'http://localhost:8000/auth'; // Ajusta el puerto y ruta si es necesario
 
 export const registerUser = async (data) => {
   try {

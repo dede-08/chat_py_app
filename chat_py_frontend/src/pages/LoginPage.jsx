@@ -25,7 +25,7 @@ const RegisterPage = () => {
           <label>Contraseña</label>
           <input className="form-control" type="password" name="password" onChange={handleChange} />
         </div>
-        <button className="btn btn-primary">Registrar</button>
+        <button className="btn btn-primary">Iniciar Sesion</button>
       </form>
     </div>
   );
