@@ -11,11 +11,6 @@ FRONTEND_URL = os.getenv("FRONTEND_URL")
 
 app = FastAPI()
 
-#ruta de prueba
-@app.get("/")
-def home():
-    return{"message": "API working succesfully"}
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[FRONTEND_URL],
@@ -26,5 +21,5 @@ app.add_middleware(
 
 app.include_router(auth.router)
 
-#rutas websocket
+#rutas websocket para el chat
 app.include_router(chat_ws.router)
