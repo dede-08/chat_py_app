@@ -1,25 +1,15 @@
 // src/pages/ChatPage.jsx
 import React, { useState } from 'react';
 import '../App.css'; // para mantener fondo gris
+import { Router } from 'react-router-dom';
+import Sidebar from '../components/sidebar-component/Sidebar';
 
 const ChatPage = () => {
-  const [selectedUser, setSelectedUser] = useState(null);
-
-  const usersOnline = ['Alice', 'Bob', 'Charlie']; // Simulado, luego irá desde WebSocket
+  const [selectedUser] = useState(null);
 
   return (
     <div className="chat-container">
-      <aside className="sidebar bg-dark">
-        <h5 className='text-white'>Usuarios conectados</h5>
-        <ul className="user-list">
-          {usersOnline.map((user) => (
-            <li key={user} onClick={() => setSelectedUser(user)} className={selectedUser === user ? 'selected' : ''}>
-              {user}
-            </li>
-          ))}
-        </ul>
-      </aside>
-
+      <Sidebar />
       <main className="chat-window">
         {selectedUser ? (
           <>
@@ -33,7 +23,7 @@ const ChatPage = () => {
             </form>
           </>
         ) : (
-          <p>Selecciona un usuario para empezar a chatear</p>
+          <p className='text-white'>Selecciona un usuario para empezar a chatear</p>
         )}
       </main>
     </div>

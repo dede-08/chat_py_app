@@ -17,17 +17,16 @@ const LoginPage = () => {
     <div className="fullscreen-container">
       <div className="form-container">
         <div className="container mt-5">
-          <h3 className='text-white'>Login</h3>
-          <form onSubmit={handleSubmit}>
+          <h3 className='text-white text-center'>Login</h3>
+          <form onSubmit={handleSubmit} className='form-container'>
             <div className="mb-3">
-              <label>Email</label>
               <input className="form-control" name="email" placeholder='email' onChange={handleChange} />
             </div>
             <div className="mb-3">
-              <label>Contraseña</label>
               <input className="form-control" type="password" name="password" placeholder='password' onChange={handleChange} />
             </div>
-            <button className="btn btn-primary">Iniciar Sesion</button>
+            <button className="btn btn-primary btn-form">Iniciar Sesion</button>
+            <button type='reset' className="btn btn-danger btn-form">Cancelar</button>
           </form>
         </div>
       </div>

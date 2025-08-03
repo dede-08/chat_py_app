@@ -14,28 +14,29 @@ const RegisterPage = () => {
   };
 
   return (
-    <div className="container">
-      <div className="container mt-5">
-        <h3 className='text-white'>Registro</h3>
-        <form onSubmit={handleSubmit}>
-          <div className="mb-3">
-            <label>Email</label>
-            <input className="form-control" name="email" placeholder='email' onChange={handleChange} />
+    <div>
+      <div className="fullscreen-container">
+        <div className="form-container">
+          <div className="container mt-5">
+            <h3 className='text-white text-center'>Registro</h3>
+            <form onSubmit={handleSubmit} className='form-container'>
+              <div className="mb-3">
+                <input className="form-control" name="email" placeholder='email' onChange={handleChange} />
+              </div>
+              <div className="mb-3">
+                <input className="form-control" name="username" placeholder='username' onChange={handleChange} />
+              </div>
+              <div className="mb-3">
+                <input className="form-control" type="password" name="password" placeholder='password' onChange={handleChange} />
+              </div>
+              <div className="mb-3">
+                <input className="form-control" name="telephone" placeholder='telephone' onChange={handleChange} />
+              </div>
+              <button className="btn btn-primary btn-form">Registrar</button>
+              <button type='reset' className='btn btn-danger btn-form'>Cancelar</button>
+            </form>
           </div>
-          <div className="mb-3">
-            <label>Username</label>
-            <input className="form-control" name="username" placeholder='username' onChange={handleChange} />
-          </div>
-          <div className="mb-3">
-            <label>Contraseña</label>
-            <input className="form-control" type="password" name="password" placeholder='password' onChange={handleChange} />
-          </div>
-          <div className="mb-3">
-            <label>Telefono</label>
-            <input className="form-control" name="telephone" placeholder='telephone' onChange={handleChange} />
-          </div>
-          <button className="btn btn-primary">Registrar</button>
-        </form>
+        </div>
       </div>
     </div>
   );

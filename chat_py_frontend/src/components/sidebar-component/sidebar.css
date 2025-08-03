@@ -1,0 +1,27 @@
+.chat-container {
+  display: flex;
+  height: 100vh;
+}
+
+.sidebar{
+    color: #fff;
+    height: auto;
+}
+
+
+.user-list {
+  list-style: none;
+  padding: 0;
+}
+
+.user-list li {
+  padding: 8px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.user-list li:hover,
+.user-list .selected {
+  background-color: #1a2d6b;
+}
+
