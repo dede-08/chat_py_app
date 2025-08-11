@@ -1,13 +1,15 @@
+/* 
 .chat-container {
   display: flex;
   height: 100vh;
 }
 
 .sidebar{
-    color: #fff;
+    color: #212529;
     height: auto;
+    background-color: #f8f9fa;
+    border-right: 1px solid #e9ecef;
 }
-
 
 .user-list {
   list-style: none;
@@ -22,6 +24,7 @@
 
 .user-list li:hover,
 .user-list .selected {
-  background-color: #1a2d6b;
+  background-color: #e3f2fd;
 }
+*/
 

@@ -16,19 +16,19 @@ const LoginPage = () => {
   return (
     <div className="fullscreen-container">
       <div className="form-container">
-        <div className="container mt-5">
-          <h3 className='text-white text-center'>Login</h3>
-          <form onSubmit={handleSubmit} className='form-container'>
-            <div className="mb-3">
-              <input className="form-control" name="email" placeholder='email' onChange={handleChange} />
-            </div>
-            <div className="mb-3">
-              <input className="form-control" type="password" name="password" placeholder='password' onChange={handleChange} />
-            </div>
-            <button className="btn btn-primary btn-form">Iniciar Sesion</button>
-            <button type='reset' className="btn btn-danger btn-form">Cancelar</button>
-          </form>
-        </div>
+        <h3 className='text-dark text-center mb-4'>Login</h3>
+        <form onSubmit={handleSubmit}>
+          <div className="mb-3">
+            <input className="form-control" name="email" placeholder='email' onChange={handleChange} />
+          </div>
+          <div className="mb-3">
+            <input className="form-control" type="password" name="password" placeholder='password' onChange={handleChange} />
+          </div>
+          <div className="d-flex justify-content-center gap-3">
+            <button className="btn btn-primary">Iniciar Sesion</button>
+            <button type='reset' className="btn btn-danger">Cancelar</button>
+          </div>
+        </form>
       </div>
     </div>
   );
