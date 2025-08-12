@@ -39,4 +39,8 @@ async def login(user: UserLogin):
         raise HTTPException(status_code=400, detail="credenciales invalidas")
 
     token = create_access_token({"email": db_user["email"]})
-    return {"token": token, "email": db_user["email"]}
+    return {
+        "token": token, 
+        "email": db_user["email"],
+        "username": db_user["username"]
+    }
