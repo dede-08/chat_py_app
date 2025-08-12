@@ -5,11 +5,15 @@ const API_URL = 'http://localhost:8000/auth';
 export const registerUser = async (data) => {
   try {
     const response = await axios.post(`${API_URL}/register`, data);
-    alert('Usuario registrado');
-    return response.data;
+    // Guardar el username después del registro exitoso
+    localStorage.setItem('username', data.username);
+    alert('Usuario registrado exitosamente');
+    return { success: true, data: response.data };
   } catch (error) {
     console.error(error);
-    alert('Error al registrar');
+    const errorMessage = error.response?.data?.detail || 'Error al registrar usuario';
+    alert(errorMessage);
+    return { success: false, error: errorMessage };
   }
 };
 
@@ -18,11 +22,16 @@ export const loginUser = async (data) => {
     const response = await axios.post(`${API_URL}/login`, data);
     localStorage.setItem('token', response.data.token);
     localStorage.setItem('userEmail', response.data.email);
-    alert('inicio de sesion exitoso')
-    return response.data;
+    // Guardar el username del usuario logueado (con fallback al email si no hay username)
+    const username = response.data.username || response.data.email || 'Usuario';
+    localStorage.setItem('username', username);
+    alert('Inicio de sesión exitoso');
+    return { success: true, data: response.data };
   } catch (error) {
     console.error(error);
-    alert('Error al iniciar sesión');
+    const errorMessage = error.response?.data?.detail || 'Error al iniciar sesión';
+    alert(errorMessage);
+    return { success: false, error: errorMessage };
   }
 };
 
@@ -36,6 +45,11 @@ export const getUserEmail = () => {
   return localStorage.getItem('userEmail');
 };
 
+// Obtener username del usuario
+export const getUsername = () => {
+  return localStorage.getItem('username');
+};
+
 // Verificar si el usuario está autenticado
 export const isAuthenticated = () => {
   return !!getToken();
@@ -45,6 +59,7 @@ export const isAuthenticated = () => {
 export const logout = () => {
   localStorage.removeItem('token');
   localStorage.removeItem('userEmail');
+  localStorage.removeItem('username');
 };
 
 // Crear instancia por defecto para compatibilidad
@@ -53,6 +68,7 @@ const authService = {
   loginUser,
   getToken,
   getUserEmail,
+  getUsername,
   isAuthenticated,
   logout
 };
