@@ -6,6 +6,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 const Navbar = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState('');
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -27,11 +28,28 @@ const Navbar = () => {
     };
   }, []);
 
-  const handleLogout = () => {
-    authService.logout();
-    setIsAuthenticated(false);
-    setUsername('');
-    navigate('/login');
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      // Llamar al endpoint de logout del backend
+      await authService.logoutUser();
+      
+      // Limpiar estado local
+      setIsAuthenticated(false);
+      setUsername('');
+      
+      // Redirigir al login
+      navigate('/login');
+    } catch (error) {
+      console.error('Error durante el logout:', error);
+      // Aún así, limpiar el estado local
+      authService.logout();
+      setIsAuthenticated(false);
+      setUsername('');
+      navigate('/login');
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
 
   return (
@@ -52,17 +70,25 @@ const Navbar = () => {
                   <ul className="dropdown-menu">
                     <li><Link className="dropdown-item" to="/chat">Ir al Chat</Link></li>
                     <li><hr className="dropdown-divider" /></li>
-                    <li><button className="dropdown-item" onClick={handleLogout}>Cerrar Sesión</button></li>
+                    <li>
+                      <button 
+                        className="dropdown-item" 
+                        onClick={handleLogout}
+                        disabled={isLoggingOut}
+                      >
+                        {isLoggingOut ? 'Cerrando sesión...' : 'Cerrar Sesión'}
+                      </button>
+                    </li>
                   </ul>
                 </li>
               </>
             ) : (
               <>
                 <li className="nav-item">
-                  <Link className="nav-link" to="/login">Login</Link>
+                  <Link className="nav-link" to="/login">Iniciar Sesión</Link>
                 </li>
                 <li className="nav-item">
-                  <Link className="nav-link" to="/register">Register</Link>
+                  <Link className="nav-link" to="/register">Registrarse</Link>
                 </li>
               </>
             )}
