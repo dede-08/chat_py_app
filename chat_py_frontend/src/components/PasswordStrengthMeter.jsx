@@ -88,7 +88,7 @@ const PasswordStrengthMeter = ({ password, requirements, onValidationChange }) =
     setStrength(newStrength);
     onValidationChange && onValidationChange(validationErrors.length === 0, validationErrors);
 
-  }, [password, requirements, onValidationChange]);
+  }, [password, requirements]);
 
   const getStrengthColor = () => {
     switch (strength) {

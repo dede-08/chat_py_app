@@ -25,7 +25,6 @@ export const loginUser = async (data) => {
     // Guardar el username del usuario logueado (con fallback al email si no hay username)
     const username = response.data.username || response.data.email || 'Usuario';
     localStorage.setItem('username', username);
-    alert('Inicio de sesión exitoso');
     return { success: true, data: response.data };
   } catch (error) {
     console.error(error);

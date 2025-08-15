@@ -145,7 +145,7 @@ class ChatService {
         return await response.json();
     }
 
-    // Obtener lista de usuarios
+    //obtener lista de usuarios
     async getUsers() {
         const token = authService.getToken();
         const response = await fetch(`${API_BASE_URL}/chat/users`, {
@@ -161,7 +161,7 @@ class ChatService {
         return await response.json();
     }
 
-    // Obtener número de mensajes no leídos
+    //obtener numero de mensajes no leidos
     async getUnreadCount() {
         const token = authService.getToken();
         const response = await fetch(`${API_BASE_URL}/chat/unread-count`, {
@@ -178,7 +178,7 @@ class ChatService {
         return data.unread_count;
     }
 
-    // Marcar mensajes como leídos
+    //marcar mensajes como leidos
     async markMessagesAsRead(senderEmail) {
         const token = authService.getToken();
         const response = await fetch(`${API_BASE_URL}/chat/mark-read/${senderEmail}`, {

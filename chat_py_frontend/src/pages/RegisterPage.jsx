@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { registerUser, isAuthenticated, getPasswordRequirements } from '../services/authService';
+import authService from '../services/authService';
 import PasswordStrengthMeter from '../components/PasswordStrengthMeter';
 
 const RegisterPage = () => {
@@ -14,30 +14,35 @@ const RegisterPage = () => {
   const [alreadyAuthenticated, setAlreadyAuthenticated] = useState(false);
   const [passwordRequirements, setPasswordRequirements] = useState(null);
   const [passwordValid, setPasswordValid] = useState(false);
-  const [passwordErrors, setPasswordErrors] = useState([]);
   const [formErrors, setFormErrors] = useState({});
   const navigate = useNavigate();
 
   useEffect(() => {
     // Verificar si el usuario ya está autenticado
-    if (isAuthenticated()) {
-      setAlreadyAuthenticated(true);
-    }
+    const checkAuth = () => {
+      if (authService.isAuthenticated()) {
+        setAlreadyAuthenticated(true);
+      }
+    };
+    
+    checkAuth();
 
     // Cargar requisitos de contraseña
-    loadPasswordRequirements();
+    const loadRequirements = async () => {
+      try {
+        const result = await authService.getPasswordRequirements();
+        if (result.success) {
+          setPasswordRequirements(result.data);
+        }
+      } catch (error) {
+        console.error('Error al cargar requisitos de contraseña:', error);
+      }
+    };
+
+    loadRequirements();
   }, []);
 
-  const loadPasswordRequirements = async () => {
-    try {
-      const result = await getPasswordRequirements();
-      if (result.success) {
-        setPasswordRequirements(result.data);
-      }
-    } catch (error) {
-      console.error('Error al cargar requisitos de contraseña:', error);
-    }
-  };
+
 
   const handleChange = e => {
     const { name, value } = e.target;
@@ -46,6 +51,11 @@ const RegisterPage = () => {
     // Limpiar errores del campo cuando el usuario empiece a escribir
     if (formErrors[name]) {
       setFormErrors(prev => ({ ...prev, [name]: '' }));
+    }
+    
+    // Limpiar error general cuando el usuario empiece a escribir
+    if (formErrors.general) {
+      setFormErrors(prev => ({ ...prev, general: '' }));
     }
   };
 
@@ -78,7 +88,7 @@ const RegisterPage = () => {
     // Validar teléfono
     if (!formData.telephone) {
       errors.telephone = 'El teléfono es requerido';
-    } else if (!/^\+?[\d\s\-\(\)]{7,15}$/.test(formData.telephone)) {
+    } else if (!/^\+?[\d\s\-)]{7,15}$/.test(formData.telephone)) {
       errors.telephone = 'Formato de teléfono inválido';
     }
 
@@ -86,10 +96,9 @@ const RegisterPage = () => {
     return Object.keys(errors).length === 0;
   };
 
-  const handlePasswordValidation = (isValid, errors) => {
+  const handlePasswordValidation = useCallback((isValid) => {
     setPasswordValid(isValid);
-    setPasswordErrors(errors);
-  };
+  }, []);
 
   const handleSubmit = async e => {
     e.preventDefault();
@@ -101,15 +110,21 @@ const RegisterPage = () => {
     setIsLoading(true);
     
     try {
-      const result = await registerUser(formData);
+      const result = await authService.registerUser(formData);
       if (result.success) {
         // Disparar evento para actualizar el navbar
         window.dispatchEvent(new Event('storage'));
         // Redirigir al chat después del registro exitoso
         navigate('/chat');
+      } else {
+        // Mostrar error específico del backend
+        if (result.error) {
+          setFormErrors(prev => ({ ...prev, general: result.error }));
+        }
       }
     } catch (error) {
       console.error('Error en el registro:', error);
+      setFormErrors(prev => ({ ...prev, general: 'Error de conexión. Inténtalo de nuevo.' }));
     } finally {
       setIsLoading(false);
     }
@@ -144,6 +159,14 @@ const RegisterPage = () => {
         )}
         
         <h3 className='text-dark text-center mb-4'>Registro</h3>
+        
+        {/* Mostrar error general */}
+        {formErrors.general && (
+          <div className="alert alert-danger mb-3" role="alert">
+            {formErrors.general}
+          </div>
+        )}
+        
         <form onSubmit={handleSubmit}>
           <div className="mb-3">
             <input 
@@ -221,7 +244,7 @@ const RegisterPage = () => {
                 setFormData({ email: '', username: '', password: '', telephone: '' });
                 setFormErrors({});
                 setPasswordValid(false);
-                setPasswordErrors([]);
+                setAlreadyAuthenticated(false);
               }}
             >
               Cancelar
