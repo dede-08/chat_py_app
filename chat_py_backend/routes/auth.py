@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
+from pydantic import BaseModel
 from model.user import User
 from schemas.user_schema import UserRegister, UserLogin, PasswordRequirements
 from database.connection import users_collection
@@ -22,11 +23,14 @@ async def get_password_requirements():
     """Obtener los requisitos de contraseña para mostrar al usuario"""
     return password_validator.get_password_requirements()
 
+class PasswordValidationRequest(BaseModel):
+    password: str
+
 @router.post("/validate-password")
-async def validate_password(password: str):
+async def validate_password(request: PasswordValidationRequest):
     """Validar una contraseña sin registrarla"""
-    is_valid, errors = password_validator.validate_password(password)
-    strength = password_validator.get_password_strength(password)
+    is_valid, errors = password_validator.validate_password(request.password)
+    strength = password_validator.get_password_strength(request.password)
     
     return {
         "is_valid": is_valid,
