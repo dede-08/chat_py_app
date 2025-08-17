@@ -107,14 +107,14 @@ const RegisterPage = () => {
       errors.username = 'El nombre de usuario solo puede contener letras, números y guiones bajos';
     }
 
-    // Validar contraseña
+    //validar contraseña
     if (!formData.password) {
       errors.password = 'La contraseña es requerida';
     } else if (!passwordValid) {
       errors.password = 'La contraseña no cumple con los requisitos de seguridad';
     }
 
-    // Validar teléfono
+    //validar telefono
     if (!formData.telephone) {
       errors.telephone = 'El teléfono es requerido';
     } else if (!/^\+?[\d\s\-()]{7,15}$/.test(formData.telephone)) {
