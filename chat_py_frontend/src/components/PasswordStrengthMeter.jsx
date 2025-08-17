@@ -5,12 +5,15 @@ const PasswordStrengthMeter = ({ password, requirements, onValidationChange }) =
   const [strength, setStrength] = useState('débil');
   const [errors, setErrors] = useState([]);
   const [isValid, setIsValid] = useState(false);
+  const [score, setScore] = useState(0);
+  const [maxScore, setMaxScore] = useState(8);
 
   useEffect(() => {
     if (!password) {
       setStrength('débil');
       setErrors([]);
       setIsValid(false);
+      setScore(0);
       onValidationChange && onValidationChange(false, []);
       return;
     }
@@ -60,29 +63,31 @@ const PasswordStrengthMeter = ({ password, requirements, onValidationChange }) =
     setIsValid(validationErrors.length === 0);
 
     // Calcular fortaleza
-    let score = 0;
+    let currentScore = 0;
     
-    // Longitud
-    if (password.length >= 8) score += 1;
-    if (password.length >= 12) score += 1;
-    if (password.length >= 16) score += 1;
+    // Longitud (máximo 3 puntos)
+    if (password.length >= 8) currentScore += 1;
+    if (password.length >= 12) currentScore += 1;
+    if (password.length >= 16) currentScore += 1;
     
-    // Complejidad
-    if (/[A-Z]/.test(password)) score += 1;
-    if (/[a-z]/.test(password)) score += 1;
-    if (/\d/.test(password)) score += 1;
-    if (requirements?.special_chars && new RegExp(`[${requirements.special_chars.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}]`).test(password)) score += 1;
+    // Complejidad (máximo 4 puntos)
+    if (/[A-Z]/.test(password)) currentScore += 1;
+    if (/[a-z]/.test(password)) currentScore += 1;
+    if (/\d/.test(password)) currentScore += 1;
+    if (requirements?.special_chars && new RegExp(`[${requirements.special_chars.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}]`).test(password)) currentScore += 1;
     
-    // Variedad
+    // Variedad (máximo 1 punto)
     const uniqueChars = new Set(password).size;
-    if (uniqueChars >= 8) score += 1;
-    if (uniqueChars >= 12) score += 1;
+    if (uniqueChars >= 8) currentScore += 1;
+
+    setScore(currentScore);
+    setMaxScore(8);
 
     // Determinar fortaleza
     let newStrength;
-    if (score <= 3) newStrength = 'débil';
-    else if (score <= 5) newStrength = 'media';
-    else if (score <= 7) newStrength = 'fuerte';
+    if (currentScore <= 2) newStrength = 'débil';
+    else if (currentScore <= 4) newStrength = 'media';
+    else if (currentScore <= 6) newStrength = 'fuerte';
     else newStrength = 'muy_fuerte';
 
     setStrength(newStrength);
@@ -92,11 +97,11 @@ const PasswordStrengthMeter = ({ password, requirements, onValidationChange }) =
 
   const getStrengthColor = () => {
     switch (strength) {
-      case 'débil': return '#ff4444';
-      case 'media': return '#ffaa00';
-      case 'fuerte': return '#00aa00';
-      case 'muy_fuerte': return '#008800';
-      default: return '#cccccc';
+      case 'débil': return '#dc3545';
+      case 'media': return '#ffc107';
+      case 'fuerte': return '#28a745';
+      case 'muy_fuerte': return '#198754';
+      default: return '#6c757d';
     }
   };
 
@@ -111,12 +116,26 @@ const PasswordStrengthMeter = ({ password, requirements, onValidationChange }) =
   };
 
   const getStrengthWidth = () => {
+    return `${(score / maxScore) * 100}%`;
+  };
+
+  const getStrengthIcon = () => {
     switch (strength) {
-      case 'débil': return '25%';
-      case 'media': return '50%';
-      case 'fuerte': return '75%';
-      case 'muy_fuerte': return '100%';
-      default: return '0%';
+      case 'débil': return '⚠️';
+      case 'media': return '⚡';
+      case 'fuerte': return '🛡️';
+      case 'muy_fuerte': return '🔒';
+      default: return '❓';
+    }
+  };
+
+  const getStrengthDescription = () => {
+    switch (strength) {
+      case 'débil': return 'Fácil de adivinar';
+      case 'media': return 'Mejorable';
+      case 'fuerte': return 'Buena seguridad';
+      case 'muy_fuerte': return 'Excelente seguridad';
+      default: return '';
     }
   };
 
@@ -124,29 +143,35 @@ const PasswordStrengthMeter = ({ password, requirements, onValidationChange }) =
 
   return (
     <div className="password-strength-meter">
-      <div className="strength-bar">
-        <div 
-          className="strength-fill"
-          style={{ 
-            width: getStrengthWidth(),
-            backgroundColor: getStrengthColor()
-          }}
-        />
-      </div>
-      
-      <div className="strength-info">
+      <div className="strength-header">
+        <span className="strength-icon">{getStrengthIcon()}</span>
         <span className="strength-text" style={{ color: getStrengthColor() }}>
           {getStrengthText()}
         </span>
+        <span className="strength-description">- {getStrengthDescription()}</span>
+      </div>
+      
+      <div className="strength-bar-container">
+        <div className="strength-bar">
+          <div 
+            className="strength-fill"
+            style={{ 
+              width: getStrengthWidth(),
+              backgroundColor: getStrengthColor()
+            }}
+          />
+        </div>
+        <span className="strength-score">{score}/{maxScore}</span>
       </div>
 
       {errors.length > 0 && (
         <div className="password-errors">
-          <h6>Requisitos faltantes:</h6>
-          <ul>
+          <h6 className="errors-title">Requisitos faltantes:</h6>
+          <ul className="errors-list">
             {errors.map((error, index) => (
               <li key={index} className="error-item">
-                ❌ {error}
+                <span className="error-icon">❌</span>
+                <span className="error-text">{error}</span>
               </li>
             ))}
           </ul>
@@ -156,9 +181,19 @@ const PasswordStrengthMeter = ({ password, requirements, onValidationChange }) =
       {isValid && (
         <div className="password-valid">
           <span className="valid-icon">✅</span>
-          <span className="valid-text">Contraseña válida</span>
+          <span className="valid-text">¡Contraseña válida y segura!</span>
         </div>
       )}
+
+      <div className="password-tips">
+        <h6 className="tips-title">Consejos de seguridad:</h6>
+        <ul className="tips-list">
+          <li>Usa al menos 8 caracteres</li>
+          <li>Combina mayúsculas, minúsculas y números</li>
+          <li>Incluye caracteres especiales</li>
+          <li>Evita información personal</li>
+        </ul>
+      </div>
     </div>
   );
 };

@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import authService from '../services/authService';
 import PasswordStrengthMeter from '../components/PasswordStrengthMeter';
+import SuccessModal from '../components/SuccessModal';
 
 const RegisterPage = () => {
   const [formData, setFormData] = useState({ 
@@ -15,6 +16,10 @@ const RegisterPage = () => {
   const [passwordRequirements, setPasswordRequirements] = useState(null);
   const [passwordValid, setPasswordValid] = useState(false);
   const [formErrors, setFormErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [requirementsLoading, setRequirementsLoading] = useState(true);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -29,20 +34,42 @@ const RegisterPage = () => {
 
     // Cargar requisitos de contraseña
     const loadRequirements = async () => {
+      setRequirementsLoading(true);
       try {
         const result = await authService.getPasswordRequirements();
         if (result.success) {
           setPasswordRequirements(result.data);
+        } else {
+          // Fallback a requisitos por defecto si falla la carga
+          setPasswordRequirements({
+            min_length: 8,
+            max_length: 128,
+            require_uppercase: true,
+            require_lowercase: true,
+            require_digits: true,
+            require_special_chars: true,
+            special_chars: '!@#$%^&*()_+-=[]{}|;:,.<>?'
+          });
         }
       } catch (error) {
         console.error('Error al cargar requisitos de contraseña:', error);
+        // Fallback a requisitos por defecto
+        setPasswordRequirements({
+          min_length: 8,
+          max_length: 128,
+          require_uppercase: true,
+          require_lowercase: true,
+          require_digits: true,
+          require_special_chars: true,
+          special_chars: '!@#$%^&*()_+-=[]{}|;:,.<>?'
+        });
+      } finally {
+        setRequirementsLoading(false);
       }
     };
 
     loadRequirements();
   }, []);
-
-
 
   const handleChange = e => {
     const { name, value } = e.target;
@@ -76,6 +103,8 @@ const RegisterPage = () => {
       errors.username = 'El nombre de usuario debe tener al menos 3 caracteres';
     } else if (formData.username.length > 50) {
       errors.username = 'El nombre de usuario no puede tener más de 50 caracteres';
+    } else if (!/^[a-zA-Z0-9_]+$/.test(formData.username)) {
+      errors.username = 'El nombre de usuario solo puede contener letras, números y guiones bajos';
     }
 
     // Validar contraseña
@@ -88,8 +117,8 @@ const RegisterPage = () => {
     // Validar teléfono
     if (!formData.telephone) {
       errors.telephone = 'El teléfono es requerido';
-    } else if (!/^\+?[\d\s\-)]{7,15}$/.test(formData.telephone)) {
-      errors.telephone = 'Formato de teléfono inválido';
+    } else if (!/^\+?[\d\s\-()]{7,15}$/.test(formData.telephone)) {
+      errors.telephone = 'Formato de teléfono inválido (ej: +1234567890)';
     }
 
     setFormErrors(errors);
@@ -108,14 +137,13 @@ const RegisterPage = () => {
     }
 
     setIsLoading(true);
+    setIsSubmitting(true);
     
     try {
       const result = await authService.registerUser(formData);
       if (result.success) {
-        // Disparar evento para actualizar el navbar
-        window.dispatchEvent(new Event('storage'));
-        // Redirigir al chat después del registro exitoso
-        navigate('/chat');
+        // Mostrar modal de éxito
+        setShowSuccessModal(true);
       } else {
         // Mostrar error específico del backend
         if (result.error) {
@@ -127,11 +155,37 @@ const RegisterPage = () => {
       setFormErrors(prev => ({ ...prev, general: 'Error de conexión. Inténtalo de nuevo.' }));
     } finally {
       setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
   const handleGoToChat = () => {
     navigate('/chat');
+  };
+
+  const resetForm = () => {
+    setFormData({ email: '', username: '', password: '', telephone: '' });
+    setFormErrors({});
+    setPasswordValid(false);
+    setAlreadyAuthenticated(false);
+    setShowPassword(false);
+  };
+
+  const handleSuccessModalClose = () => {
+    setShowSuccessModal(false);
+    // Disparar evento para actualizar el navbar
+    window.dispatchEvent(new Event('storage'));
+    // Redirigir al chat después del registro exitoso
+    navigate('/chat');
+  };
+
+  const isFormValid = () => {
+    return formData.email && 
+           formData.username && 
+           formData.password && 
+           formData.telephone && 
+           passwordValid && 
+           !isLoading;
   };
 
   return (
@@ -163,18 +217,23 @@ const RegisterPage = () => {
         {/* Mostrar error general */}
         {formErrors.general && (
           <div className="alert alert-danger mb-3" role="alert">
+            <i className="fas fa-exclamation-triangle me-2"></i>
             {formErrors.general}
           </div>
         )}
         
         <form onSubmit={handleSubmit}>
           <div className="mb-3">
+            <label htmlFor="email" className="form-label">Email</label>
             <input 
+              id="email"
               className={`form-control ${formErrors.email ? 'is-invalid' : ''}`}
               name="email" 
-              placeholder='Email' 
+              type="email"
+              placeholder='ejemplo@correo.com' 
               value={formData.email}
-              onChange={handleChange} 
+              onChange={handleChange}
+              disabled={isSubmitting}
             />
             {formErrors.email && (
               <div className="invalid-feedback">{formErrors.email}</div>
@@ -182,12 +241,15 @@ const RegisterPage = () => {
           </div>
           
           <div className="mb-3">
+            <label htmlFor="username" className="form-label">Nombre de usuario</label>
             <input 
+              id="username"
               className={`form-control ${formErrors.username ? 'is-invalid' : ''}`}
               name="username" 
-              placeholder='Nombre de usuario' 
+              placeholder='usuario123' 
               value={formData.username}
-              onChange={handleChange} 
+              onChange={handleChange}
+              disabled={isSubmitting}
             />
             {formErrors.username && (
               <div className="invalid-feedback">{formErrors.username}</div>
@@ -195,63 +257,101 @@ const RegisterPage = () => {
           </div>
           
           <div className="mb-3">
-            <input 
-              className={`form-control ${formErrors.password ? 'is-invalid' : ''}`}
-              type="password" 
-              name="password" 
-              placeholder='Contraseña' 
-              value={formData.password}
-              onChange={handleChange} 
-            />
+            <label htmlFor="password" className="form-label">Contraseña</label>
+            <div className="input-group">
+              <input 
+                id="password"
+                className={`form-control ${formErrors.password ? 'is-invalid' : ''}`}
+                type={showPassword ? "text" : "password"}
+                name="password" 
+                placeholder='Tu contraseña' 
+                value={formData.password}
+                onChange={handleChange}
+                disabled={isSubmitting}
+              />
+              <button 
+                className="btn btn-outline-secondary" 
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                disabled={isSubmitting}
+              >
+                <i className={`fas fa-${showPassword ? 'eye-slash' : 'eye'}`}></i>
+              </button>
+            </div>
             {formErrors.password && (
               <div className="invalid-feedback">{formErrors.password}</div>
             )}
             
             {/* Medidor de fortaleza de contraseña */}
-            <PasswordStrengthMeter 
-              password={formData.password}
-              requirements={passwordRequirements}
-              onValidationChange={handlePasswordValidation}
-            />
+            {!requirementsLoading && (
+              <PasswordStrengthMeter 
+                password={formData.password}
+                requirements={passwordRequirements}
+                onValidationChange={handlePasswordValidation}
+              />
+            )}
           </div>
           
           <div className="mb-3">
+            <label htmlFor="telephone" className="form-label">Teléfono</label>
             <input 
+              id="telephone"
               className={`form-control ${formErrors.telephone ? 'is-invalid' : ''}`}
               name="telephone" 
-              placeholder='Teléfono (ej: +1234567890)' 
+              placeholder='+1234567890' 
               value={formData.telephone}
-              onChange={handleChange} 
+              onChange={handleChange}
+              disabled={isSubmitting}
             />
             {formErrors.telephone && (
               <div className="invalid-feedback">{formErrors.telephone}</div>
             )}
           </div>
           
-          <div className="d-flex justify-content-center gap-3">
+          <div className="d-flex justify-content-center gap-3 mb-3">
             <button 
               className="btn btn-primary" 
-              disabled={isLoading || !passwordValid}
+              disabled={!isFormValid() || isSubmitting}
               type="submit"
             >
-              {isLoading ? 'Registrando...' : 'Registrar'}
+              {isSubmitting ? (
+                <>
+                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                  Registrando...
+                </>
+              ) : (
+                'Registrar'
+              )}
             </button>
             <button 
-              type='reset' 
-              className='btn btn-danger' 
-              disabled={isLoading}
-              onClick={() => {
-                setFormData({ email: '', username: '', password: '', telephone: '' });
-                setFormErrors({});
-                setPasswordValid(false);
-                setAlreadyAuthenticated(false);
-              }}
+              type='button' 
+              className='btn btn-outline-secondary' 
+              disabled={isSubmitting}
+              onClick={resetForm}
             >
-              Cancelar
+              Limpiar
             </button>
+          </div>
+          
+          <div className="text-center">
+            <p className="mb-0">
+              ¿Ya tienes una cuenta? 
+              <Link to="/login" className="text-decoration-none ms-1">
+                Inicia sesión aquí
+              </Link>
+            </p>
           </div>
         </form>
       </div>
+      
+      {/* Modal de éxito */}
+      <SuccessModal
+        isOpen={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+        title="¡Registro Exitoso!"
+        message={`¡Bienvenido ${formData.username}! Tu cuenta ha sido creada correctamente. Serás redirigido al chat.`}
+        onConfirm={handleSuccessModalClose}
+      />
     </div>
   );
 };

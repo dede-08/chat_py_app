@@ -7,12 +7,21 @@ export const registerUser = async (data) => {
     const response = await axios.post(`${API_URL}/register`, data);
     // Guardar el username después del registro exitoso
     localStorage.setItem('username', data.username);
-    alert('Usuario registrado exitosamente');
     return { success: true, data: response.data };
   } catch (error) {
-    console.error(error);
-    const errorMessage = error.response?.data?.detail || 'Error al registrar usuario';
-    alert(errorMessage);
+    console.error('Error en registro:', error);
+    let errorMessage = 'Error al registrar usuario';
+    
+    if (error.response?.data?.detail) {
+      errorMessage = error.response.data.detail;
+    } else if (error.response?.status === 409) {
+      errorMessage = 'El usuario ya existe';
+    } else if (error.response?.status === 422) {
+      errorMessage = 'Datos de entrada inválidos';
+    } else if (error.code === 'NETWORK_ERROR') {
+      errorMessage = 'Error de conexión. Verifica tu internet.';
+    }
+    
     return { success: false, error: errorMessage };
   }
 };
@@ -27,9 +36,19 @@ export const loginUser = async (data) => {
     localStorage.setItem('username', username);
     return { success: true, data: response.data };
   } catch (error) {
-    console.error(error);
-    const errorMessage = error.response?.data?.detail || 'Error al iniciar sesión';
-    alert(errorMessage);
+    console.error('Error en login:', error);
+    let errorMessage = 'Error al iniciar sesión';
+    
+    if (error.response?.data?.detail) {
+      errorMessage = error.response.data.detail;
+    } else if (error.response?.status === 401) {
+      errorMessage = 'Credenciales incorrectas';
+    } else if (error.response?.status === 404) {
+      errorMessage = 'Usuario no encontrado';
+    } else if (error.code === 'NETWORK_ERROR') {
+      errorMessage = 'Error de conexión. Verifica tu internet.';
+    }
+    
     return { success: false, error: errorMessage };
   }
 };
@@ -41,7 +60,19 @@ export const getPasswordRequirements = async () => {
     return { success: true, data: response.data };
   } catch (error) {
     console.error('Error al obtener requisitos de contraseña:', error);
-    return { success: false, error: 'Error al obtener requisitos de contraseña' };
+    // Retornar requisitos por defecto si falla
+    return { 
+      success: true, 
+      data: {
+        min_length: 8,
+        max_length: 128,
+        require_uppercase: true,
+        require_lowercase: true,
+        require_digits: true,
+        require_special_chars: true,
+        special_chars: '!@#$%^&*()_+-=[]{}|;:,.<>?'
+      }
+    };
   }
 };
 
