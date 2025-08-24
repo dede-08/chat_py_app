@@ -5,7 +5,7 @@ const API_URL = 'http://localhost:8000/auth';
 export const registerUser = async (data) => {
   try {
     const response = await axios.post(`${API_URL}/register`, data);
-    // Guardar el username después del registro exitoso
+    //guardar el username después del registro exitoso
     localStorage.setItem('username', data.username);
     return { success: true, data: response.data };
   } catch (error) {
@@ -31,7 +31,7 @@ export const loginUser = async (data) => {
     const response = await axios.post(`${API_URL}/login`, data);
     localStorage.setItem('token', response.data.token);
     localStorage.setItem('userEmail', response.data.email);
-    // Guardar el username del usuario logueado (con fallback al email si no hay username)
+    //guardar el username del usuario logueado (con fallback al email si no hay username)
     const username = response.data.username || response.data.email || 'Usuario';
     localStorage.setItem('username', username);
     return { success: true, data: response.data };
@@ -53,14 +53,14 @@ export const loginUser = async (data) => {
   }
 };
 
-// Obtener requisitos de contraseña
+//obtener requisitos de contraseña
 export const getPasswordRequirements = async () => {
   try {
     const response = await axios.get(`${API_URL}/password-requirements`);
     return { success: true, data: response.data };
   } catch (error) {
     console.error('Error al obtener requisitos de contraseña:', error);
-    // Retornar requisitos por defecto si falla
+    //retornar requisitos por defecto si falla
     return { 
       success: true, 
       data: {
@@ -76,7 +76,7 @@ export const getPasswordRequirements = async () => {
   }
 };
 
-// Validar contraseña
+//validar contraseña
 export const validatePassword = async (password) => {
   try {
     const response = await axios.post(`${API_URL}/validate-password`, { password });
@@ -87,7 +87,7 @@ export const validatePassword = async (password) => {
   }
 };
 
-// Logout
+//logout
 export const logoutUser = async () => {
   try {
     const token = getToken();
@@ -101,41 +101,41 @@ export const logoutUser = async () => {
   } catch (error) {
     console.error('Error en logout:', error);
   } finally {
-    // Limpiar localStorage independientemente del resultado
+    //limpiar localStorage independientemente del resultado
     localStorage.removeItem('token');
     localStorage.removeItem('userEmail');
     localStorage.removeItem('username');
   }
 };
 
-// Obtener token del localStorage
+//obtener token del localStorage
 export const getToken = () => {
   return localStorage.getItem('token');
 };
 
-// Obtener email del usuario
+//obtener email del usuario
 export const getUserEmail = () => {
   return localStorage.getItem('userEmail');
 };
 
-// Obtener username del usuario
+//obtener username del usuario
 export const getUsername = () => {
   return localStorage.getItem('username');
 };
 
-// Verificar si el usuario está autenticado
+//verificar si el usuario está autenticado
 export const isAuthenticated = () => {
   return !!getToken();
 };
 
-// Cerrar sesión (versión simple sin llamada al backend)
+//cerrar sesión (versión simple sin llamada al backend)
 export const logout = () => {
   localStorage.removeItem('token');
   localStorage.removeItem('userEmail');
   localStorage.removeItem('username');
 };
 
-// Crear instancia por defecto para compatibilidad
+//crear instancia por defecto para compatibilidad
 const authService = {
   registerUser,
   loginUser,

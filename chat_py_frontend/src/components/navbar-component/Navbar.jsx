@@ -10,7 +10,7 @@ const Navbar = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Verificar estado de autenticación
+    //verificar estado de autenticacion
     const checkAuth = () => {
       const authenticated = authService.isAuthenticated();
       setIsAuthenticated(authenticated);
@@ -20,7 +20,7 @@ const Navbar = () => {
     };
 
     checkAuth();
-    // Escuchar cambios en el localStorage
+    //escuchar cambios en el localStorage
     window.addEventListener('storage', checkAuth);
     
     return () => {
@@ -31,18 +31,18 @@ const Navbar = () => {
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
-      // Llamar al endpoint de logout del backend
+      //llamar al endpoint de logout del backend
       await authService.logoutUser();
       
-      // Limpiar estado local
+      //limpiar estado local
       setIsAuthenticated(false);
       setUsername('');
       
-      // Redirigir al login
+      //redirigir al login
       navigate('/login');
     } catch (error) {
       console.error('Error durante el logout:', error);
-      // Aún así, limpiar el estado local
+      //limpiar el estado local
       authService.logout();
       setIsAuthenticated(false);
       setUsername('');

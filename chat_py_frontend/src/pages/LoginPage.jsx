@@ -10,7 +10,7 @@ const LoginPage = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Verificar si el usuario ya está autenticado
+    //verificar si el usuario ya está autenticado
     if (isAuthenticated()) {
       setAlreadyAuthenticated(true);
     }
@@ -20,7 +20,7 @@ const LoginPage = () => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
     
-    // Limpiar errores del campo cuando el usuario empiece a escribir
+    //limpiar errores del campo cuando el usuario empiece a escribir
     if (formErrors[name]) {
       setFormErrors(prev => ({ ...prev, [name]: '' }));
     }
@@ -29,14 +29,14 @@ const LoginPage = () => {
   const validateForm = () => {
     const errors = {};
 
-    // Validar email
+    //validar email
     if (!formData.email) {
       errors.email = 'El email es requerido';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       errors.email = 'El email no es válido';
     }
 
-    // Validar contraseña
+    //validar contraseña
     if (!formData.password) {
       errors.password = 'La contraseña es requerida';
     }
@@ -57,9 +57,9 @@ const LoginPage = () => {
     try {
       const result = await loginUser(formData);
       if (result.success) {
-        // Disparar evento para actualizar el navbar
+        //disparar evento para actualizar el navbar
         window.dispatchEvent(new Event('storage'));
-        // Redirigir al chat después del login exitoso
+        //redirigir al chat después del login exitoso
         navigate('/chat');
       }
     } catch (error) {

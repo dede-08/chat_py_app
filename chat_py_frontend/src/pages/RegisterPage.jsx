@@ -23,7 +23,7 @@ const RegisterPage = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Verificar si el usuario ya está autenticado
+    //verificar si el usuario ya esta autenticado
     const checkAuth = () => {
       if (authService.isAuthenticated()) {
         setAlreadyAuthenticated(true);
@@ -32,7 +32,7 @@ const RegisterPage = () => {
     
     checkAuth();
 
-    // Cargar requisitos de contraseña
+    //cargar requisitos de contraseña
     const loadRequirements = async () => {
       setRequirementsLoading(true);
       try {
@@ -40,7 +40,7 @@ const RegisterPage = () => {
         if (result.success) {
           setPasswordRequirements(result.data);
         } else {
-          // Fallback a requisitos por defecto si falla la carga
+          //fallback a requisitos por defecto si falla la carga
           setPasswordRequirements({
             min_length: 8,
             max_length: 128,
@@ -53,7 +53,7 @@ const RegisterPage = () => {
         }
       } catch (error) {
         console.error('Error al cargar requisitos de contraseña:', error);
-        // Fallback a requisitos por defecto
+        //fallback a requisitos por defecto
         setPasswordRequirements({
           min_length: 8,
           max_length: 128,
@@ -75,12 +75,12 @@ const RegisterPage = () => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
     
-    // Limpiar errores del campo cuando el usuario empiece a escribir
+    //limpiar errores del campo cuando el usuario empiece a escribir
     if (formErrors[name]) {
       setFormErrors(prev => ({ ...prev, [name]: '' }));
     }
     
-    // Limpiar error general cuando el usuario empiece a escribir
+    //limpiar error general cuando el usuario empiece a escribir
     if (formErrors.general) {
       setFormErrors(prev => ({ ...prev, general: '' }));
     }
@@ -89,14 +89,14 @@ const RegisterPage = () => {
   const validateForm = () => {
     const errors = {};
 
-    // Validar email
+    //validar email
     if (!formData.email) {
       errors.email = 'El email es requerido';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       errors.email = 'El email no es válido';
     }
 
-    // Validar username
+    //validar username
     if (!formData.username) {
       errors.username = 'El nombre de usuario es requerido';
     } else if (formData.username.length < 3) {
@@ -142,10 +142,10 @@ const RegisterPage = () => {
     try {
       const result = await authService.registerUser(formData);
       if (result.success) {
-        // Mostrar modal de éxito
+        //mostrar modal de éxito
         setShowSuccessModal(true);
       } else {
-        // Mostrar error específico del backend
+        //mostrar error específico del backend
         if (result.error) {
           setFormErrors(prev => ({ ...prev, general: result.error }));
         }
@@ -173,9 +173,9 @@ const RegisterPage = () => {
 
   const handleSuccessModalClose = () => {
     setShowSuccessModal(false);
-    // Disparar evento para actualizar el navbar
+    //disparar evento para actualizar el navbar
     window.dispatchEvent(new Event('storage'));
-    // Redirigir al chat después del registro exitoso
+    //redirigir al chat después del registro exitoso
     navigate('/chat');
   };
 
@@ -214,7 +214,7 @@ const RegisterPage = () => {
         
         <h3 className='text-dark text-center mb-4'>Registro</h3>
         
-        {/* Mostrar error general */}
+        {/* mostrar error general */}
         {formErrors.general && (
           <div className="alert alert-danger mb-3" role="alert">
             <i className="fas fa-exclamation-triangle me-2"></i>
@@ -282,7 +282,7 @@ const RegisterPage = () => {
               <div className="invalid-feedback">{formErrors.password}</div>
             )}
             
-            {/* Medidor de fortaleza de contraseña */}
+            {/* medidor de fortaleza de contraseña */}
             {!requirementsLoading && (
               <PasswordStrengthMeter 
                 password={formData.password}
@@ -344,7 +344,7 @@ const RegisterPage = () => {
         </form>
       </div>
       
-      {/* Modal de éxito */}
+      {/* modal de exito */}
       <SuccessModal
         isOpen={showSuccessModal}
         onClose={() => setShowSuccessModal(false)}

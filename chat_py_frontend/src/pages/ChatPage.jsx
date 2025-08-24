@@ -11,18 +11,18 @@ const ChatPage = () => {
   const [connectionError, setConnectionError] = useState(null);
 
   useEffect(() => {
-    // Verificar si el usuario está autenticado
+    //verificar si el usuario está autenticado
     const token = authService.getToken();
     if (!token) {
       setConnectionError('No hay token de autenticación disponible');
       return;
     }
 
-    // Conectar WebSocket con manejo de errores
+    //conectar websocket con manejo de errores
     try {
       chatService.connect();
       
-      // Escuchar eventos de conexión
+      //escuchar eventos de conexión
       const handleConnectionChange = (connected) => {
         if (!connected) {
           setConnectionError('Conexión perdida. Intentando reconectar...');
@@ -31,18 +31,18 @@ const ChatPage = () => {
         }
       };
 
-      // Configurar manejadores de eventos del WebSocket
+      //configurar manejadores de eventos del WebSocket
       chatService.onMessage('connection_status', (data) => {
         handleConnectionChange(data.connected);
       });
 
-      // Conexión establecida
+      //conexion establecida
     } catch (error) {
       console.error('Error al conectar WebSocket:', error);
       setConnectionError('Error al conectar con el servidor');
     }
 
-    // Limpiar conexión al desmontar
+    //limpiar conexion al desmontar
     return () => {
       try {
         chatService.disconnect();
@@ -56,7 +56,7 @@ const ChatPage = () => {
     setSelectedUser(user);
   };
 
-  // Mostrar error de conexión si existe
+  //mostrar error de conexión si existe
   if (connectionError) {
     return (
       <div className="chat-container">

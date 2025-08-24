@@ -10,7 +10,7 @@ class ChatService {
         this.isConnected = false;
     }
 
-    // Conectar WebSocket
+    //conectar websocket
     connect() {
         const token = authService.getToken();
         if (!token) {
@@ -23,7 +23,7 @@ class ChatService {
             this.ws.onopen = () => {
       console.log('WebSocket conectado');
       this.isConnected = true;
-      // Notificar que la conexión está establecida
+      //notificar que la conexión está establecida
       this.handleMessage({ type: 'connection_status', connected: true });
     };
 
@@ -35,19 +35,19 @@ class ChatService {
             this.ws.onclose = () => {
       console.log('WebSocket desconectado');
       this.isConnected = false;
-      // Notificar que la conexión se perdió
+      //notificar que la conexion se ha perdido
       this.handleMessage({ type: 'connection_status', connected: false });
     };
 
             this.ws.onerror = (error) => {
       console.error('Error en WebSocket:', error);
       this.isConnected = false;
-      // Notificar error de conexión
+      //notificar error de conexión
       this.handleMessage({ type: 'connection_status', connected: false, error: true });
     };
     }
 
-    // Desconectar WebSocket
+    //desconectar websocket
     disconnect() {
         if (this.ws) {
             this.ws.close();
@@ -56,7 +56,7 @@ class ChatService {
         }
     }
 
-    // Enviar mensaje privado
+    //enviar mensaje privado
     sendMessage(receiverEmail, content) {
         if (!this.isConnected) {
             console.error('WebSocket no conectado');
@@ -72,7 +72,7 @@ class ChatService {
         this.ws.send(JSON.stringify(message));
     }
 
-    // Enviar indicador de escritura
+    //enviar indicador de escritura
     sendTypingIndicator(receiverEmail, isTyping) {
         if (!this.isConnected) return;
 
@@ -85,7 +85,7 @@ class ChatService {
         this.ws.send(JSON.stringify(message));
     }
 
-    // Enviar confirmación de lectura
+    //enviar confirmacion de lectura
     sendReadReceipt(senderEmail) {
         if (!this.isConnected) return;
 
@@ -97,7 +97,7 @@ class ChatService {
         this.ws.send(JSON.stringify(message));
     }
 
-    // Manejar mensajes recibidos
+    //manejar mensajes recibidos
     handleMessage(data) {
         const handler = this.messageHandlers.get(data.type);
         if (handler) {
@@ -105,12 +105,12 @@ class ChatService {
         }
     }
 
-    // Registrar manejadores de mensajes
+    //registrar manejadores de mensajes
     onMessage(type, handler) {
         this.messageHandlers.set(type, handler);
     }
 
-    // Obtener historial de chat
+    //obtener historial de chat
     async getChatHistory(otherUserEmail, limit = 50) {
         const token = authService.getToken();
         const response = await fetch(
@@ -129,7 +129,7 @@ class ChatService {
         return await response.json();
     }
 
-    // Obtener salas de chat del usuario
+    //obtener salas de chat del usuario
     async getChatRooms() {
         const token = authService.getToken();
         const response = await fetch(`${API_BASE_URL}/chat/rooms`, {
