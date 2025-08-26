@@ -11,7 +11,7 @@ const Sidebar = () => {
   return (
     <div className="sidebar">
       <aside className="sidebar bg-dark">
-        <h5 className='text-white'>Usuarios conectados</h5>
+        <h5 className='text-white'>Online</h5>
         <ul className="user-list">
           {usersOnline.map((user) => (
             <li key={user} onClick={() => setSelectedUser(user)} className={selectedUser === user ? 'selected' : ''}>

@@ -46,7 +46,7 @@ const UserList = ({ onUserSelect, selectedUser }) => {
     return (
       <div className="user-list">
         <div className="user-list-header">
-          <h3>Usuarios</h3>
+          <h3>Online</h3>
         </div>
         <div className="loading">Cargando usuarios...</div>
       </div>
