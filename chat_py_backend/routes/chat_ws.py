@@ -39,7 +39,7 @@ async def chat_endpoint(websocket: WebSocket, token: str = Query(None)):
     await websocket.accept()
     connected_users[user_email] = websocket
     
-    # Notificar a otros usuarios que este usuario está online
+    #notificar a otros usuarios que este usuario esta online
     await broadcast_user_status(user_email, True)
     
     try:
@@ -47,7 +47,7 @@ async def chat_endpoint(websocket: WebSocket, token: str = Query(None)):
             data = await websocket.receive_text()
             message_data = json.loads(data)
             
-            # Procesar diferentes tipos de mensajes
+            #procesar diferentes tipos de mensajes
             message_type = message_data.get("type", "message")
             
             if message_type == "message":
@@ -60,7 +60,7 @@ async def chat_endpoint(websocket: WebSocket, token: str = Query(None)):
     except WebSocketDisconnect:
         if user_email in connected_users:
             del connected_users[user_email]
-        # Notificar que el usuario está offline
+        #notificar que el usuario esta offline
         await broadcast_user_status(user_email, False)
 
 async def handle_private_message(sender_email: str, message_data: dict):
@@ -71,10 +71,10 @@ async def handle_private_message(sender_email: str, message_data: dict):
     if not receiver_email or not content:
         return
     
-    # Guardar mensaje en la base de datos
+    #guardar mensaje en la base de datos
     saved_message = await chat_service.save_message(sender_email, receiver_email, content)
     
-    # Preparar mensaje para enviar
+    #preparar mensaje para enviar
     message_to_send = {
         "type": "message",
         "id": saved_message.id,
@@ -85,7 +85,7 @@ async def handle_private_message(sender_email: str, message_data: dict):
         "is_read": False
     }
     
-    # Enviar al destinatario si está conectado
+    #enviar al destinatario si esta en linea
     if receiver_email in connected_users:
         await connected_users[receiver_email].send_text(json.dumps(message_to_send))
     
