@@ -16,16 +16,15 @@ class JWTBearer(HTTPBearer):
     async def __call__(self, request: Request):
         credentials: HTTPAuthorizationCredentials = await super().__call__(request)
         if credentials:
-            payload = self.verify_jwt(credentials.credentials)
-            if payload is None:
+            if not self.verify_jwt(credentials.credentials):
                 raise HTTPException(status_code=403, detail="Token inválido o expirado")
-            return payload  # Devolvemos los datos decodificados
+            return credentials.credentials  # <-- Devuelve el token como string
         else:
             raise HTTPException(status_code=403, detail="Token no encontrado")
 
     def verify_jwt(self, token: str):
         try:
-            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-            return payload  # Devuelve el contenido decodificado del token
+            jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            return True
         except JWTError:
-            return None
+            return False

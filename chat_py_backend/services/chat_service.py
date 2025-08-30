@@ -113,16 +113,15 @@ class ChatService:
             chat_room_data["created_at"] = datetime.utcnow()
             await self.chat_rooms_collection.insert_one(chat_room_data)
 
-    async def get_all_users(self, current_user_email: str) -> List[dict]:
+    async def get_all_users(self, current_user_email: str) -> list:
         """Obtener lista de todos los usuarios excepto el actual"""
         cursor = self.users_collection.find(
             {"email": {"$ne": current_user_email}},
-            {"password": 0}  # Excluir contraseña
+            {"password": 0}
         )
-        
         users = []
         async for doc in cursor:
-            doc["id"] = str(doc["_id"])
+            doc["id"] = str(doc.get("_id", ""))
+            doc.pop("_id", None)  # Elimina el campo _id para evitar problemas de serialización
             users.append(doc)
-        
         return users

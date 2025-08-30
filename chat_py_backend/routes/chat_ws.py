@@ -6,6 +6,7 @@ import os
 import json
 from datetime import datetime
 from services.chat_service import ChatService
+import traceback
 
 router = APIRouter()
 # Diccionario para mantener conexiones por usuario
@@ -61,6 +62,12 @@ async def chat_endpoint(websocket: WebSocket, token: str = Query(None)):
         if user_email in connected_users:
             del connected_users[user_email]
         #notificar que el usuario esta offline
+        await broadcast_user_status(user_email, False)
+    except Exception as e:
+        print(f"Error en WebSocket:", e)
+        traceback.print_exc()
+        if user_email in connected_users:
+            del connected_users[user_email]
         await broadcast_user_status(user_email, False)
 
 async def handle_private_message(sender_email: str, message_data: dict):
