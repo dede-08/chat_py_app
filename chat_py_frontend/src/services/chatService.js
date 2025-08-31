@@ -13,38 +13,41 @@ class ChatService {
     //conectar websocket
     connect() {
         const token = authService.getToken();
+        console.log('Token usado para WebSocket:', token);
         if (!token) {
             console.error('No hay token disponible');
             return;
         }
 
         this.ws = new WebSocket(`${WS_BASE_URL}/ws/chat?token=${token}`);
-        
-            this.ws.onopen = () => {
-      console.log('WebSocket conectado');
-      this.isConnected = true;
-      //notificar que la conexión está establecida
-      this.handleMessage({ type: 'connection_status', connected: true });
-    };
+
+        this.ws.onopen = () => {
+            console.log('WebSocket conectado');
+            this.isConnected = true;
+            //notificar que la conexión está establecida
+            this.ws.send(JSON.stringify({ type: 'ping' }));
+            this.handleMessage({ type: 'connection_status', connected: true });
+        };
 
         this.ws.onmessage = (event) => {
+            console.log('Mensaje recibido:', event.data);
             const data = JSON.parse(event.data);
             this.handleMessage(data);
         };
 
-            this.ws.onclose = () => {
-      console.log('WebSocket desconectado');
-      this.isConnected = false;
-      //notificar que la conexion se ha perdido
-      this.handleMessage({ type: 'connection_status', connected: false });
-    };
+        this.ws.onclose = () => {
+            console.log('WebSocket desconectado');
+            this.isConnected = false;
+            //notificar que la conexion se ha perdido
+            this.handleMessage({ type: 'connection_status', connected: false });
+        };
 
-            this.ws.onerror = (error) => {
-      console.error('Error en WebSocket:', error);
-      this.isConnected = false;
-      //notificar error de conexión
-      this.handleMessage({ type: 'connection_status', connected: false, error: true });
-    };
+        this.ws.onerror = (error) => {
+            console.error('Error en WebSocket:', error);
+            this.isConnected = false;
+            //notificar error de conexión
+            this.handleMessage({ type: 'connection_status', connected: false, error: true });
+        };
     }
 
     //desconectar websocket
