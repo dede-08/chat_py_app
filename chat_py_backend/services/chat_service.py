@@ -3,6 +3,11 @@ from model.chat import Message, ChatRoom
 from datetime import datetime
 from typing import List, Optional
 from bson import ObjectId
+from jose import JWTError, jwt
+import os
+
+SECRET_KEY = os.getenv("JWT_SECRET")
+ALGORITHM = os.getenv("JWT_ALGORITHM")
 
 class ChatService:
     def __init__(self):
@@ -125,3 +130,11 @@ class ChatService:
             doc.pop("_id", None)  # Elimina el campo _id para evitar problemas de serialización
             users.append(doc)
         return users
+
+    async def get_user_email_from_token(token: str):
+        try:
+            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            return payload.get("email")
+        except JWTError as e:
+            print(f"Error decodificando token JWT: {e}")
+            return None

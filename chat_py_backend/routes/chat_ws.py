@@ -46,17 +46,18 @@ async def chat_endpoint(websocket: WebSocket, token: str = Query(None)):
     try:
         while True:
             data = await websocket.receive_text()
+            print("Mensaje recibido en WebSocket:", data)
             message_data = json.loads(data)
-            
-            #procesar diferentes tipos de mensajes
             message_type = message_data.get("type", "message")
-            
             if message_type == "message":
                 await handle_private_message(user_email, message_data)
             elif message_type == "typing":
                 await handle_typing_indicator(user_email, message_data)
             elif message_type == "read":
                 await handle_read_receipt(user_email, message_data)
+            elif message_type == "ping":
+                await websocket.send_text('{"type":"pong"}')
+                pass  # Solo para mantener la conexión
                 
     except WebSocketDisconnect:
         if user_email in connected_users:
@@ -69,6 +70,7 @@ async def chat_endpoint(websocket: WebSocket, token: str = Query(None)):
         if user_email in connected_users:
             del connected_users[user_email]
         await broadcast_user_status(user_email, False)
+        print("Cerrando conexión WebSocket debido a error.")
 
 async def handle_private_message(sender_email: str, message_data: dict):
     """Manejar mensaje privado entre usuarios"""
