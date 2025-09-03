@@ -215,9 +215,21 @@ export const ChatProvider = ({ children }) => {
     }
   };
 
+  // Iniciar y cerrar la conexión WebSocket
+  useEffect(() => {
+    chatService.connect();
+
+    return () => {
+      chatService.disconnect();
+    };
+  }, []); // Se ejecuta solo al montar y desmontar el provider
+
   // Configurar listeners de WebSocket
   useEffect(() => {
-    if (!chatService.isConnected) return;
+    // Handler para el estado de la conexión
+    const handleConnectionStatus = (data) => {
+      setConnectionStatus(data.connected);
+    };
 
     // Handler para mensajes nuevos
     const handleNewMessage = (data) => {
@@ -251,6 +263,7 @@ export const ChatProvider = ({ children }) => {
     };
 
     // Registrar handlers
+    chatService.onMessage('connection_status', handleConnectionStatus);
     chatService.onMessage('message', handleNewMessage);
     chatService.onMessage('typing', handleTyping);
     chatService.onMessage('user_status', handleUserStatus);
@@ -258,9 +271,9 @@ export const ChatProvider = ({ children }) => {
 
     // Cleanup
     return () => {
-      chatService.messageHandlers.clear();
+      // No es necesario limpiar los handlers uno por uno si el servicio se va a desconectar
     };
-  }, [state.selectedUser, state.currentUser, state.messages]);
+  }, [state.selectedUser, state.currentUser, state.messages]); // Dependencias optimizadas
 
   // Valor del contexto
   const contextValue = {
