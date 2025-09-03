@@ -1,5 +1,5 @@
 // src/pages/ChatPage.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import '../App.css';
 import UserList from '../components/user-list-component/UserList';
 import ChatArea from '../components/chat-area-component/ChatArea';
@@ -9,8 +9,11 @@ import authService from '../services/authService';
 const ChatPage = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [connectionError, setConnectionError] = useState(null);
+  const hasConnected = useRef(false);
 
   useEffect(() => {
+    if(hasConnected.current) return;
+    hasConnected.current = true;
     //verificar si el usuario está autenticado
     const token = authService.getToken();
     if (!token) {

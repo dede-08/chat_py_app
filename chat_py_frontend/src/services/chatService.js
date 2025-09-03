@@ -8,6 +8,7 @@ class ChatService {
         this.ws = null;
         this.messageHandlers = new Map();
         this.isConnected = false;
+        this.isConnecting = false;
     }
 
     //conectar websocket
@@ -19,11 +20,17 @@ class ChatService {
             return;
         }
 
+        if (this.ws || this.isConnecting) {
+            return;
+        }
+
+        this.isConnecting = true;
         this.ws = new WebSocket(`${WS_BASE_URL}/ws/chat?token=${token}`);
 
         this.ws.onopen = () => {
             console.log('WebSocket conectado');
             this.isConnected = true;
+            this.isConnecting = false;
             //notificar que la conexión está establecida
             this.ws.send(JSON.stringify({ type: 'ping' }));
             this.handleMessage({ type: 'connection_status', connected: true });
@@ -38,6 +45,8 @@ class ChatService {
         this.ws.onclose = () => {
             console.log('WebSocket desconectado');
             this.isConnected = false;
+            this.isConnecting = false;
+            this.ws = null;
             //notificar que la conexion se ha perdido
             this.handleMessage({ type: 'connection_status', connected: false });
         };
@@ -45,6 +54,8 @@ class ChatService {
         this.ws.onerror = (error) => {
             console.error('Error en WebSocket:', error);
             this.isConnected = false;
+            this.isConnecting = false;
+            this.ws = null;
             //notificar error de conexión
             this.handleMessage({ type: 'connection_status', connected: false, error: true });
         };
@@ -54,8 +65,6 @@ class ChatService {
     disconnect() {
         if (this.ws) {
             this.ws.close();
-            this.ws = null;
-            this.isConnected = false;
         }
     }
 
