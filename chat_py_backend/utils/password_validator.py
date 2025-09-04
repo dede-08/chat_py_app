@@ -18,35 +18,35 @@ class PasswordValidator:
         """
         errors = []
         
-        # Verificar longitud mínima
+        #verificar longitud mínima
         if len(password) < self.min_length:
             errors.append(f"La contraseña debe tener al menos {self.min_length} caracteres")
         
-        # Verificar longitud máxima
+        #verificar longitud máxima
         if len(password) > self.max_length:
             errors.append(f"La contraseña no puede tener más de {self.max_length} caracteres")
         
-        # Verificar mayúsculas
+        #verificar mayúsculas
         if self.require_uppercase and not re.search(r'[A-Z]', password):
             errors.append("La contraseña debe contener al menos una letra mayúscula")
         
-        # Verificar minúsculas
+        #verificar minúsculas
         if self.require_lowercase and not re.search(r'[a-z]', password):
             errors.append("La contraseña debe contener al menos una letra minúscula")
         
-        # Verificar dígitos
+        #verificar dígitos
         if self.require_digits and not re.search(r'\d', password):
             errors.append("La contraseña debe contener al menos un número")
         
-        # Verificar caracteres especiales
+        #verificar caracteres especiales
         if self.require_special_chars and not re.search(f'[{re.escape(self.special_chars)}]', password):
             errors.append("La contraseña debe contener al menos un carácter especial (!@#$%^&*()_+-=[]{}|;:,.<>?)")
         
-        # Verificar espacios (no permitidos)
+        #verificar espacios (no permitidos)
         if ' ' in password:
             errors.append("La contraseña no puede contener espacios")
         
-        # Verificar caracteres no permitidos
+        #verificar caracteres no permitidos
         if re.search(r'[^\w!@#$%^&*()_+\-=\[\]{}|;:,.<>?]', password):
             errors.append("La contraseña contiene caracteres no permitidos")
         
@@ -59,7 +59,7 @@ class PasswordValidator:
         """
         score = 0
         
-        # Longitud
+        #longitud
         if len(password) >= 8:
             score += 1
         if len(password) >= 12:
@@ -67,7 +67,7 @@ class PasswordValidator:
         if len(password) >= 16:
             score += 1
         
-        # Complejidad
+        #complejidad
         if re.search(r'[A-Z]', password):
             score += 1
         if re.search(r'[a-z]', password):
@@ -77,14 +77,14 @@ class PasswordValidator:
         if re.search(f'[{re.escape(self.special_chars)}]', password):
             score += 1
         
-        # Variedad de caracteres
+        #variedad de caracteres
         unique_chars = len(set(password))
         if unique_chars >= 8:
             score += 1
         if unique_chars >= 12:
             score += 1
         
-        # Evaluar score
+        #evaluar score
         if score <= 3:
             return "débil"
         elif score <= 5:
@@ -108,5 +108,5 @@ class PasswordValidator:
             "special_chars": self.special_chars
         }
 
-# Instancia global del validador
+#instancia global del validador
 password_validator = PasswordValidator()

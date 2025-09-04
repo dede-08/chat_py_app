@@ -41,12 +41,12 @@ async def validate_password(request: PasswordValidationRequest):
 
 @router.post("/register")
 async def register(user: UserRegister):
-    # La validación de contraseña ya se hace en el esquema
+    #la validación de contraseña ya se hace en el esquema
     existing_user = await users_collection.find_one({"email": user.email})
     if existing_user:
         raise HTTPException(status_code=400, detail="El email ya ha sido registrado")
 
-    # Verificar si el username ya existe
+    #verificar si el username ya existe
     existing_username = await users_collection.find_one({"username": user.username})
     if existing_username:
         raise HTTPException(status_code=400, detail="El nombre de usuario ya está en uso")

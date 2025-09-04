@@ -10,23 +10,23 @@ def setup_logger(name: str, log_file: str = None, level: str = "INFO"):
     logger = logging.getLogger(name)
     logger.setLevel(getattr(logging, level.upper()))
     
-    # Evitar duplicar handlers
+    #evitar duplicar handlers
     if logger.handlers:
         return logger
     
-    # Formato del log
+    #formato del log
     formatter = logging.Formatter(
         '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
     
-    # Console handler
+    #console handler
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
     
-    # File handler con rotación
+    #file handler con rotación
     if log_file:
-        # Crear directorio de logs si no existe
+        #crear directorio de logs si no existe
         log_dir = os.path.dirname(log_file)
         if log_dir and not os.path.exists(log_dir):
             os.makedirs(log_dir)
@@ -39,7 +39,7 @@ def setup_logger(name: str, log_file: str = None, level: str = "INFO"):
     
     return logger
 
-# Loggers para diferentes módulos
+#loggers para diferentes módulos
 app_logger = setup_logger('chatpy.app', 'logs/app.log')
 auth_logger = setup_logger('chatpy.auth', 'logs/auth.log')
 chat_logger = setup_logger('chatpy.chat', 'logs/chat.log')

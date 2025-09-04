@@ -99,11 +99,11 @@ class ChatService:
             "updated_at": datetime.utcnow()
         }
         
-        # Buscar si ya existe la sala
+        #buscar si ya existe la sala
         existing_room = await self.chat_rooms_collection.find_one({"room_id": room_id})
         
         if existing_room:
-            # Actualizar sala existente
+            #actualizar sala existente
             await self.chat_rooms_collection.update_one(
                 {"room_id": room_id},
                 {
@@ -114,7 +114,7 @@ class ChatService:
                 }
             )
         else:
-            # Crear nueva sala
+            #crear nueva sala
             chat_room_data["created_at"] = datetime.utcnow()
             await self.chat_rooms_collection.insert_one(chat_room_data)
 
@@ -127,7 +127,7 @@ class ChatService:
         users = []
         async for doc in cursor:
             doc["id"] = str(doc.get("_id", ""))
-            doc.pop("_id", None)  # Elimina el campo _id para evitar problemas de serialización
+            doc.pop("_id", None)  #elimina el campo _id para evitar problemas de serialización
             users.append(doc)
         return users
 

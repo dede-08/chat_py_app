@@ -136,10 +136,10 @@ async def handle_read_receipt(user_email: str, message_data: dict):
     sender_email = message_data.get("sender_email")
     
     if sender_email:
-        # Marcar mensajes como leídos en la base de datos
+        #marcar mensajes como leídos en la base de datos
         await chat_service.mark_messages_as_read(sender_email, user_email)
         
-        # Notificar al remitente
+        #notificar al remitente
         if sender_email in connected_users:
             read_data = {
                 "type": "read_receipt",
@@ -158,11 +158,11 @@ async def broadcast_user_status(user_email: str, is_online: bool):
     }
     
     for email, websocket in list(connected_users.items()):
-        if email != user_email:  # No enviar a sí mismo
+        if email != user_email:  #no enviar a sí mismo
             try:
                 await websocket.send_text(json.dumps(status_data))
             except Exception as e:
                 print(f"Error al transmitir el estado a {email}: {e}")
-                # Si hay error, remover la conexión
+                #si hay error, remover la conexión
                 if email in connected_users:
                     del connected_users[email]

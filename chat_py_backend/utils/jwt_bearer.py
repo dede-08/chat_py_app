@@ -18,7 +18,7 @@ class JWTBearer(HTTPBearer):
         if credentials:
             if not self.verify_jwt(credentials.credentials):
                 raise HTTPException(status_code=403, detail="Token inválido o expirado")
-            return credentials.credentials  # <-- Devuelve el token como string
+            return credentials.credentials  #devuelve el token como string
         else:
             raise HTTPException(status_code=403, detail="Token no encontrado")
 
