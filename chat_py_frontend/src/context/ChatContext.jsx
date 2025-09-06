@@ -1,8 +1,8 @@
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
 import chatService from '../services/chatService';
 import authService from '../services/authService';
 
-// Tipos de acciones
+//tipos de acciones
 const CHAT_ACTIONS = {
   SET_USERS: 'SET_USERS',
   SET_SELECTED_USER: 'SET_SELECTED_USER',
@@ -17,7 +17,7 @@ const CHAT_ACTIONS = {
   CLEAR_ERROR: 'CLEAR_ERROR'
 };
 
-// Estado inicial
+//estado inicial
 const initialState = {
   users: [],
   selectedUser: null,
@@ -30,7 +30,7 @@ const initialState = {
   error: null
 };
 
-// Reducer
+//reducer
 const chatReducer = (state, action) => {
   switch (action.type) {
     case CHAT_ACTIONS.SET_USERS:
@@ -58,7 +58,7 @@ const chatReducer = (state, action) => {
         )
       };
     
-    case CHAT_ACTIONS.SET_USER_TYPING:
+    case CHAT_ACTIONS.SET_USER_TYPING: {
       const newTypingUsers = new Set(state.typingUsers);
       if (action.payload.isTyping) {
         newTypingUsers.add(action.payload.userEmail);
@@ -66,8 +66,9 @@ const chatReducer = (state, action) => {
         newTypingUsers.delete(action.payload.userEmail);
       }
       return { ...state, typingUsers: newTypingUsers };
+    }
     
-    case CHAT_ACTIONS.SET_USER_ONLINE_STATUS:
+    case CHAT_ACTIONS.SET_USER_ONLINE_STATUS: {
       const newOnlineUsers = new Set(state.onlineUsers);
       if (action.payload.isOnline) {
         newOnlineUsers.add(action.payload.userEmail);
@@ -75,6 +76,7 @@ const chatReducer = (state, action) => {
         newOnlineUsers.delete(action.payload.userEmail);
       }
       return { ...state, onlineUsers: newOnlineUsers };
+    }
     
     case CHAT_ACTIONS.SET_UNREAD_COUNT:
       return {
@@ -116,61 +118,61 @@ export const ChatProvider = ({ children }) => {
   const [state, dispatch] = useReducer(chatReducer, initialState);
 
   // Acciones
-  const setUsers = (users) => {
+  const setUsers = useCallback((users) => {
     dispatch({ type: CHAT_ACTIONS.SET_USERS, payload: users });
-  };
+  }, []);
 
-  const setSelectedUser = (user) => {
+  const setSelectedUser = useCallback((user) => {
     dispatch({ type: CHAT_ACTIONS.SET_SELECTED_USER, payload: user });
-  };
+  }, []);
 
-  const addMessage = (message) => {
+  const addMessage = useCallback((message) => {
     dispatch({ type: CHAT_ACTIONS.ADD_MESSAGE, payload: message });
-  };
+  }, []);
 
-  const setMessages = (messages) => {
+  const setMessages = useCallback((messages) => {
     dispatch({ type: CHAT_ACTIONS.SET_MESSAGES, payload: messages });
-  };
+  }, []);
 
-  const updateMessageStatus = (messageId, field, value) => {
+  const updateMessageStatus = useCallback((messageId, field, value) => {
     dispatch({ 
       type: CHAT_ACTIONS.UPDATE_MESSAGE_STATUS, 
       payload: { messageId, field, value } 
     });
-  };
+  }, []);
 
-  const setUserTyping = (userEmail, isTyping) => {
+  const setUserTyping = useCallback((userEmail, isTyping) => {
     dispatch({ 
       type: CHAT_ACTIONS.SET_USER_TYPING, 
       payload: { userEmail, isTyping } 
     });
-  };
+  }, []);
 
-  const setUserOnlineStatus = (userEmail, isOnline) => {
+  const setUserOnlineStatus = useCallback((userEmail, isOnline) => {
     dispatch({ 
       type: CHAT_ACTIONS.SET_USER_ONLINE_STATUS, 
       payload: { userEmail, isOnline } 
     });
-  };
+  }, []);
 
-  const setUnreadCount = (userEmail, count) => {
+  const setUnreadCount = useCallback((userEmail, count) => {
     dispatch({ 
       type: CHAT_ACTIONS.SET_UNREAD_COUNT, 
       payload: { userEmail, count } 
     });
-  };
+  }, []);
 
-  const setConnectionStatus = (isConnected) => {
+  const setConnectionStatus = useCallback((isConnected) => {
     dispatch({ type: CHAT_ACTIONS.SET_CONNECTION_STATUS, payload: isConnected });
-  };
+  }, []);
 
-  const setError = (error) => {
+  const setError = useCallback((error) => {
     dispatch({ type: CHAT_ACTIONS.SET_ERROR, payload: error });
-  };
+  }, []);
 
-  const clearError = () => {
+  const clearError = useCallback(() => {
     dispatch({ type: CHAT_ACTIONS.CLEAR_ERROR });
-  };
+  }, []);
 
   // Funciones de utilidad
   const sendMessage = (content) => {
@@ -253,13 +255,14 @@ export const ChatProvider = ({ children }) => {
 
     // Handler para confirmación de lectura
     const handleReadReceipt = (data) => {
-      // Marcar mensajes como leídos
-      state.messages.forEach(msg => {
-        if (msg.sender_email === state.currentUser && 
-            msg.receiver_email === data.reader_email) {
-          updateMessageStatus(msg.id, 'is_read', true);
-        }
-      });
+      // Actualiza el estado de los mensajes de una sola vez, en lugar de en un bucle
+      setMessages(prevMessages =>
+        prevMessages.map(msg =>
+          (msg.sender_email === state.currentUser && msg.receiver_email === data.reader_email && !msg.is_read)
+            ? { ...msg, is_read: true }
+            : msg
+        )
+      );
     };
 
     // Registrar handlers
@@ -269,11 +272,29 @@ export const ChatProvider = ({ children }) => {
     chatService.onMessage('user_status', handleUserStatus);
     chatService.onMessage('read_receipt', handleReadReceipt);
 
-    // Cleanup
+    // --- CAMBIO CLAVE: Función de limpieza ---
+    // Se eliminan los listeners cuando el efecto se "limpia" para evitar duplicados y fugas de memoria.
     return () => {
-      // No es necesario limpiar los handlers uno por uno si el servicio se va a desconectar
+      // Nota: Esto asume que tu chatService.js tiene un método .off() o similar para anular el registro.
+      if (typeof chatService.off === 'function') {
+        chatService.off('connection_status', handleConnectionStatus);
+        chatService.off('message', handleNewMessage);
+        chatService.off('typing', handleTyping);
+        chatService.off('user_status', handleUserStatus);
+        chatService.off('read_receipt', handleReadReceipt);
+      }
     };
-  }, [state.selectedUser, state.currentUser, state.messages]); // Dependencias optimizadas
+  }, [
+      // --- CAMBIO CLAVE: Dependencias corregidas ---
+      // Se quita state.messages y se añaden las funciones que realmente se usan.
+      state.selectedUser,
+      state.currentUser,
+      addMessage,
+      setMessages,
+      setUserTyping,
+      setUserOnlineStatus,
+      setConnectionStatus
+  ]);
 
   // Valor del contexto
   const contextValue = {
