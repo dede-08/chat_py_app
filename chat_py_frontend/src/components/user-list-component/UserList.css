@@ -1,15 +1,16 @@
 .user-list {
   width: 300px;
-  background: #ffffff;
-  border-right: 1px solid #e9ecef;
+  background: var(--bg-discord-elevated);
+  border-right: 1px solid #3c3f44;
   display: flex;
   flex-direction: column;
   height: 100%;
+  color: var(--text-primary);
 }
 
 .user-list-header {
   padding: 20px;
-  border-bottom: 1px solid #e9ecef;
+  border-bottom: 1px solid #3c3f44;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -17,14 +18,14 @@
 
 .user-list-header h3 {
   margin: 0;
-  color: #212529;
+  color: var(--text-primary);
   font-size: 18px;
 }
 
 .refresh-btn {
   background: none;
   border: none;
-  color: #007bff;
+  color: #b5bac1;
   cursor: pointer;
   font-size: 16px;
   padding: 5px;
@@ -33,7 +34,7 @@
 }
 
 .refresh-btn:hover {
-  background-color: #f8f9fa;
+  background-color: #383a40;
 }
 
 .users-container {
@@ -47,22 +48,22 @@
   padding: 15px 20px;
   cursor: pointer;
   transition: background-color 0.2s;
-  border-bottom: 1px solid #e9ecef;
+  border-bottom: 1px solid #3c3f44;
 }
 
 .user-item:hover {
-  background-color: #f8f9fa;
+  background-color: #383a40;
 }
 
 .user-item.selected {
-  background-color: #e3f2fd;
+  background-color: #2f3136;
 }
 
 .user-avatar {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background-color: #007bff;
+  background-color: #5865f2;
   color: white;
   display: flex;
   align-items: center;
@@ -78,7 +79,7 @@
 }
 
 .user-name {
-  color: #212529;
+  color: var(--text-primary);
   font-weight: 500;
   margin-bottom: 4px;
   white-space: nowrap;
@@ -87,7 +88,7 @@
 }
 
 .user-email {
-  color: #6c757d;
+  color: var(--text-secondary);
   font-size: 12px;
   white-space: nowrap;
   overflow: hidden;
@@ -110,7 +111,7 @@
 .loading, .error {
   padding: 20px;
   text-align: center;
-  color: #212529;
+  color: var(--text-secondary);
 }
 
 .error {
