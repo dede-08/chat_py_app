@@ -8,6 +8,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import ChatPage from './pages/ChatPage';
 import Sidebar from './components/sidebar-component/Sidebar';
 import authService from './services/authService';
+import { ChatProvider } from './context';
 
 //componente para proteger rutas que requieren autenticación
 const ProtectedRoute = ({ children }) => {
@@ -37,7 +38,9 @@ function App() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path='/chat' element={
           <ProtectedRoute>
-            <ChatPage />
+            <ChatProvider>
+              <ChatPage />
+            </ChatProvider>
           </ProtectedRoute>
         } />
       </Routes>
