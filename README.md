@@ -2,7 +2,7 @@
 
 Una aplicación de chat moderna construida con FastAPI (backend) y React (frontend) que permite comunicación en tiempo real entre usuarios.
 
-## 🚀 Características
+## Características
 
 ### Funcionalidades de Chat
 - **Chats privados**: Conversaciones individuales entre usuarios
@@ -22,13 +22,9 @@ Una aplicación de chat moderna construida con FastAPI (backend) y React (fronte
 - **Autenticación**: JWT con bcrypt para hash de contraseñas
 - **CORS**: Configurado para desarrollo local
 
-## 🔒 Seguridad
+## Seguridad
 
 - **JWT Tokens**: Autenticación basada en tokens
 - **Hash de contraseñas**: Bcrypt para almacenamiento seguro
 - **Validación de datos**: Pydantic para validación de esquemas
 - **CORS**: Configurado para permitir solo el frontend autorizado
-
-## 📝 Licencia
-
-Este proyecto está bajo la Licencia MIT.
