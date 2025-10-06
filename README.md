@@ -1,4 +1,4 @@
-# ChatPy - Aplicación de Chat en Tiempo Real
+# ChatPy - Aplicación de chat en tiempo real con Python
 
 Una aplicación de chat moderna construida con FastAPI (backend) y React (frontend) que permite comunicación en tiempo real entre usuarios.
 
