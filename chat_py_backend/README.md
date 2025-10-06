@@ -4,13 +4,13 @@ Backend para la aplicación de chat en tiempo real desarrollada con FastAPI y Mo
 
 ## Características
 
-- ✅ Autenticación JWT
-- ✅ Validación robusta de contraseñas
-- ✅ Chat en tiempo real con WebSockets
-- ✅ Base de datos MongoDB con Motor
-- ✅ Validación de datos con Pydantic
-- ✅ CORS configurado
-- ✅ Estructura modular y escalable
+-  Autenticación JWT
+- Validación robusta de contraseñas
+- Chat en tiempo real con WebSockets
+- Base de datos MongoDB con Motor
+- Validación de datos con Pydantic
+- CORS configurado
+- Estructura modular y escalable
 
 ## API Endpoints
 
@@ -44,7 +44,3 @@ El sistema incluye validación robusta de contraseñas con los siguientes requis
 - **Caracteres especiales**: Al menos un carácter especial
 - **Sin espacios**: No se permiten espacios
 - **Caracteres permitidos**: Solo letras, números y caracteres especiales específicos
-
-## Licencia
-
-Este proyecto está bajo la Licencia MIT.

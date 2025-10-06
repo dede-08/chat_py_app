@@ -4,16 +4,16 @@ from typing import List, Dict, Any
 import asyncio
 
 class DatabaseMigration:
-    """Clase para manejar migraciones de base de datos"""
+    #clase para manejar migraciones de base de datos
     
     def __init__(self, db: AsyncIOMotorDatabase):
         self.db = db
         self.logger = db_logger
     
     async def create_indexes(self):
-        """Crear índices para optimizar consultas"""
+        #crear índices para optimizar consultas
         try:
-            # Índices para la colección de usuarios
+            #indices para la colección de usuarios
             await self.db.users.create_index([
                 ("email", 1)
             ], unique=True, name="idx_users_email")
@@ -22,7 +22,7 @@ class DatabaseMigration:
                 ("username", 1)
             ], unique=True, name="idx_users_username")
             
-            # Índices para la colección de mensajes
+            #indices para la colección de mensajes
             await self.db.messages.create_index([
                 ("sender_email", 1),
                 ("receiver_email", 1),
@@ -38,7 +38,7 @@ class DatabaseMigration:
                 ("timestamp", -1)
             ], name="idx_messages_timestamp")
             
-            # Índices para salas de chat
+            #indices para salas de chat
             await self.db.chat_rooms.create_index([
                 ("participants", 1)
             ], name="idx_chatrooms_participants")
@@ -58,14 +58,14 @@ class DatabaseMigration:
             raise
     
     async def setup_ttl_indexes(self):
-        """Configurar índices TTL para limpieza automática"""
+        #configurar índices TTL para limpieza automatica
         try:
-            # TTL para mensajes antiguos (opcional - 1 año)
+            #TTL para mensajes antiguos (opcional - 1 año)
             await self.db.messages.create_index([
                 ("timestamp", 1)
             ], expireAfterSeconds=31536000, name="idx_messages_ttl")  # 365 días
             
-            # TTL para logs de conexión (si se implementa)
+            #TTL para logs de conexión (si se implementa)
             await self.db.connection_logs.create_index([
                 ("timestamp", 1)
             ], expireAfterSeconds=604800, name="idx_connection_logs_ttl")  # 7 días
@@ -76,7 +76,7 @@ class DatabaseMigration:
             self.logger.warning(f"No se pudieron configurar índices TTL: {str(e)}")
     
     async def run_migrations(self):
-        """Ejecutar todas las migraciones"""
+        #ejecutar todas las migraciones
         self.logger.info("Iniciando migraciones de base de datos...")
         
         migration_tasks = [
@@ -89,6 +89,6 @@ class DatabaseMigration:
         self.logger.info("Migraciones completadas")
 
 async def run_database_migrations(db: AsyncIOMotorDatabase):
-    """Función principal para ejecutar migraciones"""
+    #funcion principal para ejecutar migraciones
     migration = DatabaseMigration(db)
     await migration.run_migrations()

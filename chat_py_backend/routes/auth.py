@@ -76,5 +76,5 @@ async def login(user: UserLogin):
 
 @router.post("/logout", dependencies=[Depends(JWTBearer())])
 async def logout():
-    """Endpoint para logout (el token se invalidará en el frontend)"""
+    #endpoint para logout (el token se invalidara en el frontend)
     return {"message": "Sesión cerrada correctamente"}

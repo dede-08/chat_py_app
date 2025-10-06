@@ -12,7 +12,7 @@ class Message(BaseModel):
 
 class ChatRoom(BaseModel):
     id: Optional[str] = None
-    participants: list[str]  # Lista de emails de participantes
+    participants: list[str]  #lista de emails de participantes
     last_message: Optional[Message] = None
     created_at: datetime
     updated_at: datetime

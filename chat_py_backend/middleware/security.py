@@ -7,7 +7,7 @@ import asyncio
 from utils.logger import app_logger
 
 class RateLimiter:
-    """Rate limiter basado en sliding window"""
+    #rate limiter basado en sliding window
     
     def __init__(self, max_requests: int = 100, window_seconds: int = 60):
         self.max_requests = max_requests
@@ -16,20 +16,20 @@ class RateLimiter:
         self._cleanup_task = None
         
     def is_allowed(self, client_id: str) -> bool:
-        """Verificar si una solicitud está permitida"""
+        #verificar si una solicitud esta permitida
         now = time.time()
         window_start = now - self.window_seconds
         
-        # Limpiar solicitudes fuera de la ventana
+        #limpiar solicitudes fuera de la ventana
         client_requests = self.requests[client_id]
         while client_requests and client_requests[0] < window_start:
             client_requests.popleft()
         
-        # Verificar límite
+        #verificar limite
         if len(client_requests) >= self.max_requests:
             return False
         
-        # Agregar solicitud actual
+        #agregar solicitud actual
         client_requests.append(now)
         return True
     
@@ -40,21 +40,21 @@ class RateLimiter:
                 now = time.time()
                 window_start = now - self.window_seconds
                 
-                # Limpiar entradas de clientes inactivos
+                #limpiar entradas de clientes inactivos
                 clients_to_remove = []
                 for client_id, requests in self.requests.items():
                     while requests and requests[0] < window_start:
                         requests.popleft()
                     
-                    # Si no hay solicitudes recientes, marcar para eliminación
+                    #si no hay solicitudes recientes, marcar para eliminación
                     if not requests:
                         clients_to_remove.append(client_id)
                 
-                # Eliminar clientes inactivos
+                #eliminar clientes inactivos
                 for client_id in clients_to_remove:
                     del self.requests[client_id]
                 
-                # Esperar 5 minutos antes de la siguiente limpieza
+                #esperar 5 minutos antes de la siguiente limpieza
                 await asyncio.sleep(300)
                 
             except Exception as e:
@@ -67,7 +67,7 @@ api_rate_limiter = RateLimiter(max_requests=100, window_seconds=60)  # 100 reque
 ws_rate_limiter = RateLimiter(max_requests=1000, window_seconds=60)  # 1000 mensajes WS por minuto
 
 async def rate_limit_middleware(request: Request, call_next, limiter: RateLimiter = None):
-    """Middleware para rate limiting"""
+    #middleware para rate limiting
     if limiter is None:
         limiter = api_rate_limiter
     
@@ -88,7 +88,7 @@ async def rate_limit_middleware(request: Request, call_next, limiter: RateLimite
     return response
 
 class SecurityHeaders:
-    """Middleware para agregar headers de seguridad"""
+    #middleware para agregar headers de seguridad
     
     @staticmethod
     async def add_security_headers(request: Request, call_next):
@@ -104,7 +104,7 @@ class SecurityHeaders:
         return response
 
 class RequestLogger:
-    """Middleware para logging de solicitudes"""
+    #middleware para logging de solicitudes
     
     @staticmethod
     async def log_requests(request: Request, call_next):

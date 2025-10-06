@@ -4,9 +4,7 @@ from datetime import datetime
 from logging.handlers import RotatingFileHandler
 
 def setup_logger(name: str, log_file: str = None, level: str = "INFO"):
-    """
-    Configurar logger con formato estándar y rotación de archivos
-    """
+    #configurar logger con formato estándar y rotación de archivos
     logger = logging.getLogger(name)
     logger.setLevel(getattr(logging, level.upper()))
     
@@ -39,7 +37,7 @@ def setup_logger(name: str, log_file: str = None, level: str = "INFO"):
     
     return logger
 
-#loggers para diferentes módulos
+#loggers para diferentes modulos
 app_logger = setup_logger('chatpy.app', 'logs/app.log')
 auth_logger = setup_logger('chatpy.auth', 'logs/auth.log')
 chat_logger = setup_logger('chatpy.chat', 'logs/chat.log')

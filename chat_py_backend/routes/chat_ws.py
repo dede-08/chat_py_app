@@ -84,7 +84,7 @@ async def chat_endpoint(websocket: WebSocket, token: str = Query(None)):
         print("Cerrando conexión WebSocket debido a error.")
 
 async def handle_private_message(sender_email: str, message_data: dict):
-    """Manejar mensaje privado entre usuarios"""
+    #manejar mensaje privado entre usuarios
     receiver_email = message_data.get("receiver_email")
     content = message_data.get("content")
     
@@ -109,7 +109,7 @@ async def handle_private_message(sender_email: str, message_data: dict):
     if receiver_email in connected_users:
         await connected_users[receiver_email].send_text(json.dumps(message_to_send))
     
-    # Enviar confirmación al remitente
+    #enviar confirmación al remitente
     if sender_email in connected_users:
         confirmation = {
             "type": "message_sent",
@@ -119,7 +119,7 @@ async def handle_private_message(sender_email: str, message_data: dict):
         await connected_users[sender_email].send_text(json.dumps(confirmation))
 
 async def handle_typing_indicator(sender_email: str, message_data: dict):
-    """Manejar indicador de escritura"""
+    #manejar indicador de escritura
     receiver_email = message_data.get("receiver_email")
     is_typing = message_data.get("is_typing", False)
     
@@ -132,7 +132,7 @@ async def handle_typing_indicator(sender_email: str, message_data: dict):
         await connected_users[receiver_email].send_text(json.dumps(typing_data))
 
 async def handle_read_receipt(user_email: str, message_data: dict):
-    """Manejar confirmación de lectura"""
+    #manejar confirmación de lectura
     sender_email = message_data.get("sender_email")
     
     if sender_email:
@@ -149,7 +149,7 @@ async def handle_read_receipt(user_email: str, message_data: dict):
             await connected_users[sender_email].send_text(json.dumps(read_data))
 
 async def broadcast_user_status(user_email: str, is_online: bool):
-    """Notificar a todos los usuarios conectados sobre el estado de un usuario"""
+    #notificar a todos los usuarios conectados sobre el estado de un usuario
     status_data = {
         "type": "user_status",
         "user_email": user_email,

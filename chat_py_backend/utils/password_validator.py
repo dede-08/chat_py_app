@@ -12,10 +12,7 @@ class PasswordValidator:
         self.special_chars = "!@#$%^&*()_+-=[]{}|;:,.<>?"
     
     def validate_password(self, password: str) -> Tuple[bool, List[str]]:
-        """
-        Valida una contraseña según las reglas de seguridad
-        Retorna: (es_válida, lista_de_errores)
-        """
+        #valida una contraseña segun las reglas de seguridad (retorna si es valida y lista de errores)
         errors = []
         
         #verificar longitud mínima
@@ -53,10 +50,7 @@ class PasswordValidator:
         return len(errors) == 0, errors
     
     def get_password_strength(self, password: str) -> str:
-        """
-        Evalúa la fortaleza de una contraseña
-        Retorna: 'débil', 'media', 'fuerte', 'muy_fuerte'
-        """
+        #evalua la fortaleza de una contraseña (retorna una cadena indicando la fortaleza)
         score = 0
         
         #longitud
@@ -95,9 +89,7 @@ class PasswordValidator:
             return "muy_fuerte"
     
     def get_password_requirements(self) -> dict:
-        """
-        Retorna los requisitos de contraseña para mostrar al usuario
-        """
+        #retorna los requisitos de contraseña para mostrar al usuario
         return {
             "min_length": self.min_length,
             "max_length": self.max_length,

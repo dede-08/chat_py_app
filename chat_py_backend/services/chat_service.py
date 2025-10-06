@@ -16,7 +16,7 @@ class ChatService:
         self.users_collection = database.users
 
     async def save_message(self, sender_email: str, receiver_email: str, content: str) -> Message:
-        """Guardar un mensaje en la base de datos"""
+        #guardar un mensaje en la base de datos
         message_data = {
             "sender_email": sender_email,
             "receiver_email": receiver_email,
@@ -34,7 +34,7 @@ class ChatService:
         return Message(**message_data)
 
     async def get_chat_history(self, user1_email: str, user2_email: str, limit: int = 50) -> List[Message]:
-        """Obtener historial de chat entre dos usuarios"""
+        #obtener historial de chat entre dos usuarios
         query = {
             "$or": [
                 {"sender_email": user1_email, "receiver_email": user2_email},
@@ -49,10 +49,10 @@ class ChatService:
             doc["id"] = str(doc["_id"])
             messages.append(Message(**doc))
         
-        return list(reversed(messages))  # Ordenar por timestamp ascendente
+        return list(reversed(messages))  #ordenar por timestamp ascendente
 
     async def get_user_chat_rooms(self, user_email: str) -> List[ChatRoom]:
-        """Obtener todas las salas de chat de un usuario"""
+        #obtener todas las salas de chat de un usuario
         query = {"participants": user_email}
         cursor = self.chat_rooms_collection.find(query).sort("updated_at", -1)
         
@@ -66,7 +66,7 @@ class ChatService:
         return chat_rooms
 
     async def mark_messages_as_read(self, sender_email: str, receiver_email: str):
-        """Marcar mensajes como leídos"""
+        #marcar mensajes como leídos
         query = {
             "sender_email": sender_email,
             "receiver_email": receiver_email,
@@ -79,7 +79,7 @@ class ChatService:
         )
 
     async def get_unread_count(self, user_email: str) -> int:
-        """Obtener número de mensajes no leídos para un usuario"""
+        #obtener numero de mensajes no leidos para un usuario
         query = {
             "receiver_email": user_email,
             "is_read": False
@@ -88,7 +88,7 @@ class ChatService:
         return await self.messages_collection.count_documents(query)
 
     async def _update_chat_room(self, user1_email: str, user2_email: str, last_message: dict):
-        """Actualizar o crear sala de chat"""
+        #actualizar o crear sala de chat
         participants = sorted([user1_email, user2_email])
         room_id = f"{participants[0]}_{participants[1]}"
         
@@ -119,7 +119,7 @@ class ChatService:
             await self.chat_rooms_collection.insert_one(chat_room_data)
 
     async def get_all_users(self, current_user_email: str) -> list:
-        """Obtener lista de todos los usuarios excepto el actual"""
+        #obtener lista de todos los usuarios excepto el actual
         cursor = self.users_collection.find(
             {"email": {"$ne": current_user_email}},
             {"password": 0}
