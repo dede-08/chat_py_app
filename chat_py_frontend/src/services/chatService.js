@@ -1,7 +1,7 @@
 import authService from './authService';
 
-const API_BASE_URL = 'http://localhost:8000';
-const WS_BASE_URL = 'ws://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL;
+const WS_BASE_URL = import.meta.env.VITE_WS_URL;
 
 class ChatService {
     constructor() {
