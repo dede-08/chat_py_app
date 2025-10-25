@@ -9,7 +9,7 @@ from services.chat_service import ChatService
 import traceback
 
 router = APIRouter()
-# Diccionario para mantener conexiones por usuario
+#diccionario para mantener conexiones por usuario
 connected_users: Dict[str, WebSocket] = {}
 chat_service = ChatService()
 
@@ -68,7 +68,7 @@ async def chat_endpoint(websocket: WebSocket, token: str = Query(None)):
                 await handle_read_receipt(user_email, message_data)
             elif message_type == "ping":
                 await websocket.send_text(json.dumps({"type": "pong"}))
-                continue  # Solo para mantener la conexión
+                continue  #solo para mantener la conexion
                 
     except WebSocketDisconnect:
         if user_email in connected_users:
@@ -158,11 +158,11 @@ async def broadcast_user_status(user_email: str, is_online: bool):
     }
     
     for email, websocket in list(connected_users.items()):
-        if email != user_email:  #no enviar a sí mismo
+        if email != user_email:  #no enviar a mismo usuario
             try:
                 await websocket.send_text(json.dumps(status_data))
             except Exception as e:
                 print(f"Error al transmitir el estado a {email}: {e}")
-                #si hay error, remover la conexión
+                #si hay error, remover la conexion
                 if email in connected_users:
                     del connected_users[email]

@@ -28,7 +28,7 @@ class ChatService:
         result = await self.messages_collection.insert_one(message_data)
         message_data["id"] = str(result.inserted_id)
         
-        # Actualizar o crear sala de chat
+        #actualizar o crear sala de chat
         await self._update_chat_room(sender_email, receiver_email, message_data)
         
         return Message(**message_data)
