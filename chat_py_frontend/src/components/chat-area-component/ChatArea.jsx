@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import chatService from '../../services/chatService';
 import authService from '../../services/authService';
 import './ChatArea.css';
@@ -13,13 +13,52 @@ const ChatArea = ({ selectedUser }) => {
   const typingTimeoutRef = useRef(null);
   const currentUserEmail = authService.getUserEmail();
 
+  const loadChatHistory = useCallback(async () => {
+    if (!selectedUser) return;
+
+    try {
+      setLoading(true);
+      const history = await chatService.getChatHistory(selectedUser.email);
+      setMessages(history);
+    } catch (error) {
+      console.error('Error al cargar historial:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedUser]);
+
+  const handleNewMessage = useCallback((data) => {
+    if (data.sender_email === selectedUser?.email) {
+      setMessages(prev => [...prev, data]);
+      // Marcar como leído automáticamente
+      chatService.sendReadReceipt(data.sender_email);
+    }
+  }, [selectedUser]);
+
+  const handleTypingIndicator = useCallback((data) => {
+    if (data.sender_email === selectedUser?.email) {
+      setOtherUserTyping(data.is_typing);
+    }
+  }, [selectedUser]);
+
+  const handleReadReceipt = useCallback((data) => {
+    // Actualizar estado de lectura de mensajes
+    setMessages(prev => 
+      prev.map(msg => 
+        msg.sender_email === currentUserEmail && msg.receiver_email === data.reader_email
+          ? { ...msg, is_read: true }
+          : msg
+      )
+    );
+  }, [currentUserEmail]);
+
   useEffect(() => {
     if (selectedUser) {
       loadChatHistory();
       // Marcar mensajes como leídos
       chatService.markMessagesAsRead(selectedUser.email);
     }
-  }, [selectedUser]);
+  }, [selectedUser, loadChatHistory]);
 
   useEffect(() => {
     // Configurar manejadores de mensajes
@@ -32,50 +71,11 @@ const ChatArea = ({ selectedUser }) => {
       // Limpiar manejadores
       chatService.messageHandlers.clear();
     };
-  }, [selectedUser]);
+  }, [handleNewMessage, handleTypingIndicator, handleReadReceipt]);
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
-
-  const loadChatHistory = async () => {
-    if (!selectedUser) return;
-
-    try {
-      setLoading(true);
-      const history = await chatService.getChatHistory(selectedUser.email);
-      setMessages(history);
-    } catch (error) {
-      console.error('Error al cargar historial:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleNewMessage = (data) => {
-    if (data.sender_email === selectedUser?.email) {
-      setMessages(prev => [...prev, data]);
-      // Marcar como leído automáticamente
-      chatService.sendReadReceipt(data.sender_email);
-    }
-  };
-
-  const handleTypingIndicator = (data) => {
-    if (data.sender_email === selectedUser?.email) {
-      setOtherUserTyping(data.is_typing);
-    }
-  };
-
-  const handleReadReceipt = (data) => {
-    // Actualizar estado de lectura de mensajes
-    setMessages(prev => 
-      prev.map(msg => 
-        msg.sender_email === currentUserEmail && msg.receiver_email === data.reader_email
-          ? { ...msg, is_read: true }
-          : msg
-      )
-    );
-  };
 
   const handleMessageSent = (data) => {
     // Mensaje enviado exitosamente

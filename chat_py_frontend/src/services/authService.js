@@ -10,16 +10,21 @@ export const registerUser = async (data) => {
     return { success: true, data: response.data };
   } catch (error) {
     console.error('Error en registro:', error);
-    let errorMessage = 'Error al registrar usuario';
+    let errorMessage = 'Error al registrar usuario. Por favor, inténtelo de nuevo más tarde.';
     
-    if (error.response?.data?.detail) {
-      errorMessage = error.response.data.detail;
-    } else if (error.response?.status === 409) {
-      errorMessage = 'El usuario ya existe';
-    } else if (error.response?.status === 422) {
-      errorMessage = 'Datos de entrada inválidos';
-    } else if (error.code === 'NETWORK_ERROR') {
-      errorMessage = 'Error de conexión. Verifica tu internet.';
+    if (error.response) {
+        switch (error.response.status) {
+            case 409:
+                errorMessage = 'El nombre de usuario o correo electrónico ya está en uso.';
+                break;
+            case 422:
+                errorMessage = 'Los datos proporcionados no son válidos. Por favor, revise los campos.';
+                break;
+            default:
+                errorMessage = error.response.data.detail || errorMessage;
+        }
+    } else if (error.request) {
+        errorMessage = 'No se pudo conectar con el servidor. Verifique su conexión a internet.';
     }
     
     return { success: false, error: errorMessage };
@@ -37,18 +42,23 @@ export const loginUser = async (data) => {
     return { success: true, data: response.data };
   } catch (error) {
     console.error('Error en login:', error);
-    let errorMessage = 'Error al iniciar sesión';
-    
-    if (error.response?.data?.detail) {
-      errorMessage = error.response.data.detail;
-    } else if (error.response?.status === 401) {
-      errorMessage = 'Credenciales incorrectas';
-    } else if (error.response?.status === 404) {
-      errorMessage = 'Usuario no encontrado';
-    } else if (error.code === 'NETWORK_ERROR') {
-      errorMessage = 'Error de conexión. Verifica tu internet.';
+    let errorMessage = 'Error al iniciar sesión. Por favor, inténtelo de nuevo más tarde.';
+
+    if (error.response) {
+        switch (error.response.status) {
+            case 401:
+                errorMessage = 'Credenciales incorrectas. Verifique su usuario y contraseña.';
+                break;
+            case 404:
+                errorMessage = 'El usuario no existe. Por favor, regístrese.';
+                break;
+            default:
+                errorMessage = error.response.data.detail || errorMessage;
+        }
+    } else if (error.request) {
+        errorMessage = 'No se pudo conectar con el servidor. Verifique su conexión a internet.';
     }
-    
+
     return { success: false, error: errorMessage };
   }
 };
@@ -60,19 +70,7 @@ export const getPasswordRequirements = async () => {
     return { success: true, data: response.data };
   } catch (error) {
     console.error('Error al obtener requisitos de contraseña:', error);
-    //retornar requisitos por defecto si falla
-    return { 
-      success: true, 
-      data: {
-        min_length: 8,
-        max_length: 128,
-        require_uppercase: true,
-        require_lowercase: true,
-        require_digits: true,
-        require_special_chars: true,
-        special_chars: '!@#$%^&*()_+-=[]{}|;:,.<>?'
-      }
-    };
+    throw error; // Lanzar el error para que el componente lo maneje
   }
 };
 

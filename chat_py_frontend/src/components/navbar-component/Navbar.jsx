@@ -68,7 +68,7 @@ const Navbar = () => {
                     {username}
                   </a>
                   <ul className="dropdown-menu">
-                    <li><Link className="dropdown-item" to="/chat">Ir al Chat</Link></li>
+                    <li><Link className="dropdown-item" to="/chat">Perfil</Link></li>
                     <li><hr className="dropdown-divider" /></li>
                     <li>
                       <button 
