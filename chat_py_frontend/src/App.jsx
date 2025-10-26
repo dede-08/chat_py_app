@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Navbar from './components/navbar-component/Navbar';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import ProfilePage from './pages/ProfilePage';
 import './App.css'
 import 'bootstrap/dist/css/bootstrap.min.css';
 import ChatPage from './pages/ChatPage';
@@ -40,10 +41,17 @@ function App() {
           <ProtectedRoute>
             <ChatProvider>
               <ChatPage />
+              
             </ChatProvider>
           </ProtectedRoute>
         } />
+        <Route path='/profile' element ={
+          <ProtectedRoute>
+            <ProfilePage />
+          </ProtectedRoute>
+        } />
       </Routes>
+      
     </Router>
   );
 }
