@@ -106,6 +106,87 @@ export const logoutUser = async () => {
   }
 };
 
+// Obtener perfil completo del usuario
+export const getUserProfile = async () => {
+  try {
+    const token = getToken();
+    const response = await axios.get(`${API_URL}/profile`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    return { success: true, data: response.data };
+  } catch (error) {
+    console.error('Error al obtener perfil:', error);
+    let errorMessage = 'Error al cargar el perfil del usuario.';
+    
+    if (error.response) {
+      switch (error.response.status) {
+        case 401:
+          errorMessage = 'Sesión expirada. Por favor, inicie sesión nuevamente.';
+          logout(); // Cerrar sesión si el token expiró
+          break;
+        case 404:
+          errorMessage = 'Perfil no encontrado.';
+          break;
+        default:
+          errorMessage = error.response.data.detail || errorMessage;
+      }
+    } else if (error.request) {
+      errorMessage = 'No se pudo conectar con el servidor.';
+    }
+    
+    return { success: false, error: errorMessage };
+  }
+};
+
+// Actualizar perfil del usuario
+export const updateUserProfile = async (data) => {
+  try {
+    const token = getToken();
+    const response = await axios.put(`${API_URL}/profile`, data, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    // Actualizar localStorage con los nuevos datos
+    if (data.username) {
+      localStorage.setItem('username', data.username);
+    }
+    if (data.email) {
+      localStorage.setItem('userEmail', data.email);
+    }
+    
+    return { success: true, data: response.data };
+  } catch (error) {
+    console.error('Error al actualizar perfil:', error);
+    let errorMessage = 'Error al actualizar el perfil.';
+    
+    if (error.response) {
+      switch (error.response.status) {
+        case 401:
+          errorMessage = 'Sesión expirada. Por favor, inicie sesión nuevamente.';
+          logout();
+          break;
+        case 409:
+          errorMessage = 'El nombre de usuario o correo ya está en uso.';
+          break;
+        case 422:
+          errorMessage = 'Los datos proporcionados no son válidos.';
+          break;
+        default:
+          errorMessage = error.response.data.detail || errorMessage;
+      }
+    } else if (error.request) {
+      errorMessage = 'No se pudo conectar con el servidor.';
+    }
+    
+    return { success: false, error: errorMessage };
+  }
+};
+
 //obtener token del localStorage
 export const getToken = () => {
   return localStorage.getItem('token');
@@ -144,7 +225,9 @@ const authService = {
   getUserEmail,
   getUsername,
   isAuthenticated,
-  logout
+  logout,
+  getUserProfile,
+  updateUserProfile
 };
 
 export default authService;

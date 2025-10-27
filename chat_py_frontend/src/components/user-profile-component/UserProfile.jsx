@@ -1,79 +1,343 @@
-import React, { useState } from 'react';
-import './UserProfile.css'; // Crearemos este archivo a continuación
+import React, { useEffect, useState } from 'react';
+import './UserProfile.css';
+import authService from '../../services/authService';
 
 const UserProfile = () => {
     const [isEditing, setIsEditing] = useState(false);
-    const [userInfo, setUserInfo] = useState({
-        username: 'current_username',
-        email: 'user@example.com',
-        // Agrega aquí más campos si es necesario
+    const [showPassword, setShowPassword] = useState(false);
+    const [showSuccess, setShowSuccess] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
+    const [userInfo, setUserInfo] = useState({
+        username: '',
+        email: '',
+        password: '*********',
     });
-    const handleInputChange = (e) => {
+
+    const [editInfo, setEditInfo] = useState({
+        username: '',
+        email: '',
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+    });
+
+
+    useEffect(() => {
+        const loadUserData = async () => {
+            try {
+
+                setLoading(true);
+
+                const username = authService.getUsername();
+                const email = authService.getUserEmail();
+
+                setUserInfo({
+                    username: username || 'usuario',
+                    email: email || 'email@example.com',
+                    password: '********'
+                });
+
+            } catch (err) {
+                console.error('error al cargar datos del usuario:', err);
+                setError('error al cargar la informacion del perfil');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadUserData();
+    }, []);
+
+    const handleEdit = () => {
+        setEditInfo({
+            username: userInfo.username,
+            email: userInfo.email,
+            currentPassword: '',
+            newPassword: '',
+            confirmPassword: ''
+        });
+        setIsEditing(true);
+        setShowSuccess(false);
+        setError(null);
+    };
+
+    const handleCancel = () => {
+        setIsEditing(false);
+        setShowSuccess(false)
+        setError(null);
+    };
+
+    const handleChange = (e) => {
         const { name, value } = e.target;
-        setUserInfo(prevState => ({
-            ...prevState,
-            [name]: value,
+        setEditInfo(prev => ({
+            ...prev,
+            [name]: value
         }));
     };
 
-    const handleEditClick = () => {
-        setIsEditing(!isEditing);
+    const handleSave = async () => {
+        //validaciones basicas
+        if (editInfo.newPassword && editInfo.newPassword !== editInfo.confirmPassword) {
+            setError('las contraseñas no coinciden');
+            return;
+        }
 
+        if (editInfo.newPassword && editInfo.newPassword.length < 8) {
+            setError('la contraseña debe tener al menos 8 caracteres');
+            return;
+        }
+
+        try {
+            setLoading(true);
+            setError(null);
+
+            const updateData = {
+                username: editInfo.username,
+                email: editInfo.email,
+            };
+
+            //solo incluir password si se esta cambiando
+            if (editInfo.newPassword){
+                updateData.currentPassword = editInfo.currentPassword;
+                updateData.newPassword = editInfo.newPassword;
+            }
+
+            //llamar al servicio para actualizar
+            const result = await authService.updateUserProfile(updateData);
+
+            if(result.success){
+                //actualizar el estado local
+                setUserInfo({
+                    username: editInfo.username,
+                    email: editInfo.email,
+                    password: '********'
+                });
+
+                setIsEditing(false);
+                setShowSuccess(true);
+                setShowPassword(false);
+
+                //ocultar mensaje de exito despues de 3 segundos
+                setTimeout(() => setShowSuccess(false), 3000);
+            } else{
+                setError(result.error);
+            }
+        } catch (err) {
+            console.error('error al actualizar perfil:', err);
+            alert('error al actualizar el perfil. intenta de nuevo');
+        }finally{
+            setLoading(false);
+        }
     };
 
-    const handleSave = (e) => {
-        e.preventDefault();
-        console.log('Saving data:', userInfo); // Aquí iría la lógica para guardar en el backend
-        setIsEditing(false);
-        // Lógica para mostrar feedback al usuario (ej. un modal o un toast)
-
-    };
+    if (loading && !userInfo.username) {
+        return (
+            <div className="min-vh-100 bg-light d-flex align-items-center justify-content-center">
+                <div className="spinner-border text-primary" role="status">
+                    <span className="visually-hidden">Cargando...</span>
+                </div>
+            </div>
+        );
+    }
 
     return (
-        < div className="user-profile-container" >
-            < h2 > Perfil de Usuario</h2 >
-            < form onSubmit={handleSave} >
-                < div className="profile-field" >
-                    < label htmlFor="username" > Nombre de usuario:</label >
-                    < input
-                        type="text"
-                        id="username"
-                        name="username"
-                        value={userInfo.username}
-                        onChange={handleInputChange}
-                        disabled={!isEditing
-                        }
-                    />
-                </div >
-                < div className="profile-field" >
-                    < label htmlFor="email" > Email:</label >
-                    < input
-                        type="email"
-                        id="email"
-                        name="email"
-                        value={userInfo.email}
-                        onChange={handleInputChange}
-                        disabled={!isEditing}
-                    />
-                </div >
-                < div className="profile-actions" >
-                    {
-                        isEditing ? (
-                            < button type="submit" className="save-btn" > Guardar</button >
-                        ) : (
-                            < button type="button" onClick={handleEditClick} className="edit-btn" > Editar</button >
-                        )
-                    }
-                    {
-                        isEditing && (
-                            < button type="button" onClick={() => setIsEditing(false)
-                            } className="cancel-btn" > Cancelar
-                            </button >
+        <div className="min-vh-100 bg-light py-5">
+            <div className="container">
+                <div className="row justify-content-center">
+                    <div className="col-lg-8 col-xl-7">
+
+                        {/* Alerta de éxito */}
+                        {showSuccess && (
+                            <div className="alert alert-success alert-dismissible fade show" role="alert">
+                                <i className="bi bi-check-circle-fill me-2"></i>
+                                ¡Perfil actualizado exitosamente!
+                                <button type="button" className="btn-close" onClick={() => setShowSuccess(false)}></button>
+                            </div>
                         )}
-                </div >
-            </form >
-        </div >
+
+                        {/* Tarjeta de perfil */}
+                        <div className="card shadow-sm">
+                            <div className="card-header bg-primary text-white py-3">
+                                <div className="d-flex align-items-center justify-content-between">
+                                    <div className="d-flex align-items-center">
+                                        <div className="bg-white text-primary rounded-circle d-flex align-items-center justify-content-center me-3" style={{ width: '50px', height: '50px' }}>
+                                            <i className="bi bi-person-fill fs-3"></i>
+                                        </div>
+                                        <div>
+                                            <h5 className="mb-0">Mi Perfil</h5>
+                                            <small className="opacity-75">Información de la cuenta</small>
+                                        </div>
+                                    </div>
+                                    {!isEditing && (
+                                        <button className="btn btn-light btn-sm" onClick={handleEdit}>
+                                            <i className="bi bi-pencil-fill me-1"></i>
+                                            Editar
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="card-body p-4">
+                                {!isEditing ? (
+                                    //vista de solo lectura
+                                    <div>
+                                        <div className="mb-4">
+                                            <label className="text-muted small mb-1">Nombre de usuario</label>
+                                            <div className="d-flex align-items-center">
+                                                <i className="bi bi-person text-primary me-2"></i>
+                                                <h6 className="mb-0">{userInfo.username}</h6>
+                                            </div>
+                                        </div>
+
+                                        <div className="mb-4">
+                                            <label className="text-muted small mb-1">Correo electrónico</label>
+                                            <div className="d-flex align-items-center">
+                                                <i className="bi bi-envelope text-primary me-2"></i>
+                                                <h6 className="mb-0">{userInfo.email}</h6>
+                                            </div>
+                                        </div>
+
+                                        <div className="mb-3">
+                                            <label className="text-muted small mb-1">Contraseña</label>
+                                            <div className="d-flex align-items-center">
+                                                <i className="bi bi-lock text-primary me-2"></i>
+                                                <h6 className="mb-0">{userInfo.password}</h6>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    // Formulario de edición
+                                    <div>
+                                        <div className="mb-3">
+                                            <label className="form-label fw-semibold">
+                                                <i className="bi bi-person me-1"></i>
+                                                Nombre de usuario
+                                            </label>
+                                            <input
+                                                type="text"
+                                                className="form-control"
+                                                name="username"
+                                                value={editInfo.username}
+                                                onChange={handleChange}
+                                                required
+                                            />
+                                        </div>
+
+                                        <div className="mb-4">
+                                            <label className="form-label fw-semibold">
+                                                <i className="bi bi-envelope me-1"></i>
+                                                Correo electrónico
+                                            </label>
+                                            <input
+                                                type="email"
+                                                className="form-control"
+                                                name="email"
+                                                value={editInfo.email}
+                                                onChange={handleChange}
+                                                required
+                                            />
+                                        </div>
+
+                                        <hr className="my-4" />
+
+                                        <h6 className="mb-3">
+                                            <i className="bi bi-shield-lock me-2"></i>
+                                            Cambiar contraseña (opcional)
+                                        </h6>
+
+                                        <div className="mb-3">
+                                            <label className="form-label">Contraseña actual</label>
+                                            <div className="input-group">
+                                                <input
+                                                    type={showPassword ? "text" : "password"}
+                                                    className="form-control"
+                                                    name="currentPassword"
+                                                    value={editInfo.currentPassword}
+                                                    onChange={handleChange}
+                                                    placeholder="Ingresa tu contraseña actual"
+                                                />
+                                                <button
+                                                    className="btn btn-outline-secondary"
+                                                    type="button"
+                                                    onClick={() => setShowPassword(!showPassword)}
+                                                >
+                                                    <i className={`bi bi-eye${showPassword ? '-slash' : ''}`}></i>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div className="mb-3">
+                                            <label className="form-label">Nueva contraseña</label>
+                                            <input
+                                                type={showPassword ? "text" : "password"}
+                                                className="form-control"
+                                                name="newPassword"
+                                                value={editInfo.newPassword}
+                                                onChange={handleChange}
+                                                placeholder="Mínimo 8 caracteres"
+                                            />
+                                        </div>
+
+                                        <div className="mb-4">
+                                            <label className="form-label">Confirmar nueva contraseña</label>
+                                            <input
+                                                type={showPassword ? "text" : "password"}
+                                                className="form-control"
+                                                name="confirmPassword"
+                                                value={editInfo.confirmPassword}
+                                                onChange={handleChange}
+                                                placeholder="Repite la nueva contraseña"
+                                            />
+                                        </div>
+
+                                        <div className="d-flex gap-2 justify-content-end">
+                                            <button
+                                                type="button"
+                                                className="btn btn-secondary"
+                                                onClick={handleCancel}
+                                            >
+                                                <i className="bi bi-x-lg me-1"></i>
+                                                Cancelar
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className="btn btn-primary"
+                                                onClick={handleSave}
+                                            >
+                                                <i className="bi bi-check-lg me-1"></i>
+                                                Guardar cambios
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {!isEditing && (
+                                <div className="card-footer text-muted small">
+                                    <i className="bi bi-info-circle me-1"></i>
+                                    Última actualización: {new Date().toLocaleDateString('es-ES')}
+                                </div>
+                            )}
+                        </div>
+
+
+                        <div className="card mt-3 border-0 bg-transparent">
+                            <div className="card-body text-center">
+                                <small className="text-muted">
+                                    <i className="bi bi-shield-check me-1"></i>
+                                    Tu información está protegida y segura
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" />
+        </div>
     );
 };
 
