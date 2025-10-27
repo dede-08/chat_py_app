@@ -157,6 +157,15 @@ const UserProfile = () => {
                             </div>
                         )}
 
+                         {/* Alerta de error */}
+                         {error && (
+                            <div className="alert alert-danger alert-dismissible fade show" role="alert">
+                                <i className="bi bi-exclamation-triangle-fill me-2"></i>
+                                {error}
+                                <button type="button" className="btn-close" onClick={() => setError(null)}></button>
+                            </div>
+                        )}
+
                         {/* Tarjeta de perfil */}
                         <div className="card shadow-sm">
                             <div className="card-header bg-primary text-white py-3">
