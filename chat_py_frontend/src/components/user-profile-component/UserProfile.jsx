@@ -143,7 +143,7 @@ const UserProfile = () => {
     }
 
     return (
-        <div className="min-vh-100 bg-light py-5">
+        <div className="profile-container">
             <div className="container">
                 <div className="row justify-content-center">
                     <div className="col-lg-8 col-xl-7">
@@ -167,11 +167,11 @@ const UserProfile = () => {
                         )}
 
                         {/* Tarjeta de perfil */}
-                        <div className="card shadow-sm">
-                            <div className="card-header bg-primary text-white py-3">
+                        <div className="card profile-card">
+                            <div className="card-header profile-card-header py-3">
                                 <div className="d-flex align-items-center justify-content-between">
                                     <div className="d-flex align-items-center">
-                                        <div className="bg-white text-primary rounded-circle d-flex align-items-center justify-content-center me-3" style={{ width: '50px', height: '50px' }}>
+                                        <div className="profile-icon-container rounded-circle d-flex align-items-center justify-content-center me-3" style={{ width: '50px', height: '50px' }}>
                                             <i className="bi bi-person-fill fs-3"></i>
                                         </div>
                                         <div>
@@ -188,12 +188,12 @@ const UserProfile = () => {
                                 </div>
                             </div>
 
-                            <div className="card-body p-4">
+                            <div className="card-body profile-card-body">
                                 {!isEditing ? (
                                     //vista de solo lectura
                                     <div>
                                         <div className="mb-4">
-                                            <label className="text-muted small mb-1">Nombre de usuario</label>
+                                            <label className="small mb-1">Nombre de usuario</label>
                                             <div className="d-flex align-items-center">
                                                 <i className="bi bi-person text-primary me-2"></i>
                                                 <h6 className="mb-0">{userInfo.username}</h6>
@@ -201,7 +201,7 @@ const UserProfile = () => {
                                         </div>
 
                                         <div className="mb-4">
-                                            <label className="text-muted small mb-1">Correo electrónico</label>
+                                            <label className="small mb-1">Correo electrónico</label>
                                             <div className="d-flex align-items-center">
                                                 <i className="bi bi-envelope text-primary me-2"></i>
                                                 <h6 className="mb-0">{userInfo.email}</h6>
@@ -209,7 +209,7 @@ const UserProfile = () => {
                                         </div>
 
                                         <div className="mb-3">
-                                            <label className="text-muted small mb-1">Contraseña</label>
+                                            <label className="small mb-1">Contraseña</label>
                                             <div className="d-flex align-items-center">
                                                 <i className="bi bi-lock text-primary me-2"></i>
                                                 <h6 className="mb-0">{userInfo.password}</h6>
@@ -324,7 +324,7 @@ const UserProfile = () => {
                             </div>
 
                             {!isEditing && (
-                                <div className="card-footer text-muted small">
+                                <div className="card-footer small">
                                     <i className="bi bi-info-circle me-1"></i>
                                     Última actualización: {new Date().toLocaleDateString('es-ES')}
                                 </div>
@@ -332,9 +332,9 @@ const UserProfile = () => {
                         </div>
 
 
-                        <div className="card mt-3 border-0 bg-transparent">
+                        <div className="card mt-3 border-0 bg-transparent profile-card">
                             <div className="card-body text-center">
-                                <small className="text-muted">
+                                <small className="">
                                     <i className="bi bi-shield-check me-1"></i>
                                     Tu información está protegida y segura
                                 </small>
