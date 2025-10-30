@@ -97,7 +97,7 @@ const LoginPage = () => {
           </div>
         )}
         
-        <h3 className='text-dark text-center mb-4'>Iniciar Sesión</h3>
+        <h3 className='text-light text-center mb-4'>Iniciar Sesión</h3>
         <form onSubmit={handleSubmit}>
           <div className="mb-3">
             <input 

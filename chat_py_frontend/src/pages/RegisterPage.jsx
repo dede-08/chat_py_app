@@ -212,7 +212,7 @@ const RegisterPage = () => {
           </div>
         )}
         
-        <h3 className='text-dark text-center mb-4'>Registro</h3>
+        <h3 className='text-light text-center mb-4'>Registro</h3>
         
         {/* mostrar error general */}
         {formErrors.general && (
@@ -224,7 +224,7 @@ const RegisterPage = () => {
         
         <form onSubmit={handleSubmit}>
           <div className="mb-3">
-            <label htmlFor="email" className="form-label">Email</label>
+            <label htmlFor="email" className="form-label text-light">Email</label>
             <input 
               id="email"
               className={`form-control ${formErrors.email ? 'is-invalid' : ''}`}
@@ -241,7 +241,7 @@ const RegisterPage = () => {
           </div>
           
           <div className="mb-3">
-            <label htmlFor="username" className="form-label">Nombre de usuario</label>
+            <label htmlFor="username" className="form-label text-light">Nombre de usuario</label>
             <input 
               id="username"
               className={`form-control ${formErrors.username ? 'is-invalid' : ''}`}
@@ -257,7 +257,7 @@ const RegisterPage = () => {
           </div>
           
           <div className="mb-3">
-            <label htmlFor="password" className="form-label">Contraseña</label>
+            <label htmlFor="password" className="form-label text-light">Contraseña</label>
             <div className="input-group">
               <input 
                 id="password"
@@ -293,7 +293,7 @@ const RegisterPage = () => {
           </div>
           
           <div className="mb-3">
-            <label htmlFor="telephone" className="form-label">Teléfono</label>
+            <label htmlFor="telephone" className="form-label text-light">Teléfono</label>
             <input 
               id="telephone"
               className={`form-control ${formErrors.telephone ? 'is-invalid' : ''}`}
@@ -334,7 +334,7 @@ const RegisterPage = () => {
           </div>
           
           <div className="text-center">
-            <p className="mb-0">
+            <p className="mb-0 text-light">
               ¿Ya tienes una cuenta? 
               <Link to="/login" className="text-decoration-none ms-1">
                 Inicia sesión aquí
