@@ -2,33 +2,8 @@ import axios from 'axios';
 
 const API_URL = `${import.meta.env.VITE_API_URL}/auth`;
 
-export const registerUser = async (data) => {
-  try {
-    const response = await axios.post(`${API_URL}/register`, data);
-    //guardar el username después del registro exitoso
-    localStorage.setItem('username', data.username);
-    return { success: true, data: response.data };
-  } catch (error) {
-    console.error('Error en registro:', error);
-    let errorMessage = 'Error al registrar usuario. Por favor, inténtelo de nuevo más tarde.';
-    
-    if (error.response) {
-        switch (error.response.status) {
-            case 409:
-                errorMessage = 'El nombre de usuario o correo electrónico ya está en uso.';
-                break;
-            case 422:
-                errorMessage = 'Los datos proporcionados no son válidos. Por favor, revise los campos.';
-                break;
-            default:
-                errorMessage = error.response.data.detail || errorMessage;
-        }
-    } else if (error.request) {
-        errorMessage = 'No se pudo conectar con el servidor. Verifique su conexión a internet.';
-    }
-    
-    return { success: false, error: errorMessage };
-  }
+const register = (userData) => {
+    return axios.post(`${API_URL}/auth/register`, userData);
 };
 
 export const loginUser = async (data) => {
@@ -208,26 +183,24 @@ export const isAuthenticated = () => {
 };
 
 //cerrar sesión (versión simple sin llamada al backend)
-export const logout = () => {
-  localStorage.removeItem('token');
-  localStorage.removeItem('userEmail');
-  localStorage.removeItem('username');
+const logout = () => {
+    localStorage.removeItem('token');
+};
+
+const confirmEmail = (token) => {
+    return axios.get(`${API_URL}/auth/confirm-email/${token}`);
 };
 
 //crear instancia por defecto para compatibilidad
-const authService = {
-  registerUser,
-  loginUser,
-  getPasswordRequirements,
-  validatePassword,
-  logoutUser,
-  getToken,
-  getUserEmail,
-  getUsername,
-  isAuthenticated,
-  logout,
-  getUserProfile,
-  updateUserProfile
+export default {
+    register,
+    login,
+    logout,
+    isAuthenticated,
+    getCurrentUser,
+    validatePassword,
+    getPasswordRequirements,
+    confirmEmail
 };
 
 export default authService;

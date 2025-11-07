@@ -19,7 +19,7 @@ const RegisterPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [requirementsLoading, setRequirementsLoading] = useState(true);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -37,20 +37,7 @@ const RegisterPage = () => {
       setRequirementsLoading(true);
       try {
         const result = await authService.getPasswordRequirements();
-        if (result.success) {
-          setPasswordRequirements(result.data);
-        } else {
-          //fallback a requisitos por defecto si falla la carga
-          setPasswordRequirements({
-            min_length: 8,
-            max_length: 128,
-            require_uppercase: true,
-            require_lowercase: true,
-            require_digits: true,
-            require_special_chars: true,
-            special_chars: '!@#$%^&*()_+-=[]{}|;:,.<>?'
-          });
-        }
+        setPasswordRequirements(result.data);
       } catch (error) {
         console.error('Error al cargar requisitos de contraseña:', error);
         //fallback a requisitos por defecto
@@ -140,19 +127,12 @@ const RegisterPage = () => {
     setIsSubmitting(true);
     
     try {
-      const result = await authService.registerUser(formData);
-      if (result.success) {
-        //mostrar modal de éxito
-        setShowSuccessModal(true);
-      } else {
-        //mostrar error específico del backend
-        if (result.error) {
-          setFormErrors(prev => ({ ...prev, general: result.error }));
-        }
-      }
+      const response = await authService.register(formData);
+      setSuccessMessage(response.data.message);
+      setShowSuccessModal(true);
     } catch (error) {
-      console.error('Error en el registro:', error);
-      setFormErrors(prev => ({ ...prev, general: 'Error de conexión. Inténtalo de nuevo.' }));
+      const errorMessage = error.response?.data?.detail || 'Error de conexión. Inténtalo de nuevo.';
+      setFormErrors(prev => ({ ...prev, general: errorMessage }));
     } finally {
       setIsLoading(false);
       setIsSubmitting(false);
@@ -173,10 +153,7 @@ const RegisterPage = () => {
 
   const handleSuccessModalClose = () => {
     setShowSuccessModal(false);
-    //disparar evento para actualizar el navbar
-    window.dispatchEvent(new Event('storage'));
-    //redirigir al chat después del registro exitoso
-    navigate('/chat');
+    navigate('/login');
   };
 
   const isFormValid = () => {
@@ -347,10 +324,11 @@ const RegisterPage = () => {
       {/* modal de exito */}
       <SuccessModal
         isOpen={showSuccessModal}
-        onClose={() => setShowSuccessModal(false)}
+        onClose={handleSuccessModalClose}
         title="¡Registro Exitoso!"
-        message={`¡Bienvenido ${formData.username}! Tu cuenta ha sido creada correctamente. Serás redirigido al chat.`}
+        message={successMessage}
         onConfirm={handleSuccessModalClose}
+        confirmButtonText="Ir a Iniciar Sesión"
       />
     </div>
   );

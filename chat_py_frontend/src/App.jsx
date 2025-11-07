@@ -4,6 +4,7 @@ import Navbar from './components/navbar-component/Navbar';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ProfilePage from './pages/ProfilePage';
+import ConfirmEmailPage from './pages/ConfirmEmailPage';
 import './App.css'
 import 'bootstrap/dist/css/bootstrap.min.css';
 import ChatPage from './pages/ChatPage';
@@ -37,6 +38,7 @@ function App() {
         <Route path='/' element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/confirm-email/:token" element={<ConfirmEmailPage />} />
         <Route path='/chat' element={
           <ProtectedRoute>
             <ChatProvider>
