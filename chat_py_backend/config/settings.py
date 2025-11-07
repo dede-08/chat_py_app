@@ -33,6 +33,15 @@ class Settings(BaseSettings):
     # WebSocket
     ws_heartbeat_interval: int = 30
     ws_connection_timeout: int = 60
+
+    # Configuración de correo
+    mail_username: str = "your_email@example.com"
+    mail_password: str = "your_password"
+    mail_from: EmailStr = "your_email@example.com"
+    mail_port: int = 587
+    mail_server: str = "smtp.example.com"
+    mail_starttls: bool = True
+    mail_ssl_tls: bool = False
     
     @field_validator("jwt_secret")
     def validate_jwt_secret(cls, v):
