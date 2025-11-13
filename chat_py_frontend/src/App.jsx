@@ -1,6 +1,6 @@
 import { React, useEffect, useState } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import Navbar from './components/navbar-component/Navbar';
+import Navbar from './components/Navbar/Navbar';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ProfilePage from './pages/ProfilePage';
@@ -8,7 +8,7 @@ import ConfirmEmailPage from './pages/ConfirmEmailPage';
 import './App.css'
 import 'bootstrap/dist/css/bootstrap.min.css';
 import ChatPage from './pages/ChatPage';
-import Sidebar from './components/sidebar-component/Sidebar';
+
 import authService from './services/authService';
 import { ChatProvider } from './context';
 

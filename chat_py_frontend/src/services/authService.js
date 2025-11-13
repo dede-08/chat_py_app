@@ -194,13 +194,15 @@ const confirmEmail = (token) => {
 //crear instancia por defecto para compatibilidad
 export default {
     register,
-    login,
-    logout,
+    loginUser,
+    logoutUser,
     isAuthenticated,
-    getCurrentUser,
     validatePassword,
     getPasswordRequirements,
-    confirmEmail
+    confirmEmail,
+    getToken,
+    getUserEmail,
+    getUsername,
+    getUserProfile,
+    updateUserProfile
 };
-
-export default authService;

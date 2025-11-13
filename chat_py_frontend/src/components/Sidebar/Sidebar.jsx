@@ -1,7 +1,7 @@
 import React, { Component, useState } from "react"
 import { Link } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import '../sidebar-component/sidebar.css';
+import './Sidebar.css';
 
 const Sidebar = () => {
   const [selectedUser, setSelectedUser] = useState(null);

@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import authService from '../services/authService';
-import PasswordStrengthMeter from '../components/PasswordStrengthMeter';
-import SuccessModal from '../components/SuccessModal';
+import PasswordStrengthMeter from '../components/PasswordStrengthMeter/PasswordStrengthMeter';
+import SuccessModal from '../components/SuccessModal/SuccessModal';
 
 const RegisterPage = () => {
   const [formData, setFormData] = useState({ 
@@ -20,6 +20,7 @@ const RegisterPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [requirementsLoading, setRequirementsLoading] = useState(true);
   const [successMessage, setSuccessMessage] = useState('');
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
