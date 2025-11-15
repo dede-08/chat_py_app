@@ -61,7 +61,7 @@ class RateLimiter:
                 app_logger.error(f"Error en limpieza de rate limiter: {str(e)}")
                 await asyncio.sleep(60)
 
-# Instancias globales de rate limiters
+#instancias globales de rate limiters
 auth_rate_limiter = RateLimiter(max_requests=5, window_seconds=60)  # 5 intentos por minuto
 api_rate_limiter = RateLimiter(max_requests=100, window_seconds=60)  # 100 requests por minuto
 ws_rate_limiter = RateLimiter(max_requests=1000, window_seconds=60)  # 1000 mensajes WS por minuto
@@ -71,12 +71,12 @@ async def rate_limit_middleware(request: Request, call_next, limiter: RateLimite
     if limiter is None:
         limiter = api_rate_limiter
     
-    # Obtener IP del cliente
+    #obtener IP del cliente
     client_ip = request.client.host
     if "x-forwarded-for" in request.headers:
         client_ip = request.headers["x-forwarded-for"].split(",")[0].strip()
     
-    # Verificar rate limit
+    #verificar rate limit
     if not limiter.is_allowed(client_ip):
         app_logger.warning(f"Rate limit excedido para IP: {client_ip}")
         return JSONResponse(
@@ -94,7 +94,7 @@ class SecurityHeaders:
     async def add_security_headers(request: Request, call_next):
         response = await call_next(request)
         
-        # Headers de seguridad
+        #headers de seguridad
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
@@ -104,19 +104,19 @@ class SecurityHeaders:
         return response
 
 class RequestLogger:
+
     #middleware para logging de solicitudes
-    
     @staticmethod
     async def log_requests(request: Request, call_next):
         start_time = time.time()
         
-        # Log de solicitud entrante
+        #log de solicitud entrante
         app_logger.info(f"Request: {request.method} {request.url}")
         
         try:
             response = await call_next(request)
             
-            # Log de respuesta
+            #log de respuesta
             process_time = time.time() - start_time
             app_logger.info(
                 f"Response: {response.status_code} - "

@@ -11,7 +11,7 @@ class DatabaseMigration:
         self.logger = db_logger
     
     async def create_indexes(self):
-        #crear índices para optimizar consultas
+        #crear indices para optimizar consultas
         try:
             #indices para la colección de usuarios
             await self.db.users.create_index([
@@ -58,17 +58,17 @@ class DatabaseMigration:
             raise
     
     async def setup_ttl_indexes(self):
-        #configurar índices TTL para limpieza automatica
+        #configurar indices TTL para limpieza automatica
         try:
             #TTL para mensajes antiguos (opcional - 1 año)
             await self.db.messages.create_index([
                 ("timestamp", 1)
-            ], expireAfterSeconds=31536000, name="idx_messages_ttl")  # 365 días
+            ], expireAfterSeconds=31536000, name="idx_messages_ttl")  # 365 dias
             
-            #TTL para logs de conexión (si se implementa)
+            #TTL para logs de conexion (si se implementa)
             await self.db.connection_logs.create_index([
                 ("timestamp", 1)
-            ], expireAfterSeconds=604800, name="idx_connection_logs_ttl")  # 7 días
+            ], expireAfterSeconds=604800, name="idx_connection_logs_ttl")  # 7 dias
             
             self.logger.info("Índices TTL configurados exitosamente")
             

@@ -27,13 +27,13 @@ async def get_chat_history(
     limit: int = Query(50, ge=1, le=100),
     current_user_email: str = Depends(get_current_user_email)
 ):
-    #obtener historial de chat con un usuario específico
+    #obtener historial de chat con un usuario especifico
     messages = await chat_service.get_chat_history(current_user_email, other_user_email, limit)
     return messages
 
 @router.get("/chat/rooms", response_model=List[ChatRoomResponse])
 async def get_user_chat_rooms(current_user_email: str = Depends(get_current_user_email)):
-    #obtener todas las salas de chat del usuario
+    #obtener todas las salas de chat del usuario actual
     chat_rooms = await chat_service.get_user_chat_rooms(current_user_email)
     return chat_rooms
 
@@ -45,7 +45,7 @@ async def get_all_users(current_user_email: str = Depends(get_current_user_email
 
 @router.get("/chat/unread-count")
 async def get_unread_count(current_user_email: str = Depends(get_current_user_email)):
-    #obtener número total de mensajes no leídos
+    #obtener numero total de mensajes no leidos
     count = await chat_service.get_unread_count(current_user_email)
     return {"unread_count": count}
 
@@ -54,6 +54,6 @@ async def mark_messages_as_read(
     sender_email: str,
     current_user_email: str = Depends(get_current_user_email)
 ):
-    #marcar mensajes de un usuario específico como leidos
+    #marcar mensajes de un usuario especifico como leidos
     await chat_service.mark_messages_as_read(sender_email, current_user_email)
     return {"message": "Mensajes marcados como leídos"}

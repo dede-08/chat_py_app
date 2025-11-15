@@ -9,9 +9,14 @@ from utils.jwt_bearer import JWTBearer
 from utils.password_validator import password_validator
 from utils.email_handler import send_email
 import uuid
+import os
+from dotenv import load_dotenv
 
 router = APIRouter(prefix="/auth")
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+load_dotenv()
+FRONTEND_URL = os.getenv("FRONTEND_URL")
 
 @router.get("/protected", dependencies=[Depends(JWTBearer())])
 async def protected_route(payload: dict = Depends(JWTBearer())):
@@ -61,8 +66,8 @@ async def register(user: UserRegister, request: Request):
 
     await users_collection.insert_one(user_dict)
 
-    # Enviar correo de confirmación
-    confirmation_url = f"{settings.frontend_url}/confirm-email/{confirmation_token}"
+    #enviar correo de confirmación
+    confirmation_url = f"{FRONTEND_URL}/confirm-email/{confirmation_token}"
     email_body = f"""
         <h1>Bienvenido a ChatPy!</h1>
         <p>Gracias por registrarte. Por favor, haz clic en el siguiente enlace para confirmar tu correo electrónico:</p>

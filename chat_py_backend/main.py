@@ -5,7 +5,7 @@ from config.settings import settings
 
 app = FastAPI()
 
-# Configuración de CORS
+#configuracion de CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
@@ -16,8 +16,8 @@ app.add_middleware(
 
 app.include_router(auth.router)
 
-# Rutas websocket para el chat
+#rutas websocket para el chat
 app.include_router(chat_ws.router)
 
-# Rutas HTTP para el chat
+#rutas HTTP para el chat
 app.include_router(chat.router)
