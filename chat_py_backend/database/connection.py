@@ -13,9 +13,9 @@ try:
     database = client[DB_NAME]
     users_collection = database["users"]
     messages_collection = database["messages"]
-    logging.info("Conexión a la base de datos establecida con éxito.")
+    logging.info("coneccion a la base de datos establecida con exito")
 except Exception as e:
-    logging.error(f"No se pudo conectar a la base de datos: {e}")
+    logging.error(f"no se pudo conectar a la base de datos: {e}")
     client = None
     database = None
     users_collection = None

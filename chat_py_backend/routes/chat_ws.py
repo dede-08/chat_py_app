@@ -132,11 +132,11 @@ async def handle_typing_indicator(sender_email: str, message_data: dict):
         await connected_users[receiver_email].send_text(json.dumps(typing_data))
 
 async def handle_read_receipt(user_email: str, message_data: dict):
-    #manejar confirmación de lectura
+    #manejar confirmacion de lectura
     sender_email = message_data.get("sender_email")
     
     if sender_email:
-        #marcar mensajes como leídos en la base de datos
+        #marcar mensajes como leidos en la base de datos
         await chat_service.mark_messages_as_read(sender_email, user_email)
         
         #notificar al remitente

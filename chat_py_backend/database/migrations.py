@@ -4,8 +4,8 @@ from typing import List, Dict, Any
 import asyncio
 
 class DatabaseMigration:
-    #clase para manejar migraciones de base de datos
     
+    #clase para manejar migraciones de base de datos
     def __init__(self, db: AsyncIOMotorDatabase):
         self.db = db
         self.logger = db_logger
@@ -63,12 +63,12 @@ class DatabaseMigration:
             #TTL para mensajes antiguos (opcional - 1 año)
             await self.db.messages.create_index([
                 ("timestamp", 1)
-            ], expireAfterSeconds=31536000, name="idx_messages_ttl")  # 365 dias
+            ], expireAfterSeconds=31536000, name="idx_messages_ttl")  #365 dias
             
             #TTL para logs de conexion (si se implementa)
             await self.db.connection_logs.create_index([
                 ("timestamp", 1)
-            ], expireAfterSeconds=604800, name="idx_connection_logs_ttl")  # 7 dias
+            ], expireAfterSeconds=604800, name="idx_connection_logs_ttl")  #7 dias
             
             self.logger.info("Índices TTL configurados exitosamente")
             

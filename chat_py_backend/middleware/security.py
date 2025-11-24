@@ -7,8 +7,8 @@ import asyncio
 from utils.logger import app_logger
 
 class RateLimiter:
+
     #rate limiter basado en sliding window
-    
     def __init__(self, max_requests: int = 100, window_seconds: int = 60):
         self.max_requests = max_requests
         self.window_seconds = window_seconds
@@ -62,9 +62,9 @@ class RateLimiter:
                 await asyncio.sleep(60)
 
 #instancias globales de rate limiters
-auth_rate_limiter = RateLimiter(max_requests=5, window_seconds=60)  # 5 intentos por minuto
-api_rate_limiter = RateLimiter(max_requests=100, window_seconds=60)  # 100 requests por minuto
-ws_rate_limiter = RateLimiter(max_requests=1000, window_seconds=60)  # 1000 mensajes WS por minuto
+auth_rate_limiter = RateLimiter(max_requests=5, window_seconds=60)  #5 intentos por minuto
+api_rate_limiter = RateLimiter(max_requests=100, window_seconds=60) #100 requests por minuto
+ws_rate_limiter = RateLimiter(max_requests=1000, window_seconds=60) #1000 mensajes WS por minuto
 
 async def rate_limit_middleware(request: Request, call_next, limiter: RateLimiter = None):
     #middleware para rate limiting
@@ -88,8 +88,8 @@ async def rate_limit_middleware(request: Request, call_next, limiter: RateLimite
     return response
 
 class SecurityHeaders:
+
     #middleware para agregar headers de seguridad
-    
     @staticmethod
     async def add_security_headers(request: Request, call_next):
         response = await call_next(request)
@@ -104,7 +104,7 @@ class SecurityHeaders:
         return response
 
 class RequestLogger:
-
+    
     #middleware para logging de solicitudes
     @staticmethod
     async def log_requests(request: Request, call_next):
