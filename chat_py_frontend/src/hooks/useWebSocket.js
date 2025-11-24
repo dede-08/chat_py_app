@@ -16,7 +16,7 @@ const useWebSocket = (url, options = {}) => {
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState(null);
 
-  //use refs to hold callbacks to prevent re-renders from changing them
+  //usar refs para mantener las callbacks y evitar re-renders
   const onOpenRef = useRef(onOpen);
   const onMessageRef = useRef(onMessage);
   const onCloseRef = useRef(onClose);
@@ -85,7 +85,7 @@ const useWebSocket = (url, options = {}) => {
           console.error('WebSocket error:', event);
           setError('WebSocket connection error');
           onErrorRef.current?.(event);
-          //the onclose event will be fired next, which handles reconnection.
+          //el evento onclose se ejecutara next, que maneja la reconexion.
         };
 
       } catch (err) {
@@ -97,19 +97,19 @@ const useWebSocket = (url, options = {}) => {
     connect();
 
     return () => {
-      shouldReconnect = false; // Prevent reconnection on unmount
+      shouldReconnect = false; // evitar reconexion en unmount
       if (reconnectTimeout) {
         clearTimeout(reconnectTimeout);
       }
       if (ws) {
-        //prevent "WebSocket is closed before the connection is established"
-        ws.onclose = () => {}; // Disable onclose handler first
+        //evitar "WebSocket is closed before the connection is established"
+        ws.onclose = () => {}; // deshabilitar el handler onclose primero
         ws.close();
       }
       setSocket(null);
       setIsConnected(false);
     };
-  //the effect should only run when the URL or protocols change.
+  //el efecto solo debe ejecutarse cuando el URL o protocols cambian.
   }, [url, protocols, maxReconnectAttempts, reconnectInterval]);
 
   const sendMessage = useCallback((message) => {

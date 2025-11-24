@@ -1,6 +1,6 @@
 import authService from '../services/authService';
 
-// Estado inicial para el contexto de chat
+//estado inicial para el contexto de chat
 export const initialState = {
   users: [],
   selectedUser: null,

@@ -12,10 +12,10 @@ class ChatService {
         this.messageQueue = [];
         this.reconnectAttempts = 0;
         this.maxReconnectAttempts = 5;
-        this.reconnectInterval = 3000; // 3 segundos
+        this.reconnectInterval = 3000; //3 segundos
     }
 
-    // --- WebSocket Logic ---
+    // --- logica de websocket ---
 
     connect() {
         const token = authService.getToken();
@@ -24,7 +24,7 @@ class ChatService {
             return;
         }
 
-        // Verificar si ya hay una conexión activa o en proceso
+        //verificar si ya hay una conexion activa o en proceso
         if (this.ws && (this.ws.readyState === WebSocket.CONNECTING || this.ws.readyState === WebSocket.OPEN)) {
             console.log('WebSocket ya está conectado o en proceso de conexión.');
             return;
@@ -66,7 +66,7 @@ class ChatService {
                 this.ws = null;
                 this.handleMessage({ type: 'connection_status', connected: false });
 
-                // Solo intentar reconectar si no fue una desconexión intencional
+                //solo intentar reconectar si no fue una desconexion intencional
                 if (this.reconnectAttempts < this.maxReconnectAttempts && event.code !== 1000) {
                     this.reconnectAttempts++;
                     console.log(`Intento de reconexión ${this.reconnectAttempts}/${this.maxReconnectAttempts}...`);
@@ -90,9 +90,9 @@ class ChatService {
         this.isConnecting = false;
         
         if (this.ws) {
-            // Verificar el estado antes de cerrar
+            //verificar el estado antes de cerrar
             if (this.ws.readyState === WebSocket.CONNECTING || this.ws.readyState === WebSocket.OPEN) {
-                // Deshabilitar los handlers antes de cerrar para evitar errores
+                //deshabilitar los handlers antes de cerrar para evitar errores
                 this.ws.onclose = () => {};
                 this.ws.onerror = () => {};
                 this.ws.close(1000, 'Desconexión intencional');
@@ -109,7 +109,7 @@ class ChatService {
             content: content
         };
 
-        // Verificar si el WebSocket está realmente conectado
+        //verificar si el WebSocket esta realmente conectado
         if (!this.isConnected || !this.ws || this.ws.readyState !== WebSocket.OPEN) {
             console.warn('WebSocket no conectado. Añadiendo mensaje a la cola.');
             this.messageQueue.push(message);
@@ -123,7 +123,7 @@ class ChatService {
             this.ws.send(JSON.stringify(message));
         } catch (error) {
             console.error('Error al enviar mensaje:', error);
-            // Añadir a la cola si falla el envío
+            //añadir a la cola si falla el envio
             this.messageQueue.push(message);
         }
     }
@@ -135,7 +135,7 @@ class ChatService {
                 this.ws.send(JSON.stringify(message));
             } catch (error) {
                 console.error('Error al procesar mensaje de la cola:', error);
-                // Volver a añadir el mensaje al principio de la cola
+                //volver a añadir el mensaje al principio de la cola
                 this.messageQueue.unshift(message);
                 break;
             }
@@ -191,12 +191,12 @@ class ChatService {
         }
     }
 
-    // Método para limpiar todos los listeners
+    //metodo para limpiar todos los listeners
     clearAllListeners() {
         this.messageHandlers.clear();
     }
 
-    // --- API Methods ---
+    // --- metodos de la API ---
 
     async getChatHistory(otherUserEmail, limit = 50) {
         const token = authService.getToken();

@@ -45,7 +45,7 @@ export const getPasswordRequirements = async () => {
     return { success: true, data: response.data };
   } catch (error) {
     console.error('Error al obtener requisitos de contraseña:', error);
-    throw error; // Lanzar el error para que el componente lo maneje
+    throw error; //lanzar el error para que el componente lo maneje
   }
 };
 
@@ -81,7 +81,7 @@ export const logoutUser = async () => {
   }
 };
 
-// Obtener perfil completo del usuario
+//obtener perfil completo del usuario
 export const getUserProfile = async () => {
   try {
     const token = getToken();
@@ -99,7 +99,7 @@ export const getUserProfile = async () => {
       switch (error.response.status) {
         case 401:
           errorMessage = 'Sesión expirada. Por favor, inicie sesión nuevamente.';
-          logout(); // Cerrar sesión si el token expiró
+          logout(); //cerrar sesion si el token expiró
           break;
         case 404:
           errorMessage = 'Perfil no encontrado.';
@@ -115,7 +115,7 @@ export const getUserProfile = async () => {
   }
 };
 
-// Actualizar perfil del usuario
+//actualizar perfil del usuario
 export const updateUserProfile = async (data) => {
   try {
     const token = getToken();
@@ -126,7 +126,7 @@ export const updateUserProfile = async (data) => {
       }
     });
     
-    // Actualizar localStorage con los nuevos datos
+    //actualizar localStorage con los nuevos datos del usuario
     if (data.username) {
       localStorage.setItem('username', data.username);
     }

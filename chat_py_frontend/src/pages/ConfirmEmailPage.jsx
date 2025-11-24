@@ -5,7 +5,7 @@ import './ConfirmEmailPage.css';
 
 const ConfirmEmailPage = () => {
     const { token } = useParams();
-    const [status, setStatus] = useState('loading'); // loading, success, error
+    const [status, setStatus] = useState('loading'); //loading, success, error
     const [message, setMessage] = useState('');
 
     useEffect(() => {

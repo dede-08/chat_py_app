@@ -2,7 +2,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    height: calc(100vh - 80px); /* Resta la altura del navbar si es necesario */
+    height: calc(100vh - 80px);
     background-color: #f4f7f6;
 }
 
