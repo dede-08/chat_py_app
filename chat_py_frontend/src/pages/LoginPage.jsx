@@ -100,10 +100,11 @@ const LoginPage = () => {
         <h3 className='text-light text-center mb-4'>Iniciar Sesión</h3>
         <form onSubmit={handleSubmit}>
           <div className="mb-3">
+          <label htmlFor="email" className="form-label text-light">Email</label>
             <input 
               className={`form-control ${formErrors.email ? 'is-invalid' : ''}`}
               name="email" 
-              placeholder='Email' 
+              placeholder='email' 
               value={formData.email}
               onChange={handleChange} 
             />
@@ -113,11 +114,12 @@ const LoginPage = () => {
           </div>
           
           <div className="mb-3">
+            <label htmlFor="password" className="form-label text-light">Contraseña</label>
             <input 
               className={`form-control ${formErrors.password ? 'is-invalid' : ''}`}
               type="password" 
               name="password" 
-              placeholder='Contraseña' 
+              placeholder='password' 
               value={formData.password}
               onChange={handleChange} 
             />

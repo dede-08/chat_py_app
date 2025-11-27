@@ -121,7 +121,7 @@ const PasswordStrengthMeter = ({ password, requirements, onValidationChange }) =
 
   const getStrengthIcon = () => {
     switch (strength) {
-      case 'débil': return '⚠️';
+      case 'débil': return '';
       case 'media': return '⚡';
       case 'fuerte': return '🛡️';
       case 'muy_fuerte': return '🔒';
@@ -184,16 +184,6 @@ const PasswordStrengthMeter = ({ password, requirements, onValidationChange }) =
           <span className="valid-text">¡Contraseña válida y segura!</span>
         </div>
       )}
-
-      <div className="password-tips">
-        <h6 className="tips-title">Consejos de seguridad:</h6>
-        <ul className="tips-list">
-          <li>Usa al menos 8 caracteres</li>
-          <li>Combina mayúsculas, minúsculas y números</li>
-          <li>Incluye caracteres especiales</li>
-          <li>Evita información personal</li>
-        </ul>
-      </div>
     </div>
   );
 };
