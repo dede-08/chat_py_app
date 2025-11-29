@@ -30,7 +30,7 @@ const ChatArea = ({ selectedUser }) => {
   const handleNewMessage = useCallback((data) => {
     if (data.sender_email === selectedUser?.email) {
       setMessages(prev => [...prev, data]);
-      // Marcar como leído automáticamente
+      //marcar como leido
       chatService.sendReadReceipt(data.sender_email);
     }
   }, [selectedUser]);
@@ -42,7 +42,7 @@ const ChatArea = ({ selectedUser }) => {
   }, [selectedUser]);
 
   const handleReadReceipt = useCallback((data) => {
-    // Actualizar estado de lectura de mensajes
+    //actualizar estado de lectura de mensajes
     setMessages(prev => 
       prev.map(msg => 
         msg.sender_email === currentUserEmail && msg.receiver_email === data.reader_email
@@ -55,20 +55,20 @@ const ChatArea = ({ selectedUser }) => {
   useEffect(() => {
     if (selectedUser) {
       loadChatHistory();
-      // Marcar mensajes como leídos
+      //marcar mensajes como leidos
       chatService.markMessagesAsRead(selectedUser.email);
     }
   }, [selectedUser, loadChatHistory]);
 
   useEffect(() => {
-    // Configurar manejadores de mensajes
+    //configurar manejadores de mensajes
     chatService.onMessage('message', handleNewMessage);
     chatService.onMessage('typing', handleTypingIndicator);
     chatService.onMessage('read_receipt', handleReadReceipt);
     chatService.onMessage('message_sent', handleMessageSent);
 
     return () => {
-      // Limpiar manejadores
+      //limpiar manejadores
       chatService.messageHandlers.clear();
     };
   }, [handleNewMessage, handleTypingIndicator, handleReadReceipt]);
@@ -78,7 +78,7 @@ const ChatArea = ({ selectedUser }) => {
   }, [messages]);
 
   const handleMessageSent = (data) => {
-    // Mensaje enviado exitosamente
+    //mensaje enviado exitosamente
     console.log('Mensaje enviado:', data.message_id);
   };
 
@@ -87,7 +87,7 @@ const ChatArea = ({ selectedUser }) => {
     if (!newMessage.trim() || !selectedUser) return;
 
     const messageData = {
-      id: Date.now().toString(), // ID temporal
+      id: Date.now().toString(), //id temporal
       sender_email: currentUserEmail,
       receiver_email: selectedUser.email,
       content: newMessage.trim(),
@@ -95,16 +95,16 @@ const ChatArea = ({ selectedUser }) => {
       is_read: false
     };
 
-    // Agregar mensaje localmente inmediatamente
+    //agregar mensaje localmente inmediatamente
     setMessages(prev => [...prev, messageData]);
     
-    // Enviar mensaje
+    //enviar mensaje
     chatService.sendMessage(selectedUser.email, newMessage.trim());
     
-    // Limpiar input
+    //limpiar input
     setNewMessage('');
     
-    // Detener indicador de escritura
+    //detener indicador de escritura
     setIsTyping(false);
     chatService.sendTypingIndicator(selectedUser.email, false);
   };
@@ -112,18 +112,18 @@ const ChatArea = ({ selectedUser }) => {
   const handleInputChange = (e) => {
     setNewMessage(e.target.value);
     
-    // Manejar indicador de escritura
+    //manejar indicador de escritura
     if (!isTyping) {
       setIsTyping(true);
       chatService.sendTypingIndicator(selectedUser?.email, true);
     }
     
-    // Limpiar timeout anterior
+    //limpiar timeout anterior
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
     
-    // Configurar nuevo timeout
+    //configurar nuevo timeout
     typingTimeoutRef.current = setTimeout(() => {
       setIsTyping(false);
       chatService.sendTypingIndicator(selectedUser?.email, false);
@@ -146,7 +146,7 @@ const ChatArea = ({ selectedUser }) => {
     return (
       <div className="chat-area">
         <div className="no-chat-selected">
-          <div className="no-chat-icon">💬</div>
+          <div className="no-chat-icon"><span className="material-symbols-outlined text-primary fs-1">chat_bubble</span></div>
           <h3>Selecciona un usuario para empezar a chatear</h3>
           <p>Elige un usuario de la lista para comenzar una conversación</p>
         </div>

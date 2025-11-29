@@ -10,8 +10,8 @@ const UserList = ({ onUserSelect, selectedUser }) => {
 
   useEffect(() => {
     loadUsers();
-    
-    // Escuchar cambios de estado de usuarios
+
+    //escuchar cambios de estado de usuarios
     chatService.onMessage('user_status', (data) => {
       setOnlineUsers(prev => {
         const newSet = new Set(prev);
@@ -69,7 +69,9 @@ const UserList = ({ onUserSelect, selectedUser }) => {
       <div className="user-list-header">
         <h3>Usuarios ({users.length})</h3>
         <button onClick={loadUsers} className="refresh-btn">
-          🔄
+          <span class="material-symbols-outlined">
+            autorenew
+          </span>
         </button>
       </div>
       <div className="users-container">
@@ -87,7 +89,11 @@ const UserList = ({ onUserSelect, selectedUser }) => {
               <div className="user-email">{user.email}</div>
             </div>
             <div className={`user-status ${onlineUsers.has(user.email) ? 'online' : 'offline'}`}>
-              {onlineUsers.has(user.email) ? '🟢' : '⚫'}
+              {onlineUsers.has(user.email) ? <span class="material-symbols-outlined">
+                wifi
+              </span> : <span class="material-symbols-outlined">
+                wifi_off
+              </span>}
             </div>
           </div>
         ))}

@@ -1,6 +1,6 @@
 .user-list {
   width: 300px;
-  background: var(--bg-discord-elevated);
+  background: var(--bg-discord);
   border-right: 1px solid #3c3f44;
   display: flex;
   flex-direction: column;
