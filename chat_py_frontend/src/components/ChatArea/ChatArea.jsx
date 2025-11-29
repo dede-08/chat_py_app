@@ -43,8 +43,8 @@ const ChatArea = ({ selectedUser }) => {
 
   const handleReadReceipt = useCallback((data) => {
     //actualizar estado de lectura de mensajes
-    setMessages(prev => 
-      prev.map(msg => 
+    setMessages(prev =>
+      prev.map(msg =>
         msg.sender_email === currentUserEmail && msg.receiver_email === data.reader_email
           ? { ...msg, is_read: true }
           : msg
@@ -97,13 +97,13 @@ const ChatArea = ({ selectedUser }) => {
 
     //agregar mensaje localmente inmediatamente
     setMessages(prev => [...prev, messageData]);
-    
+
     //enviar mensaje
     chatService.sendMessage(selectedUser.email, newMessage.trim());
-    
+
     //limpiar input
     setNewMessage('');
-    
+
     //detener indicador de escritura
     setIsTyping(false);
     chatService.sendTypingIndicator(selectedUser.email, false);
@@ -111,18 +111,18 @@ const ChatArea = ({ selectedUser }) => {
 
   const handleInputChange = (e) => {
     setNewMessage(e.target.value);
-    
+
     //manejar indicador de escritura
     if (!isTyping) {
       setIsTyping(true);
       chatService.sendTypingIndicator(selectedUser?.email, true);
     }
-    
+
     //limpiar timeout anterior
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
-    
+
     //configurar nuevo timeout
     typingTimeoutRef.current = setTimeout(() => {
       setIsTyping(false);
@@ -136,9 +136,9 @@ const ChatArea = ({ selectedUser }) => {
 
   const formatTime = (timestamp) => {
     const date = new Date(timestamp);
-    return date.toLocaleTimeString('es-ES', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
+    return date.toLocaleTimeString('es-ES', {
+      hour: '2-digit',
+      minute: '2-digit'
     });
   };
 
@@ -179,17 +179,19 @@ const ChatArea = ({ selectedUser }) => {
                 className={`message ${message.sender_email === currentUserEmail ? 'sent' : 'received'}`}
               >
                 <div className="message-content">
-                  <p>{message.content}</p>
-                  <div className="message-meta">
-                    <span className="message-time">
-                      {formatTime(message.timestamp)}
-                    </span>
-                    {message.sender_email === currentUserEmail && (
-                      <span className="message-status">
-                        {message.is_read ? '✓✓' : '✓'}
+                  <p>
+                    {message.content}
+                    <span className="message-meta">
+                      <span className="message-time">
+                        {formatTime(message.timestamp)}
                       </span>
-                    )}
-                  </div>
+                      {message.sender_email === currentUserEmail && (
+                        <span className="message-status">
+                          {message.is_read ? '✓✓' : '✓'}
+                        </span>
+                      )}
+                    </span>
+                  </p>
                 </div>
               </div>
             ))}
@@ -213,7 +215,9 @@ const ChatArea = ({ selectedUser }) => {
             disabled={!selectedUser}
           />
           <button type="submit" disabled={!newMessage.trim() || !selectedUser}>
-            Enviar
+            <span class="material-symbols-outlined">
+              send
+            </span>
           </button>
         </div>
       </form>
