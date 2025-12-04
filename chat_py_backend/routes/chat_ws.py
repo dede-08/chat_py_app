@@ -2,6 +2,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query, HTTPExcept
 from jose import JWTError, jwt
 from typing import Dict, List
 import json
+import re
 from datetime import datetime
 from services.chat_service import ChatService
 from config.settings import settings
@@ -86,11 +87,32 @@ async def chat_endpoint(websocket: WebSocket, token: str = Query(None)):
         await broadcast_user_status(user_email, False)
 
 async def handle_private_message(sender_email: str, message_data: dict):
-    #manejar mensaje privado entre usuarios
+    """Manejar mensaje privado entre usuarios"""
     receiver_email = message_data.get("receiver_email")
     content = message_data.get("content")
     
+    # Validaciones básicas
     if not receiver_email or not content:
+        websocket_logger.warning(f"Mensaje incompleto de {sender_email}")
+        return
+    
+    # Validar tamaño del mensaje (máximo 5000 caracteres)
+    MAX_MESSAGE_LENGTH = 5000
+    if len(content) > MAX_MESSAGE_LENGTH:
+        websocket_logger.warning(f"Mensaje demasiado largo de {sender_email}: {len(content)} caracteres")
+        if sender_email in connected_users:
+            error_msg = {
+                "type": "error",
+                "message": f"El mensaje excede el límite de {MAX_MESSAGE_LENGTH} caracteres"
+            }
+            await connected_users[sender_email].send_text(json.dumps(error_msg))
+        return
+    
+    # Sanitizar contenido básico (remover caracteres de control)
+    content = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', content).strip()
+    
+    if not content:
+        websocket_logger.warning(f"Mensaje vacío después de sanitización de {sender_email}")
         return
     
     #guardar mensaje en la base de datos

@@ -38,9 +38,13 @@ async def get_user_chat_rooms(current_user_email: str = Depends(get_current_user
     return chat_rooms
 
 @router.get("/chat/users", response_model=List[dict])
-async def get_all_users(current_user_email: str = Depends(get_current_user_email)):
-    #obtener lista de todos los usuarios disponibles para chat
-    users = await chat_service.get_all_users(current_user_email)
+async def get_all_users(
+    current_user_email: str = Depends(get_current_user_email),
+    limit: int = Query(100, ge=1, le=500, description="Número máximo de usuarios"),
+    skip: int = Query(0, ge=0, description="Número de usuarios a saltar para paginación")
+):
+    """Obtener lista de todos los usuarios disponibles para chat (con paginación)"""
+    users = await chat_service.get_all_users(current_user_email, limit=limit, skip=skip)
     return users
 
 @router.get("/chat/unread-count")

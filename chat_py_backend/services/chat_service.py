@@ -9,6 +9,8 @@ from utils.logger import chat_logger
 
 class ChatService:
     def __init__(self):
+        if database is None:
+            raise RuntimeError("Base de datos no inicializada. Verifique la conexión.")
         self.messages_collection = database.messages
         self.chat_rooms_collection = database.chat_rooms
         self.users_collection = database.users
@@ -116,20 +118,42 @@ class ChatService:
             chat_room_data["created_at"] = datetime.utcnow()
             await self.chat_rooms_collection.insert_one(chat_room_data)
 
-    async def get_all_users(self, current_user_email: str) -> list:
-        #obtener lista de todos los usuarios excepto el actual
+    async def get_all_users(self, current_user_email: str, limit: int = 100, skip: int = 0) -> list:
+        """
+        Obtener lista de todos los usuarios excepto el actual
+        
+        Args:
+            current_user_email: Email del usuario actual
+            limit: Número máximo de usuarios a retornar (default: 100)
+            skip: Número de usuarios a saltar para paginación (default: 0)
+        
+        Returns:
+            Lista de usuarios (sin password)
+        """
+        if limit > 500:  # Límite máximo de seguridad
+            limit = 500
+            chat_logger.warning(f"Límite de usuarios ajustado a 500 (solicitado: {limit})")
+        
         cursor = self.users_collection.find(
             {"email": {"$ne": current_user_email}},
             {"password": 0}
-        )
+        ).skip(skip).limit(limit)
+        
         users = []
         async for doc in cursor:
             doc["id"] = str(doc.get("_id", ""))
-            doc.pop("_id", None)  #elimina el campo _id para evitar problemas de serialización
+            doc.pop("_id", None)  # Elimina el campo _id para evitar problemas de serialización
             users.append(doc)
         return users
 
+    @staticmethod
     async def get_user_email_from_token(token: str):
+        """
+        Obtener email del usuario desde token JWT (método estático)
+        
+        Nota: Este método está duplicado en otros lugares. 
+        Considerar usar una función centralizada en utils.
+        """
         try:
             payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
             return payload.get("email")

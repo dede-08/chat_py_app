@@ -1,6 +1,7 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
 from routes import auth, chat_ws, chat
 from config.settings import settings
 from database.connection import database, client
@@ -13,6 +14,7 @@ from middleware.security import (
     api_rate_limiter
 )
 from utils.logger import app_logger
+import traceback
 
 app = FastAPI(
     title="ChatPy API",
@@ -65,6 +67,13 @@ async def startup_event():
         
         # Ejecutar migraciones
         await run_database_migrations(database)
+        
+        # Iniciar tarea de limpieza del rate limiter
+        import asyncio
+        asyncio.create_task(auth_rate_limiter.cleanup_old_entries())
+        asyncio.create_task(api_rate_limiter.cleanup_old_entries())
+        app_logger.info("Tareas de limpieza de rate limiter iniciadas")
+        
         app_logger.info("Aplicación iniciada correctamente")
     except Exception as e:
         app_logger.error(f"Error durante el inicio de la aplicación: {e}")
@@ -103,6 +112,49 @@ async def health_check():
             status_code=503,
             content={"status": "unhealthy", "error": str(e)}
         )
+
+# Handler global de excepciones
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Manejar todas las excepciones no capturadas"""
+    app_logger.error(
+        f"Excepción no manejada: {type(exc).__name__} - {str(exc)}\n"
+        f"Path: {request.url.path}\n"
+        f"Method: {request.method}\n"
+        f"Traceback: {traceback.format_exc()}"
+    )
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": "Error interno del servidor. Por favor, intente más tarde.",
+            "type": "internal_server_error"
+        }
+    )
+
+# Handler para errores de validación
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Manejar errores de validación de Pydantic"""
+    app_logger.warning(f"Error de validación en {request.url.path}: {exc.errors()}")
+    return JSONResponse(
+        status_code=422,
+        content={
+            "detail": "Error de validación en los datos enviados",
+            "errors": exc.errors()
+        }
+    )
+
+# Handler para HTTPException
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    """Manejar HTTPExceptions de forma consistente"""
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "detail": exc.detail,
+            "status_code": exc.status_code
+        }
+    )
 
 # Incluir routers
 app.include_router(auth.router)
