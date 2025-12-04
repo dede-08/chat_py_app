@@ -3,23 +3,23 @@ from typing import List
 from services.chat_service import ChatService
 from schemas.chat_schema import MessageResponse, ChatRoomResponse, UserStatus
 from utils.jwt_bearer import JWTBearer
+from config.settings import settings
 from jose import JWTError, jwt
-from dotenv import load_dotenv
-import os
+from utils.logger import chat_logger
 
 router = APIRouter()
 chat_service = ChatService()
 
-load_dotenv()
-SECRET_KEY = os.getenv("JWT_SECRET")
-ALGORITHM = os.getenv("JWT_ALGORITHM")
-
 async def get_current_user_email(token: str = Depends(JWTBearer())):
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        return payload.get("email")
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Token inválido")
+        payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+        email = payload.get("email")
+        if not email:
+            raise HTTPException(status_code=401, detail="Token inválido: email no encontrado")
+        return email
+    except JWTError as e:
+        chat_logger.warning(f"Token JWT inválido: {e}")
+        raise HTTPException(status_code=401, detail="Token inválido o expirado")
 
 @router.get("/chat/history/{other_user_email}", response_model=List[MessageResponse])
 async def get_chat_history(

@@ -1,13 +1,7 @@
 from fastapi import Request, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt, JWTError
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
-
-SECRET_KEY = os.getenv("JWT_SECRET")
-ALGORITHM = os.getenv("JWT_ALGORITHM")
+from config.settings import settings
 
 class JWTBearer(HTTPBearer):
     def __init__(self, auto_error: bool = True):
@@ -24,7 +18,7 @@ class JWTBearer(HTTPBearer):
 
     def verify_jwt(self, token: str):
         try:
-            jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
             return True
         except JWTError:
             return False

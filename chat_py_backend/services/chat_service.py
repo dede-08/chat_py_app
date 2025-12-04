@@ -4,10 +4,8 @@ from datetime import datetime
 from typing import List, Optional
 from bson import ObjectId
 from jose import JWTError, jwt
-import os
-
-SECRET_KEY = os.getenv("JWT_SECRET")
-ALGORITHM = os.getenv("JWT_ALGORITHM")
+from config.settings import settings
+from utils.logger import chat_logger
 
 class ChatService:
     def __init__(self):
@@ -133,8 +131,8 @@ class ChatService:
 
     async def get_user_email_from_token(token: str):
         try:
-            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
             return payload.get("email")
         except JWTError as e:
-            print(f"Error decodificando token JWT: {e}")
+            chat_logger.warning(f"Error decodificando token JWT: {e}")
             return None

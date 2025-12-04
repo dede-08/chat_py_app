@@ -1,52 +1,44 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query, HTTPException
 from jose import JWTError, jwt
 from typing import Dict, List
-from dotenv import load_dotenv
-import os
 import json
 from datetime import datetime
 from services.chat_service import ChatService
+from config.settings import settings
+from utils.logger import websocket_logger
 import traceback
 
 router = APIRouter()
-#diccionario para mantener conexiones por usuario
+# Diccionario para mantener conexiones por usuario
 connected_users: Dict[str, WebSocket] = {}
 chat_service = ChatService()
 
-load_dotenv()
-
-SECRET_KEY = os.getenv("JWT_SECRET")
-ALGORITHM = os.getenv("JWT_ALGORITHM")
-
 async def get_user_email_from_token(token: str):
-    print(f"Token recibido para decodificar: {token}")
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        print(f"Payload decodificado: {payload}")
+        payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
         email = payload.get("email")
         if not email:
-            print("Email no encontrado en el payload")
+            websocket_logger.warning("Email no encontrado en el payload del token")
             return None
         return email
     except JWTError as e:
-        print(f"Token inválido: {e}")
+        websocket_logger.warning(f"Token JWT inválido: {e}")
         return None
 
 @router.websocket("/ws/chat")
 async def chat_endpoint(websocket: WebSocket, token: str = Query(None)):
-    print(f"Intento de conexión WebSocket con token: {token}")
     if not token:
-        print("Conexión WebSocket cerrada: No se proporcionó token")
+        websocket_logger.warning("Intento de conexión WebSocket sin token")
         await websocket.close(code=1008, reason="Token no proporcionado")
         return
 
     user_email = await get_user_email_from_token(token)
     if not user_email:
-        print(f"Conexión WebSocket cerrada: Token inválido o email no encontrado para el token: {token}")
+        websocket_logger.warning("Intento de conexión WebSocket con token inválido")
         await websocket.close(code=1008, reason="Token inválido")
         return
     
-    print(f"Usuario {user_email} autenticado correctamente.")
+    websocket_logger.info(f"Usuario {user_email} conectado vía WebSocket")
 
     await websocket.accept()
     connected_users[user_email] = websocket
@@ -57,31 +49,41 @@ async def chat_endpoint(websocket: WebSocket, token: str = Query(None)):
     try:
         while True:
             data = await websocket.receive_text()
-            print("Mensaje recibido en WebSocket:", data)
-            message_data = json.loads(data)
-            message_type = message_data.get("type", "message")
-            if message_type == "message":
-                await handle_private_message(user_email, message_data)
-            elif message_type == "typing":
-                await handle_typing_indicator(user_email, message_data)
-            elif message_type == "read":
-                await handle_read_receipt(user_email, message_data)
-            elif message_type == "ping":
-                await websocket.send_text(json.dumps({"type": "pong"}))
-                continue  #solo para mantener la conexion
+            websocket_logger.debug(f"Mensaje recibido de {user_email}: {data[:100]}")
+            try:
+                message_data = json.loads(data)
+                message_type = message_data.get("type", "message")
+                
+                if message_type == "message":
+                    await handle_private_message(user_email, message_data)
+                elif message_type == "typing":
+                    await handle_typing_indicator(user_email, message_data)
+                elif message_type == "read":
+                    await handle_read_receipt(user_email, message_data)
+                elif message_type == "ping":
+                    await websocket.send_text(json.dumps({"type": "pong"}))
+                    continue  # Solo para mantener la conexión
+                else:
+                    websocket_logger.warning(f"Tipo de mensaje desconocido: {message_type}")
+            except json.JSONDecodeError as e:
+                websocket_logger.error(f"Error al parsear JSON: {e}")
+                await websocket.send_text(json.dumps({
+                    "type": "error",
+                    "message": "Formato de mensaje inválido"
+                }))
                 
     except WebSocketDisconnect:
+        websocket_logger.info(f"Usuario {user_email} desconectado")
         if user_email in connected_users:
             del connected_users[user_email]
-        #notificar que el usuario esta offline
+        # Notificar que el usuario está offline
         await broadcast_user_status(user_email, False)
     except Exception as e:
-        print(f"Error en WebSocket:", e)
-        traceback.print_exc()
+        websocket_logger.error(f"Error en WebSocket para {user_email}: {e}")
+        websocket_logger.debug(traceback.format_exc())
         if user_email in connected_users:
             del connected_users[user_email]
         await broadcast_user_status(user_email, False)
-        print("Cerrando conexión WebSocket debido a error.")
 
 async def handle_private_message(sender_email: str, message_data: dict):
     #manejar mensaje privado entre usuarios
@@ -162,7 +164,7 @@ async def broadcast_user_status(user_email: str, is_online: bool):
             try:
                 await websocket.send_text(json.dumps(status_data))
             except Exception as e:
-                print(f"Error al transmitir el estado a {email}: {e}")
-                #si hay error, remover la conexion
+                websocket_logger.error(f"Error al transmitir el estado a {email}: {e}")
+                # Si hay error, remover la conexión
                 if email in connected_users:
                     del connected_users[email]

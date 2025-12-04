@@ -1,23 +1,16 @@
 from jose import jwt
 from datetime import datetime, timedelta
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
-
-SECRET_KEY = os.getenv("JWT_SECRET")
-ALGORITHM = os.getenv("JWT_ALGORITHM")
-EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES"))
+from config.settings import settings
 
 def create_access_token(data: dict):
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(minutes=EXPIRE_MINUTES)
+    expire = datetime.utcnow() + timedelta(minutes=settings.jwt_expire_minutes)
     to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return jwt.encode(to_encode, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
 def decode_access_token(token: str):
     try:
-        decoded_payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        decoded_payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
         return decoded_payload
     except jwt.JWTError:
         return None

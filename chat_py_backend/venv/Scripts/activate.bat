@@ -8,7 +8,7 @@ if defined _OLD_CODEPAGE (
     "%SystemRoot%\System32\chcp.com" 65001 > nul
 )
 
-set VIRTUAL_ENV=C:\Users\Ben\OneDrive\Desktop\chat_py_app\chat_py_backend\venv
+set VIRTUAL_ENV=C:\Users\Ben\OneDrive\Desktop\repos\chat_py_app\chat_py_backend\venv
 
 if not defined PROMPT set PROMPT=$P$G
 

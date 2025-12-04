@@ -6,15 +6,19 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=False)
 
     # Base de datos
+    # NOTA: Valores por defecto solo para desarrollo local
+    # En producción, usar variables de entorno en .env (que NO está en el repo)
     mongo_url: str = "mongodb://localhost:27017"
     db_name: str = "chatpydb"
     
     # JWT
+    # jwt_secret es OBLIGATORIO - debe estar en .env (nunca en el repo)
     jwt_secret: str
     jwt_expire_minutes: int = 60
     jwt_algorithm: str = "HS256"
     
     # CORS
+    # Valores por defecto solo para desarrollo local
     frontend_url: str = "http://localhost:5173"
     allowed_origins: List[str] = []
     
@@ -35,6 +39,7 @@ class Settings(BaseSettings):
     ws_connection_timeout: int = 60
 
     # Configuración de correo
+    # NOTA: Valores por defecto son placeholders - usar .env en producción
     mail_username: str = "your_email@example.com"
     mail_password: str = "your_password"
     mail_from: EmailStr = "your_email@example.com"
