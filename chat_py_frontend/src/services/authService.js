@@ -3,7 +3,7 @@ import axios from 'axios';
 const API_URL = `${import.meta.env.VITE_API_URL}/auth`;
 
 const register = (userData) => {
-    return axios.post(`${API_URL}/auth/register`, userData);
+    return axios.post(`${API_URL}/register`, userData);
 };
 
 export const loginUser = async (data) => {
@@ -188,7 +188,7 @@ const logout = () => {
 };
 
 const confirmEmail = (token) => {
-    return axios.get(`${API_URL}/auth/confirm-email/${token}`);
+    return axios.get(`${API_URL}/confirm-email/${token}`);
 };
 
 //crear instancia por defecto para compatibilidad
