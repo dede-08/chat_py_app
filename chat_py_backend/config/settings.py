@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     jwt_expire_minutes: int = 60
     jwt_algorithm: str = "HS256"
     
+    # Refresh Token
+    refresh_token_expire_days: int = 7  # 7 días de expiración para refresh tokens
+    
     # CORS
     # Valores por defecto solo para desarrollo local
     frontend_url: str = "http://localhost:5173"

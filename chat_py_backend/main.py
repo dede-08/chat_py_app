@@ -14,7 +14,9 @@ from middleware.security import (
     api_rate_limiter
 )
 from utils.logger import app_logger
+from services.refresh_token_service import refresh_token_service
 import traceback
+import asyncio
 
 app = FastAPI(
     title="ChatPy API",
@@ -69,10 +71,23 @@ async def startup_event():
         await run_database_migrations(database)
         
         # Iniciar tarea de limpieza del rate limiter
-        import asyncio
         asyncio.create_task(auth_rate_limiter.cleanup_old_entries())
         asyncio.create_task(api_rate_limiter.cleanup_old_entries())
         app_logger.info("Tareas de limpieza de rate limiter iniciadas")
+        
+        # Iniciar tarea de limpieza de refresh tokens expirados
+        async def cleanup_refresh_tokens():
+            """Tarea periódica para limpiar refresh tokens expirados"""
+            while True:
+                try:
+                    await asyncio.sleep(3600)  # Ejecutar cada hora
+                    await refresh_token_service.cleanup_expired_tokens()
+                except Exception as e:
+                    app_logger.error(f"Error en limpieza de refresh tokens: {e}")
+                    await asyncio.sleep(60)  # Esperar 1 minuto antes de reintentar
+        
+        asyncio.create_task(cleanup_refresh_tokens())
+        app_logger.info("Tarea de limpieza de refresh tokens iniciada")
         
         app_logger.info("Aplicación iniciada correctamente")
     except Exception as e:

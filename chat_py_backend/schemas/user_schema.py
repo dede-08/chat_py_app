@@ -49,3 +49,6 @@ class PasswordRequirements(BaseModel):
     require_digits: bool
     require_special_chars: bool
     special_chars: str
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str

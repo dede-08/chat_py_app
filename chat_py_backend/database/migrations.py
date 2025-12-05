@@ -51,6 +51,24 @@ class DatabaseMigration:
                 ("updated_at", -1)
             ], name="idx_chatrooms_updated")
             
+            # Índices para refresh tokens
+            await self.db.refresh_tokens.create_index([
+                ("user_email", 1),
+                ("is_revoked", 1)
+            ], name="idx_refresh_tokens_user")
+            
+            await self.db.refresh_tokens.create_index([
+                ("refresh_token", 1)
+            ], unique=True, name="idx_refresh_tokens_token")
+            
+            await self.db.refresh_tokens.create_index([
+                ("expires_at", 1)
+            ], name="idx_refresh_tokens_expires")
+            
+            await self.db.refresh_tokens.create_index([
+                ("token_id", 1)
+            ], unique=True, name="idx_refresh_tokens_id")
+            
             self.logger.info("Índices creados exitosamente")
             
         except Exception as e:
@@ -66,9 +84,17 @@ class DatabaseMigration:
             ], expireAfterSeconds=31536000, name="idx_messages_ttl")  #365 dias
             
             #TTL para logs de conexion (si se implementa)
-            await self.db.connection_logs.create_index([
-                ("timestamp", 1)
-            ], expireAfterSeconds=604800, name="idx_connection_logs_ttl")  #7 dias
+            try:
+                await self.db.connection_logs.create_index([
+                    ("timestamp", 1)
+                ], expireAfterSeconds=604800, name="idx_connection_logs_ttl")  #7 dias
+            except Exception:
+                pass  # La colección puede no existir
+            
+            # TTL para refresh tokens expirados (limpieza automática después de 7 días)
+            await self.db.refresh_tokens.create_index([
+                ("expires_at", 1)
+            ], expireAfterSeconds=0, name="idx_refresh_tokens_ttl")
             
             self.logger.info("Índices TTL configurados exitosamente")
             

@@ -1,15 +1,21 @@
 from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel
 from model.user import User
-from schemas.user_schema import UserRegister, UserLogin, PasswordRequirements
+from schemas.user_schema import UserRegister, UserLogin, PasswordRequirements, RefreshTokenRequest
 from database.connection import users_collection
 from passlib.context import CryptContext
-from utils.jwt_handler import create_access_token, decode_access_token
+from utils.jwt_handler import (
+    create_access_token, 
+    create_refresh_token, 
+    decode_access_token, 
+    decode_refresh_token
+)
 from utils.jwt_bearer import JWTBearer
 from utils.password_validator import password_validator
 from utils.email_handler import send_email
 from config.settings import settings
 from utils.logger import auth_logger
+from services.refresh_token_service import refresh_token_service
 import uuid
 
 router = APIRouter(prefix="/auth")
@@ -140,10 +146,18 @@ async def login(user: UserLogin):
             auth_logger.warning(f"Intento de login con contraseña incorrecta: {user.email}")
             raise HTTPException(status_code=400, detail="Credenciales inválidas")
 
-        token = create_access_token({"email": db_user["email"]})
+        # Crear access token y refresh token
+        access_token = create_access_token({"email": db_user["email"]})
+        refresh_token = create_refresh_token({"email": db_user["email"]})
+        
+        # Guardar refresh token en la base de datos
+        await refresh_token_service.save_refresh_token(db_user["email"], refresh_token)
+        
         auth_logger.info(f"Login exitoso: {user.email}")
         return {
-            "token": token, 
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type": "bearer",
             "email": db_user["email"],
             "username": db_user["username"]
         }
@@ -155,13 +169,75 @@ async def login(user: UserLogin):
 
 @router.post("/logout", dependencies=[Depends(JWTBearer())])
 async def logout(token: str = Depends(JWTBearer())):
-    """Endpoint para logout (el token se invalidará en el frontend)"""
+    """Endpoint para logout - invalida todos los refresh tokens del usuario"""
     try:
         payload = decode_access_token(token)
         if payload and isinstance(payload, dict):
             email = payload.get("email")
             if email:
-                auth_logger.info(f"Logout exitoso: {email}")
-    except Exception:
-        pass  # No fallar si hay error al obtener el email
+                # Revocar todos los refresh tokens del usuario
+                revoked_count = await refresh_token_service.revoke_all_user_tokens(email)
+                auth_logger.info(f"Logout exitoso: {email} - {revoked_count} tokens revocados")
+    except Exception as e:
+        auth_logger.warning(f"Error durante logout: {e}")
+        # No fallar si hay error, pero loguear
     return {"message": "Sesión cerrada correctamente"}
+
+@router.post("/refresh")
+async def refresh_token(request: RefreshTokenRequest):
+    """
+    Endpoint para renovar access token usando refresh token
+    Implementa rotación de tokens: genera nuevo access token y nuevo refresh token
+    """
+    try:
+        # Decodificar refresh token
+        payload = decode_refresh_token(request.refresh_token)
+        if not payload:
+            auth_logger.warning("Intento de refresh con token inválido")
+            raise HTTPException(status_code=401, detail="Refresh token inválido o expirado")
+        
+        user_email = payload.get("email")
+        if not user_email:
+            auth_logger.warning("Refresh token sin email en payload")
+            raise HTTPException(status_code=401, detail="Refresh token inválido")
+        
+        # Verificar que el usuario existe y está confirmado
+        db_user = await users_collection.find_one({"email": user_email})
+        if not db_user:
+            auth_logger.warning(f"Intento de refresh con usuario inexistente: {user_email}")
+            raise HTTPException(status_code=401, detail="Usuario no encontrado")
+        
+        if not db_user.get("is_email_confirmed"):
+            auth_logger.warning(f"Intento de refresh con email no confirmado: {user_email}")
+            raise HTTPException(status_code=403, detail="Correo electrónico no confirmado")
+        
+        # Validar que el refresh token existe en la base de datos y no está revocado
+        is_valid = await refresh_token_service.validate_refresh_token(
+            request.refresh_token, 
+            user_email
+        )
+        if not is_valid:
+            auth_logger.warning(f"Intento de refresh con token revocado o inválido: {user_email}")
+            raise HTTPException(status_code=401, detail="Refresh token inválido o revocado")
+        
+        # Revocar el refresh token usado (rotación de tokens)
+        await refresh_token_service.revoke_refresh_token(request.refresh_token, user_email)
+        
+        # Generar nuevos tokens
+        new_access_token = create_access_token({"email": user_email})
+        new_refresh_token = create_refresh_token({"email": user_email})
+        
+        # Guardar el nuevo refresh token
+        await refresh_token_service.save_refresh_token(user_email, new_refresh_token)
+        
+        auth_logger.info(f"Tokens renovados exitosamente para: {user_email}")
+        return {
+            "access_token": new_access_token,
+            "refresh_token": new_refresh_token,
+            "token_type": "bearer"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        auth_logger.error(f"Error durante refresh token: {e}")
+        raise HTTPException(status_code=500, detail="Error interno del servidor")
