@@ -9,11 +9,29 @@ const register = (userData) => {
 export const loginUser = async (data) => {
   try {
     const response = await axios.post(`${API_URL}/login`, data);
-    localStorage.setItem('token', response.data.token);
+    
+    // Verificar que la respuesta tenga los tokens
+    if (!response.data.access_token || !response.data.refresh_token) {
+      console.error('Respuesta de login sin tokens:', response.data);
+      throw new Error('El servidor no devolvió los tokens necesarios');
+    }
+    
+    // Guardar access_token y refresh_token
+    localStorage.setItem('access_token', response.data.access_token);
+    localStorage.setItem('refresh_token', response.data.refresh_token);
+    // Mantener compatibilidad con código antiguo que usa 'token'
+    localStorage.setItem('token', response.data.access_token);
     localStorage.setItem('userEmail', response.data.email);
     //guardar el username del usuario logueado (con fallback al email si no hay username)
     const username = response.data.username || response.data.email || 'Usuario';
     localStorage.setItem('username', username);
+    
+    // Verificar que se guardaron correctamente
+    const savedToken = localStorage.getItem('access_token');
+    if (!savedToken) {
+      console.error('Error: El token no se guardó correctamente en localStorage');
+    }
+    
     return { success: true, data: response.data };
   } catch (error) {
     console.error('Error en login:', error);
@@ -76,6 +94,8 @@ export const logoutUser = async () => {
   } finally {
     //limpiar localStorage independientemente del resultado
     localStorage.removeItem('token');
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
     localStorage.removeItem('userEmail');
     localStorage.removeItem('username');
   }
@@ -162,9 +182,46 @@ export const updateUserProfile = async (data) => {
   }
 };
 
-//obtener token del localStorage
+//obtener access token del localStorage
 export const getToken = () => {
-  return localStorage.getItem('token');
+  // Priorizar access_token, pero mantener compatibilidad con 'token' antiguo
+  return localStorage.getItem('access_token') || localStorage.getItem('token');
+};
+
+//obtener refresh token del localStorage
+export const getRefreshToken = () => {
+  return localStorage.getItem('refresh_token');
+};
+
+//renovar tokens usando refresh token
+export const refreshTokens = async () => {
+  try {
+    const refreshToken = getRefreshToken();
+    if (!refreshToken) {
+      throw new Error('No hay refresh token disponible');
+    }
+
+    const response = await axios.post(`${API_URL}/refresh`, {
+      refresh_token: refreshToken
+    });
+
+    // Guardar nuevos tokens
+    localStorage.setItem('access_token', response.data.access_token);
+    localStorage.setItem('refresh_token', response.data.refresh_token);
+    // Mantener compatibilidad
+    localStorage.setItem('token', response.data.access_token);
+
+    return {
+      success: true,
+      access_token: response.data.access_token,
+      refresh_token: response.data.refresh_token
+    };
+  } catch (error) {
+    console.error('Error al renovar tokens:', error);
+    // Si el refresh token es inválido, limpiar todo y forzar nuevo login
+    logoutUser();
+    throw error;
+  }
 };
 
 //obtener email del usuario
@@ -185,11 +242,80 @@ export const isAuthenticated = () => {
 //cerrar sesión (versión simple sin llamada al backend)
 const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('userEmail');
+    localStorage.removeItem('username');
 };
 
 const confirmEmail = (token) => {
     return axios.get(`${API_URL}/confirm-email/${token}`);
 };
+
+// Configurar interceptor de axios para renovar tokens automáticamente
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  
+  failedQueue = [];
+};
+
+axios.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    // Si el error es 401 y no es una petición de refresh o login
+    if (error.response?.status === 401 && 
+        !originalRequest._retry && 
+        !originalRequest.url?.includes('/refresh') &&
+        !originalRequest.url?.includes('/login')) {
+      
+      if (isRefreshing) {
+        // Si ya se está refrescando, esperar en la cola
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then(token => {
+            originalRequest.headers['Authorization'] = `Bearer ${token}`;
+            return axios(originalRequest);
+          })
+          .catch(err => {
+            return Promise.reject(err);
+          });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        const newTokens = await refreshTokens();
+        processQueue(null, newTokens.access_token);
+        originalRequest.headers['Authorization'] = `Bearer ${newTokens.access_token}`;
+        return axios(originalRequest);
+      } catch (refreshError) {
+        processQueue(refreshError, null);
+        // Redirigir a login si el refresh falla
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
 
 //crear instancia por defecto para compatibilidad
 export default {
@@ -201,6 +327,8 @@ export default {
     getPasswordRequirements,
     confirmEmail,
     getToken,
+    getRefreshToken,
+    refreshTokens,
     getUserEmail,
     getUsername,
     getUserProfile,
