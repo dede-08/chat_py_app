@@ -13,14 +13,15 @@ Una aplicación de chat moderna construida con FastAPI (backend) y React (fronte
   - Indicador de escritura ("está escribiendo...")
   - Confirmación de lectura
 - **Interfaz moderna**: Diseño responsive y intuitivo
-- **Autenticación segura**: JWT tokens para proteger las rutas
+- **Autenticación segura**: JWT tokens con sistema de refresh tokens para proteger las rutas
 
 ### Características Técnicas
 - **Backend**: FastAPI con WebSockets
 - **Base de datos**: MongoDB con Motor (async driver)
 - **Frontend**: React con hooks y componentes funcionales
-- **Autenticación**: JWT con bcrypt para hash de contraseñas
+- **Autenticación**: JWT con refresh tokens y bcrypt para hash de contraseñas
 - **CORS**: Configurado para desarrollo local
 - **Hash de contraseñas**: Bcrypt para almacenamiento seguro
 - **Validación de datos**: Pydantic para validación de esquemas
 - **CORS**: Configurado para permitir solo el frontend autorizado
+- 
