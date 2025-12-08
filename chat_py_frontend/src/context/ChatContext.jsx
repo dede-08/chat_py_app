@@ -5,11 +5,11 @@ import { CHAT_ACTIONS } from './chatActions';
 import { initialState } from './initialState';
 import { ChatContext } from './ChatContextProvider';
 
-// Provider del contexto
+//provider del contexto
 export const ChatProvider = ({ children }) => {
   const [state, dispatch] = useReducer(chatReducer, initialState);
 
-  // Acciones
+  //acciones
   const setUsers = useCallback((users) => {
     dispatch({ type: CHAT_ACTIONS.SET_USERS, payload: users });
   }, []);
@@ -66,7 +66,7 @@ export const ChatProvider = ({ children }) => {
     dispatch({ type: CHAT_ACTIONS.CLEAR_ERROR });
   }, []);
 
-  // Funciones de utilidad
+  //funciones de utilidad
   const sendMessage = (content) => {
     if (!state.selectedUser || !content.trim()) return false;
 
@@ -80,10 +80,10 @@ export const ChatProvider = ({ children }) => {
       is_temporary: true
     };
 
-    // Agregar mensaje temporalmente
+    //agregar mensaje temporalmente
     addMessage(tempMessage);
 
-    // Enviar mediante WebSocket
+    //enviar mediante WebSocket
     return chatService.sendMessage(state.selectedUser.email, content.trim());
   };
 
@@ -109,45 +109,45 @@ export const ChatProvider = ({ children }) => {
     }
   };
 
-  // Iniciar y cerrar la conexión WebSocket
+  //iniciar y cerrar la conexion WebSocket
   useEffect(() => {
     chatService.connect();
 
     return () => {
       chatService.disconnect();
     };
-  }, []); // Se ejecuta solo al montar y desmontar el provider
+  }, []); //se ejecuta solo al montar y desmontar el provider
 
-  // Configurar listeners de WebSocket
+  //configurar listeners de WebSocket
   useEffect(() => {
-    // Handler para el estado de la conexión
+    //handler para el estado de la conexion
     const handleConnectionStatus = (data) => {
       setConnectionStatus(data.connected);
     };
 
-    // Handler para mensajes nuevos
+    //handler para mensajes nuevos
     const handleNewMessage = (data) => {
       addMessage(data);
       
-      // Marcar como leído si es del usuario seleccionado
+      //marcar como leido si es del usuario seleccionado
       if (data.sender_email === state.selectedUser?.email) {
         chatService.sendReadReceipt(data.sender_email);
       }
     };
 
-    // Handler para indicador de escritura
+    //handler para indicador de escritura
     const handleTyping = (data) => {
       setUserTyping(data.sender_email, data.is_typing);
     };
 
-    // Handler para estado de usuario
+    //handler para estado de usuario
     const handleUserStatus = (data) => {
       setUserOnlineStatus(data.user_email, data.is_online);
     };
 
-    // Handler para confirmación de lectura
+    //handler para confirmacion de lectura
     const handleReadReceipt = (data) => {
-      // Actualiza el estado de los mensajes de una sola vez, en lugar de en un bucle
+      //actualiza el estado de los mensajes de una sola vez, en lugar de en un bucle
       setMessages(prevMessages =>
         prevMessages.map(msg =>
           (msg.sender_email === state.currentUser && msg.receiver_email === data.reader_email && !msg.is_read)
@@ -157,22 +157,20 @@ export const ChatProvider = ({ children }) => {
       );
     };
 
-    // Registrar handlers
+    //registrar handlers
     chatService.onMessage('connection_status', handleConnectionStatus);
     chatService.onMessage('message', handleNewMessage);
     chatService.onMessage('typing', handleTyping);
     chatService.onMessage('user_status', handleUserStatus);
     chatService.onMessage('read_receipt', handleReadReceipt);
 
-    // --- CAMBIO CLAVE: Función de limpieza ---
-    // Se eliminan los listeners cuando el efecto se "limpia" para evitar duplicados y fugas de memoria.
+    //se eliminan los listeners cuando el efecto se "limpia" para evitar duplicados y fugas de memoria.
     return () => {
-      // Limpiar todos los listeners para evitar fugas de memoria
+      //limpiar todos los listeners para evitar fugas de memoria
       chatService.clearAllListeners();
     };
   }, [
-      // --- CAMBIO CLAVE: Dependencias corregidas ---
-      // Se quita state.messages y se añaden las funciones que realmente se usan.
+      //se quita state.messages y se añaden las funciones que realmente se usan.
       state.selectedUser,
       state.currentUser,
       addMessage,
@@ -182,12 +180,13 @@ export const ChatProvider = ({ children }) => {
       setConnectionStatus
   ]);
 
-  // Valor del contexto
+  //valor del contexto
   const contextValue = {
-    // Estado
+    
+    //estado
     ...state,
     
-    // Acciones
+    //acciones
     setUsers,
     setSelectedUser,
     addMessage,
@@ -200,12 +199,12 @@ export const ChatProvider = ({ children }) => {
     setError,
     clearError,
     
-    // Funciones
+    //funciones
     sendMessage,
     loadChatHistory,
     loadUsers,
     
-    // Utilidades
+    //utilidades
     isUserOnline: (userEmail) => state.onlineUsers.has(userEmail),
     isUserTyping: (userEmail) => state.typingUsers.has(userEmail),
     getUnreadCount: (userEmail) => state.unreadCounts[userEmail] || 0

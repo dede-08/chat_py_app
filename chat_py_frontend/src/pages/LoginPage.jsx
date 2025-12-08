@@ -10,7 +10,7 @@ const LoginPage = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    //verificar si el usuario ya está autenticado
+    //verificar si el usuario ya esta autenticado
     if (isAuthenticated()) {
       setAlreadyAuthenticated(true);
     }

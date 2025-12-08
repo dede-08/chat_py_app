@@ -1,4 +1,4 @@
-// Tipos de acciones para el contexto de chat
+//tipos de acciones para el contexto de chat
 export const CHAT_ACTIONS = {
   SET_USERS: 'SET_USERS',
   SET_SELECTED_USER: 'SET_SELECTED_USER',
