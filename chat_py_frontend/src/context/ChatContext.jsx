@@ -1,4 +1,4 @@
-import React, { useReducer, useEffect, useCallback } from 'react';
+import React, { useReducer, useEffect, useCallback, useRef } from 'react';
 import chatService from '../services/chatService';
 import { chatReducer } from './chatReducer';
 import { CHAT_ACTIONS } from './chatActions';
@@ -8,6 +8,9 @@ import { ChatContext } from './ChatContextProvider';
 //provider del contexto
 export const ChatProvider = ({ children }) => {
   const [state, dispatch] = useReducer(chatReducer, initialState);
+  // Ref para acceder al estado más reciente sin causar re-renders
+  const stateRef = useRef(state);
+  stateRef.current = state;
 
   //acciones
   const setUsers = useCallback((users) => {
@@ -130,7 +133,9 @@ export const ChatProvider = ({ children }) => {
       addMessage(data);
       
       //marcar como leido si es del usuario seleccionado
-      if (data.sender_email === state.selectedUser?.email) {
+      // Usar stateRef para acceder al estado más reciente
+      const currentState = stateRef.current;
+      if (data.sender_email === currentState.selectedUser?.email) {
         chatService.sendReadReceipt(data.sender_email);
       }
     };
@@ -148,9 +153,11 @@ export const ChatProvider = ({ children }) => {
     //handler para confirmacion de lectura
     const handleReadReceipt = (data) => {
       //actualiza el estado de los mensajes de una sola vez, en lugar de en un bucle
-      setMessages(prevMessages =>
-        prevMessages.map(msg =>
-          (msg.sender_email === state.currentUser && msg.receiver_email === data.reader_email && !msg.is_read)
+      // Usar stateRef para acceder al estado más reciente sin causar re-renders innecesarios
+      const currentState = stateRef.current;
+      setMessages(
+        currentState.messages.map(msg =>
+          (msg.sender_email === currentState.currentUser && msg.receiver_email === data.reader_email && !msg.is_read)
             ? { ...msg, is_read: true }
             : msg
         )
