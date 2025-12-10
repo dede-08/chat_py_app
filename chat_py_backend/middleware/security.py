@@ -5,6 +5,7 @@ from collections import defaultdict, deque
 from typing import Dict, Deque
 import asyncio
 from utils.logger import app_logger
+from config.settings import settings
 
 class RateLimiter:
 
@@ -91,15 +92,98 @@ class SecurityHeaders:
 
     #middleware para agregar headers de seguridad
     @staticmethod
+    def _build_csp_policy() -> str:
+        """
+        Construir la política de Content Security Policy (CSP).
+        
+        Permite recursos necesarios para el frontend:
+        - Scripts desde 'self' y CDNs confiables (Bootstrap)
+        - Estilos desde 'self' y Google Fonts
+        - Fuentes desde Google Fonts
+        - Conexiones WebSocket al mismo origen
+        - Imágenes desde 'self' y data URIs
+        - Conexiones fetch/XMLHttpRequest al mismo origen y API backend
+        
+        Returns:
+            String con la política CSP completa
+        """
+        # Obtener el origen del frontend para permitir conexiones
+        frontend_origin = settings.frontend_url
+        
+        # Construir lista de orígenes permitidos para conexiones
+        connect_sources = ["'self'", frontend_origin]
+        
+        # En desarrollo, permitir conexiones WebSocket en localhost
+        if "localhost" in frontend_origin or "127.0.0.1" in frontend_origin:
+            connect_sources.extend([
+                "ws://localhost:*",
+                "wss://localhost:*",
+                "ws://127.0.0.1:*",
+                "wss://127.0.0.1:*"
+            ])
+        else:
+            # En producción, permitir WebSockets al mismo origen
+            # Extraer el protocolo y host del frontend_url
+            if frontend_origin.startswith("https://"):
+                ws_origin = frontend_origin.replace("https://", "wss://")
+            elif frontend_origin.startswith("http://"):
+                ws_origin = frontend_origin.replace("http://", "ws://")
+            else:
+                ws_origin = frontend_origin
+            connect_sources.append(ws_origin)
+        
+        # Construir CSP policy
+        csp_directives = [
+            # Scripts: permitir mismo origen y CDNs confiables
+            # 'unsafe-inline' y 'unsafe-eval' necesarios para Vite/React en desarrollo
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net",
+            # Estilos: permitir mismo origen, inline (para React/Vite) y Google Fonts
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+            # Fuentes: permitir Google Fonts
+            "font-src 'self' https://fonts.gstatic.com data:",
+            # Imágenes: permitir mismo origen, data URIs y CDNs
+            "img-src 'self' data: https: blob:",
+            # Conexiones: permitir mismo origen, WebSocket y API backend
+            f"connect-src {' '.join(connect_sources)}",
+            # Media: permitir mismo origen
+            "media-src 'self'",
+            # Objetos embebidos: deshabilitar por seguridad
+            "object-src 'none'",
+            # Base URI: solo mismo origen
+            "base-uri 'self'",
+            # Form actions: solo mismo origen
+            "form-action 'self'",
+            # Frame ancestors: deshabilitar para prevenir clickjacking
+            "frame-ancestors 'none'",
+            # Upgrade insecure requests en producción (comentado para desarrollo)
+            # "upgrade-insecure-requests",
+        ]
+        
+        return "; ".join(csp_directives)
+    
+    @staticmethod
     async def add_security_headers(request: Request, call_next):
+        """
+        Middleware para agregar headers de seguridad HTTP.
+        
+        Incluye:
+        - X-Content-Type-Options: previene MIME type sniffing
+        - X-Frame-Options: previene clickjacking
+        - X-XSS-Protection: protección básica XSS (legacy)
+        - Referrer-Policy: controla información de referrer
+        - Content-Security-Policy: política de seguridad de contenido
+        """
         response = await call_next(request)
         
-        #headers de seguridad
+        # Headers de seguridad
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        response.headers["Content-Security-Policy"] = "default-src 'self'"
+        
+        # Content Security Policy - construido dinámicamente
+        csp_policy = SecurityHeaders._build_csp_policy()
+        response.headers["Content-Security-Policy"] = csp_policy
         
         return response
 

@@ -3,23 +3,41 @@ from typing import List
 from services.chat_service import ChatService
 from schemas.chat_schema import MessageResponse, ChatRoomResponse, UserStatus
 from utils.jwt_bearer import JWTBearer
-from config.settings import settings
-from jose import JWTError, jwt
+from utils.jwt_handler import decode_access_token
 from utils.logger import chat_logger
 
 router = APIRouter()
 chat_service = ChatService()
 
 async def get_current_user_email(token: str = Depends(JWTBearer())):
-    try:
-        payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
-        email = payload.get("email")
-        if not email:
-            raise HTTPException(status_code=401, detail="Token inválido: email no encontrado")
-        return email
-    except JWTError as e:
-        chat_logger.warning(f"Token JWT inválido: {e}")
+    """
+    Obtener el email del usuario actual desde el token JWT.
+    
+    Usa la función centralizada decode_access_token para validar el token
+    y verificar que sea un access token válido (no expirado).
+    
+    Args:
+        token: Token JWT obtenido del header Authorization
+        
+    Returns:
+        Email del usuario autenticado
+        
+    Raises:
+        HTTPException: Si el token es inválido, expirado o no contiene email
+    """
+    # Usar la función centralizada que valida el tipo de token y expiración
+    payload = decode_access_token(token)
+    
+    if not payload:
+        chat_logger.warning("Intento de acceso con token inválido o expirado")
         raise HTTPException(status_code=401, detail="Token inválido o expirado")
+    
+    email = payload.get("email")
+    if not email:
+        chat_logger.warning("Token válido pero sin email en el payload")
+        raise HTTPException(status_code=401, detail="Token inválido: email no encontrado")
+    
+    return email
 
 @router.get("/chat/history/{other_user_email}", response_model=List[MessageResponse])
 async def get_chat_history(

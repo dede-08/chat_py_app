@@ -67,5 +67,5 @@ class Settings(BaseSettings):
             origins.update(self.allowed_origins)
         return list(origins)
 
-# Instancia global de configuración
+#instancia global de configuración
 settings = Settings()

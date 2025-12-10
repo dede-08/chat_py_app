@@ -3,8 +3,7 @@ from model.chat import Message, ChatRoom
 from datetime import datetime
 from typing import List, Optional
 from bson import ObjectId
-from jose import JWTError, jwt
-from config.settings import settings
+from utils.jwt_handler import decode_access_token
 from utils.logger import chat_logger
 
 class ChatService:
@@ -149,14 +148,19 @@ class ChatService:
     @staticmethod
     async def get_user_email_from_token(token: str):
         """
-        Obtener email del usuario desde token JWT (método estático)
+        Obtener email del usuario desde token JWT (método estático).
         
-        Nota: Este método está duplicado en otros lugares. 
-        Considerar usar una función centralizada en utils.
+        DEPRECADO: Este método se mantiene por compatibilidad, pero se recomienda
+        usar directamente decode_access_token() de utils.jwt_handler.
+        
+        Args:
+            token: Token JWT a decodificar
+            
+        Returns:
+            Email del usuario si el token es válido, None en caso contrario
         """
-        try:
-            payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+        # Usar la función centralizada que valida el tipo de token y expiración
+        payload = decode_access_token(token)
+        if payload:
             return payload.get("email")
-        except JWTError as e:
-            chat_logger.warning(f"Error decodificando token JWT: {e}")
-            return None
+        return None

@@ -1,12 +1,14 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query, HTTPException
 from jose import JWTError, jwt
-from typing import Dict, List
+from typing import Dict, List, Optional
 import json
 import re
 from datetime import datetime
 from services.chat_service import ChatService
 from config.settings import settings
 from utils.logger import websocket_logger
+from utils.jwt_handler import decode_access_token
+from database.connection import users_collection
 import traceback
 
 router = APIRouter()
@@ -14,37 +16,109 @@ router = APIRouter()
 connected_users: Dict[str, WebSocket] = {}
 chat_service = ChatService()
 
-async def get_user_email_from_token(token: str):
+async def validate_websocket_token(token: str) -> Optional[str]:
+    """
+    Validar token de WebSocket y retornar el email del usuario si es válido.
+    
+    Realiza las siguientes validaciones:
+    1. Verifica que el token sea un access token válido (no expirado)
+    2. Verifica que el usuario existe en la base de datos
+    3. Verifica que el email del usuario esté confirmado
+    
+    Args:
+        token: Token JWT a validar
+        
+    Returns:
+        Email del usuario si el token es válido, None en caso contrario
+    """
+    if not token:
+        websocket_logger.warning("Token no proporcionado para validación WebSocket")
+        return None
+    
     try:
-        payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+        # Usar la función centralizada que valida el tipo de token y expiración
+        payload = decode_access_token(token)
+        
+        if not payload:
+            websocket_logger.warning("Token inválido o expirado en conexión WebSocket")
+            return None
+        
         email = payload.get("email")
         if not email:
             websocket_logger.warning("Email no encontrado en el payload del token")
             return None
+        
+        # Verificar que el usuario existe en la base de datos
+        db_user = await users_collection.find_one({"email": email})
+        if not db_user:
+            websocket_logger.warning(f"Usuario no encontrado en BD para email: {email}")
+            return None
+        
+        # Verificar que el email esté confirmado
+        if not db_user.get("is_email_confirmed", False):
+            websocket_logger.warning(f"Intento de conexión WebSocket con email no confirmado: {email}")
+            return None
+        
+        websocket_logger.debug(f"Token validado exitosamente para usuario: {email}")
         return email
+        
     except JWTError as e:
-        websocket_logger.warning(f"Token JWT inválido: {e}")
+        websocket_logger.warning(f"Error JWT al validar token WebSocket: {e}")
+        return None
+    except Exception as e:
+        websocket_logger.error(f"Error inesperado al validar token WebSocket: {e}")
+        websocket_logger.debug(traceback.format_exc())
         return None
 
 @router.websocket("/ws/chat")
 async def chat_endpoint(websocket: WebSocket, token: str = Query(None)):
+    """
+    Endpoint WebSocket para chat en tiempo real.
+    
+    Requiere un token JWT válido como query parameter.
+    Valida el token antes de aceptar la conexión.
+    """
+    # Validar que se proporcionó un token
     if not token:
         websocket_logger.warning("Intento de conexión WebSocket sin token")
-        await websocket.close(code=1008, reason="Token no proporcionado")
+        await websocket.close(
+            code=1008,  # Policy violation
+            reason="Token no proporcionado"
+        )
         return
 
-    user_email = await get_user_email_from_token(token)
+    # Validar token y obtener email del usuario
+    user_email = await validate_websocket_token(token)
     if not user_email:
-        websocket_logger.warning("Intento de conexión WebSocket con token inválido")
-        await websocket.close(code=1008, reason="Token inválido")
+        websocket_logger.warning("Intento de conexión WebSocket con token inválido o usuario no autorizado")
+        await websocket.close(
+            code=1008,  # Policy violation
+            reason="Token inválido, expirado o usuario no autorizado"
+        )
         return
     
-    websocket_logger.info(f"Usuario {user_email} conectado vía WebSocket")
-
-    await websocket.accept()
-    connected_users[user_email] = websocket
+    # Verificar si el usuario ya tiene una conexión activa
+    if user_email in connected_users:
+        old_websocket = connected_users[user_email]
+        try:
+            websocket_logger.info(f"Cerrando conexión anterior para usuario {user_email}")
+            await old_websocket.close(code=1000, reason="Nueva conexión establecida")
+        except Exception as e:
+            websocket_logger.warning(f"Error al cerrar conexión anterior: {e}")
+        finally:
+            del connected_users[user_email]
     
-    #notificar a otros usuarios que este usuario esta online
+    # Aceptar la conexión WebSocket
+    try:
+        await websocket.accept()
+        connected_users[user_email] = websocket
+        websocket_logger.info(f"Usuario {user_email} conectado vía WebSocket exitosamente")
+    except Exception as e:
+        websocket_logger.error(f"Error al aceptar conexión WebSocket para {user_email}: {e}")
+        await websocket.close(code=1011, reason="Error interno del servidor")
+        return
+    
+    # Notificar a otros usuarios que este usuario está online
     await broadcast_user_status(user_email, True)
     
     try:
