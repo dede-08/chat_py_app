@@ -10,13 +10,13 @@ export const loginUser = async (data) => {
   try {
     const response = await axios.post(`${API_URL}/login`, data);
     
-    // Verificar que la respuesta tenga los tokens
+    //verificar que la respuesta tenga los tokens
     if (!response.data.access_token || !response.data.refresh_token) {
       console.error('Respuesta de login sin tokens:', response.data);
       throw new Error('El servidor no devolvió los tokens necesarios');
     }
     
-    // Guardar access_token y refresh_token
+    //guardar access_token y refresh_token
     localStorage.setItem('access_token', response.data.access_token);
     localStorage.setItem('refresh_token', response.data.refresh_token);
     // Mantener compatibilidad con código antiguo que usa 'token'
@@ -26,7 +26,7 @@ export const loginUser = async (data) => {
     const username = response.data.username || response.data.email || 'Usuario';
     localStorage.setItem('username', username);
     
-    // Verificar que se guardaron correctamente
+    //verificar que se guardaron correctamente
     const savedToken = localStorage.getItem('access_token');
     if (!savedToken) {
       console.error('Error: El token no se guardó correctamente en localStorage');
@@ -119,7 +119,12 @@ export const getUserProfile = async () => {
       switch (error.response.status) {
         case 401:
           errorMessage = 'Sesión expirada. Por favor, inicie sesión nuevamente.';
-          logout(); //cerrar sesion si el token expiró
+          //limpiar localStorage si el token expiró
+          localStorage.removeItem('token');
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('refresh_token');
+          localStorage.removeItem('userEmail');
+          localStorage.removeItem('username');
           break;
         case 404:
           errorMessage = 'Perfil no encontrado.';
@@ -163,7 +168,12 @@ export const updateUserProfile = async (data) => {
       switch (error.response.status) {
         case 401:
           errorMessage = 'Sesión expirada. Por favor, inicie sesión nuevamente.';
-          logout();
+          //limpiar localStorage si el token expiró
+          localStorage.removeItem('token');
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('refresh_token');
+          localStorage.removeItem('userEmail');
+          localStorage.removeItem('username');
           break;
         case 409:
           errorMessage = 'El nombre de usuario o correo ya está en uso.';
@@ -205,10 +215,10 @@ export const refreshTokens = async () => {
       refresh_token: refreshToken
     });
 
-    // Guardar nuevos tokens
+    //guardar nuevos tokens
     localStorage.setItem('access_token', response.data.access_token);
     localStorage.setItem('refresh_token', response.data.refresh_token);
-    // Mantener compatibilidad
+    //mantener compatibilidad
     localStorage.setItem('token', response.data.access_token);
 
     return {
@@ -218,7 +228,7 @@ export const refreshTokens = async () => {
     };
   } catch (error) {
     console.error('Error al renovar tokens:', error);
-    // Si el refresh token es inválido, limpiar todo y forzar nuevo login
+    //si el refresh token es invalido, limpiar todo y forzar nuevo login
     logoutUser();
     throw error;
   }
@@ -239,20 +249,11 @@ export const isAuthenticated = () => {
   return !!getToken();
 };
 
-//cerrar sesión (versión simple sin llamada al backend)
-const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('userEmail');
-    localStorage.removeItem('username');
-};
-
 const confirmEmail = (token) => {
     return axios.get(`${API_URL}/confirm-email/${token}`);
 };
 
-// Configurar interceptor de axios para renovar tokens automáticamente
+//configurar interceptor de axios para renovar tokens automaticamente
 let isRefreshing = false;
 let failedQueue = [];
 
@@ -273,14 +274,14 @@ axios.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // Si el error es 401 y no es una petición de refresh o login
+    //si el error es 401 y no es una peticion de refresh o login
     if (error.response?.status === 401 && 
         !originalRequest._retry && 
         !originalRequest.url?.includes('/refresh') &&
         !originalRequest.url?.includes('/login')) {
       
       if (isRefreshing) {
-        // Si ya se está refrescando, esperar en la cola
+        //si ya se esta refrescando, esperar en la cola
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
         })
@@ -303,7 +304,7 @@ axios.interceptors.response.use(
         return axios(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
-        // Redirigir a login si el refresh falla
+        //redirigir a login si el refresh falla
         if (window.location.pathname !== '/login') {
           window.location.href = '/login';
         }
