@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import authService from '../services/authService';
+import logger from '../services/logger';
 import PasswordStrengthMeter from '../components/PasswordStrengthMeter/PasswordStrengthMeter';
 import SuccessModal from '../components/SuccessModal/SuccessModal';
 
@@ -40,7 +41,9 @@ const RegisterPage = () => {
         const result = await authService.getPasswordRequirements();
         setPasswordRequirements(result.data);
       } catch (error) {
-        console.error('Error al cargar requisitos de contraseña:', error);
+        logger.error('Error al cargar requisitos de contraseña', error, { 
+          operation: 'getPasswordRequirements' 
+        });
         //fallback a requisitos por defecto
         setPasswordRequirements({
           min_length: 8,

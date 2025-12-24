@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import chatService from '../../services/chatService';
 import authService from '../../services/authService';
+import logger from '../../services/logger';
 import './ChatArea.css';
 
 const ChatArea = ({ selectedUser }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [isTyping, setIsTyping] = useState(false);
   const [otherUserTyping, setOtherUserTyping] = useState(false);
   const messagesEndRef = useRef(null);
@@ -18,10 +20,14 @@ const ChatArea = ({ selectedUser }) => {
 
     try {
       setLoading(true);
+      setError(null);
       const history = await chatService.getChatHistory(selectedUser.email);
       setMessages(history);
     } catch (error) {
-      console.error('Error al cargar historial:', error);
+      logger.error('Error al cargar historial de chat', error, { 
+        selectedUser: selectedUser?.email 
+      });
+      setError('No se pudo cargar el historial de mensajes. Por favor, intente nuevamente.');
     } finally {
       setLoading(false);
     }
@@ -79,7 +85,7 @@ const ChatArea = ({ selectedUser }) => {
 
   const handleMessageSent = (data) => {
     //mensaje enviado exitosamente
-    console.log('Mensaje enviado:', data.message_id);
+    logger.debug('Mensaje enviado exitosamente', { messageId: data.message_id });
   };
 
   const handleSendMessage = (e) => {
@@ -169,6 +175,19 @@ const ChatArea = ({ selectedUser }) => {
       </div>
 
       <div className="messages-container">
+        {error && (
+          <div className="alert alert-warning m-3" role="alert">
+            <i className="fas fa-exclamation-triangle me-2"></i>
+            {error}
+            <button 
+              type="button" 
+              className="btn btn-sm btn-outline-warning ms-2"
+              onClick={() => loadChatHistory()}
+            >
+              Reintentar
+            </button>
+          </div>
+        )}
         {loading ? (
           <div className="loading-messages">Cargando mensajes...</div>
         ) : (

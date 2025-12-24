@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import authService from '../../services/authService';
+import logger from '../../services/logger';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 const Navbar = () => {
@@ -41,9 +42,8 @@ const Navbar = () => {
       //redirigir al login
       navigate('/login');
     } catch (error) {
-      console.error('Error durante el logout:', error);
-      //limpiar el estado local
-      authService.logout();
+      logger.error('Error durante el logout', error, { operation: 'handleLogout' });
+      //limpiar el estado local (logoutUser ya limpia localStorage en el finally)
       setIsAuthenticated(false);
       setUsername('');
       navigate('/login');

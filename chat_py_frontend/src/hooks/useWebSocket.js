@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import authService from '../services/authService';
+import logger from '../services/logger';
 
 const useWebSocket = (url, options = {}) => {
   const {
@@ -49,7 +50,7 @@ const useWebSocket = (url, options = {}) => {
         setSocket(ws);
 
         ws.onopen = (event) => {
-          console.log('WebSocket connected');
+          logger.info('WebSocket connected', { operation: 'useWebSocket_connect' });
           setIsConnected(true);
           reconnectCount = 0;
           setError(null);
@@ -65,12 +66,18 @@ const useWebSocket = (url, options = {}) => {
             }
             onMessageRef.current?.(data, event);
           } catch (error) {
-            console.error('Error parsing WebSocket message:', error);
+            logger.error('Error parsing WebSocket message', error, { 
+              operation: 'useWebSocket_message' 
+            });
           }
         };
 
         ws.onclose = (event) => {
-          console.log('WebSocket disconnected');
+          logger.info('WebSocket disconnected', { 
+            operation: 'useWebSocket_close',
+            code: event.code,
+            reason: event.reason 
+          });
           setIsConnected(false);
           setSocket(null);
           onCloseRef.current?.(event);
@@ -82,14 +89,14 @@ const useWebSocket = (url, options = {}) => {
         };
 
         ws.onerror = (event) => {
-          console.error('WebSocket error:', event);
+          logger.error('WebSocket error', event, { operation: 'useWebSocket_error' });
           setError('WebSocket connection error');
           onErrorRef.current?.(event);
           //el evento onclose se ejecutara next, que maneja la reconexion.
         };
 
       } catch (err) {
-        console.error('Error creating WebSocket:', err);
+        logger.error('Error creating WebSocket', err, { operation: 'useWebSocket_create' });
         setError('Failed to create WebSocket connection');
       }
     };
@@ -118,7 +125,7 @@ const useWebSocket = (url, options = {}) => {
       socket.send(messageStr);
       return true;
     } else {
-      console.warn('WebSocket is not connected');
+      logger.warn('WebSocket is not connected', { operation: 'useWebSocket_sendMessage' });
       return false;
     }
   }, [socket]);

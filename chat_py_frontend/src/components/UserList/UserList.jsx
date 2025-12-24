@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import chatService from '../../services/chatService';
+import logger from '../../services/logger';
 import './UserList.css';
 
 const UserList = ({ onUserSelect, selectedUser }) => {
@@ -32,7 +33,7 @@ const UserList = ({ onUserSelect, selectedUser }) => {
       setUsers(usersData);
     } catch (err) {
       setError('Error al cargar usuarios');
-      console.error(err);
+      logger.error('Error al cargar usuarios', err, { operation: 'loadUsers' });
     } finally {
       setLoading(false);
     }

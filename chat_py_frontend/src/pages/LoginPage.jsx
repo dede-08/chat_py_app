@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { loginUser, isAuthenticated } from '../services/authService';
+import { isErrorResponse } from '../utils/errorHandler';
+import logger from '../services/logger';
 
 const LoginPage = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [isLoading, setIsLoading] = useState(false);
   const [alreadyAuthenticated, setAlreadyAuthenticated] = useState(false);
   const [formErrors, setFormErrors] = useState({});
+  const [generalError, setGeneralError] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -53,17 +56,21 @@ const LoginPage = () => {
     }
 
     setIsLoading(true);
+    setGeneralError(null);
     
     try {
       const result = await loginUser(formData);
-      if (result.success) {
+      if (isErrorResponse(result)) {
+        setGeneralError(result.error);
+      } else if (result.success) {
         //disparar evento para actualizar el navbar
         window.dispatchEvent(new Event('storage'));
         //redirigir al chat después del login exitoso
         navigate('/chat');
       }
     } catch (error) {
-      console.error('Error en el login:', error);
+      logger.error('Error inesperado en login', error, { operation: 'handleSubmit' });
+      setGeneralError('Ha ocurrido un error inesperado. Por favor, intente nuevamente.');
     } finally {
       setIsLoading(false);
     }
@@ -98,6 +105,14 @@ const LoginPage = () => {
         )}
         
         <h3 className='text-light text-center mb-4'>Iniciar Sesión</h3>
+        
+        {generalError && (
+          <div className="alert alert-danger mb-3" role="alert">
+            <i className="fas fa-exclamation-triangle me-2"></i>
+            {generalError}
+          </div>
+        )}
+        
         <form onSubmit={handleSubmit}>
           <div className="mb-3">
           <label htmlFor="email" className="form-label text-light">Email</label>

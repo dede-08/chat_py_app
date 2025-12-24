@@ -1,4 +1,6 @@
 import axios from 'axios';
+import logger from './logger';
+import { handleAxiosError, createSuccessResponse, createErrorResponse } from '../utils/errorHandler';
 
 const API_URL = `${import.meta.env.VITE_API_URL}/auth`;
 
@@ -12,8 +14,8 @@ export const loginUser = async (data) => {
     
     //verificar que la respuesta tenga los tokens
     if (!response.data.access_token || !response.data.refresh_token) {
-      console.error('Respuesta de login sin tokens:', response.data);
-      throw new Error('El servidor no devolvió los tokens necesarios');
+      logger.error('Respuesta de login sin tokens', null, { responseData: response.data });
+      return createErrorResponse('El servidor no devolvió los tokens necesarios');
     }
     
     //guardar access_token y refresh_token
@@ -29,30 +31,22 @@ export const loginUser = async (data) => {
     //verificar que se guardaron correctamente
     const savedToken = localStorage.getItem('access_token');
     if (!savedToken) {
-      console.error('Error: El token no se guardó correctamente en localStorage');
+      logger.error('El token no se guardó correctamente en localStorage', null, { 
+        hasAccessToken: !!response.data.access_token 
+      });
     }
     
-    return { success: true, data: response.data };
+    logger.info('Login exitoso', { email: response.data.email });
+    return createSuccessResponse(response.data);
   } catch (error) {
-    console.error('Error en login:', error);
-    let errorMessage = 'Error al iniciar sesión. Por favor, inténtelo de nuevo más tarde.';
-
-    if (error.response) {
-        switch (error.response.status) {
-            case 401:
-                errorMessage = 'Credenciales incorrectas. Verifique su usuario y contraseña.';
-                break;
-            case 404:
-                errorMessage = 'El usuario no existe. Por favor, regístrese.';
-                break;
-            default:
-                errorMessage = error.response.data.detail || errorMessage;
-        }
-    } else if (error.request) {
-        errorMessage = 'No se pudo conectar con el servidor. Verifique su conexión a internet.';
+    const errorInfo = handleAxiosError(error, { operation: 'login' });
+    
+    // Mensajes específicos para login
+    if (error.response?.status === 404) {
+      errorInfo.error = 'El usuario no existe. Por favor, regístrese.';
     }
-
-    return { success: false, error: errorMessage };
+    
+    return errorInfo;
   }
 };
 
@@ -60,9 +54,9 @@ export const loginUser = async (data) => {
 export const getPasswordRequirements = async () => {
   try {
     const response = await axios.get(`${API_URL}/password-requirements`);
-    return { success: true, data: response.data };
+    return createSuccessResponse(response.data);
   } catch (error) {
-    console.error('Error al obtener requisitos de contraseña:', error);
+    logger.error('Error al obtener requisitos de contraseña', error, { operation: 'getPasswordRequirements' });
     throw error; //lanzar el error para que el componente lo maneje
   }
 };
@@ -71,10 +65,10 @@ export const getPasswordRequirements = async () => {
 export const validatePassword = async (password) => {
   try {
     const response = await axios.post(`${API_URL}/validate-password`, { password });
-    return { success: true, data: response.data };
+    return createSuccessResponse(response.data);
   } catch (error) {
-    console.error('Error al validar contraseña:', error);
-    return { success: false, error: 'Error al validar contraseña' };
+    const errorInfo = handleAxiosError(error, { operation: 'validatePassword' });
+    return createErrorResponse(errorInfo.error || 'Error al validar contraseña');
   }
 };
 
@@ -88,9 +82,11 @@ export const logoutUser = async () => {
           'Authorization': `Bearer ${token}`
         }
       });
+      logger.info('Logout exitoso');
     }
   } catch (error) {
-    console.error('Error en logout:', error);
+    // No lanzar error en logout, solo loguear
+    logger.warn('Error en logout (se continúa con limpieza)', error, { operation: 'logout' });
   } finally {
     //limpiar localStorage independientemente del resultado
     localStorage.removeItem('token');
@@ -110,33 +106,25 @@ export const getUserProfile = async () => {
         'Authorization': `Bearer ${token}`
       }
     });
-    return { success: true, data: response.data };
+    return createSuccessResponse(response.data);
   } catch (error) {
-    console.error('Error al obtener perfil:', error);
-    let errorMessage = 'Error al cargar el perfil del usuario.';
+    const errorInfo = handleAxiosError(error, { operation: 'getUserProfile' });
     
-    if (error.response) {
-      switch (error.response.status) {
-        case 401:
-          errorMessage = 'Sesión expirada. Por favor, inicie sesión nuevamente.';
-          //limpiar localStorage si el token expiró
-          localStorage.removeItem('token');
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('refresh_token');
-          localStorage.removeItem('userEmail');
-          localStorage.removeItem('username');
-          break;
-        case 404:
-          errorMessage = 'Perfil no encontrado.';
-          break;
-        default:
-          errorMessage = error.response.data.detail || errorMessage;
-      }
-    } else if (error.request) {
-      errorMessage = 'No se pudo conectar con el servidor.';
+    // Limpiar localStorage si el token expiró
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('userEmail');
+      localStorage.removeItem('username');
     }
     
-    return { success: false, error: errorMessage };
+    // Mensajes específicos
+    if (error.response?.status === 404) {
+      errorInfo.error = 'Perfil no encontrado.';
+    }
+    
+    return errorInfo;
   }
 };
 
@@ -159,36 +147,28 @@ export const updateUserProfile = async (data) => {
       localStorage.setItem('userEmail', data.email);
     }
     
-    return { success: true, data: response.data };
+    logger.info('Perfil actualizado exitosamente', { updatedFields: Object.keys(data) });
+    return createSuccessResponse(response.data);
   } catch (error) {
-    console.error('Error al actualizar perfil:', error);
-    let errorMessage = 'Error al actualizar el perfil.';
+    const errorInfo = handleAxiosError(error, { operation: 'updateUserProfile' });
     
-    if (error.response) {
-      switch (error.response.status) {
-        case 401:
-          errorMessage = 'Sesión expirada. Por favor, inicie sesión nuevamente.';
-          //limpiar localStorage si el token expiró
-          localStorage.removeItem('token');
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('refresh_token');
-          localStorage.removeItem('userEmail');
-          localStorage.removeItem('username');
-          break;
-        case 409:
-          errorMessage = 'El nombre de usuario o correo ya está en uso.';
-          break;
-        case 422:
-          errorMessage = 'Los datos proporcionados no son válidos.';
-          break;
-        default:
-          errorMessage = error.response.data.detail || errorMessage;
-      }
-    } else if (error.request) {
-      errorMessage = 'No se pudo conectar con el servidor.';
+    // Limpiar localStorage si el token expiró
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('userEmail');
+      localStorage.removeItem('username');
     }
     
-    return { success: false, error: errorMessage };
+    // Mensajes específicos
+    if (error.response?.status === 409) {
+      errorInfo.error = 'El nombre de usuario o correo ya está en uso.';
+    } else if (error.response?.status === 422) {
+      errorInfo.error = 'Los datos proporcionados no son válidos.';
+    }
+    
+    return errorInfo;
   }
 };
 
@@ -208,7 +188,9 @@ export const refreshTokens = async () => {
   try {
     const refreshToken = getRefreshToken();
     if (!refreshToken) {
-      throw new Error('No hay refresh token disponible');
+      const error = new Error('No hay refresh token disponible');
+      logger.error('No hay refresh token disponible', error, { operation: 'refreshTokens' });
+      throw error;
     }
 
     const response = await axios.post(`${API_URL}/refresh`, {
@@ -221,13 +203,14 @@ export const refreshTokens = async () => {
     //mantener compatibilidad
     localStorage.setItem('token', response.data.access_token);
 
+    logger.debug('Tokens renovados exitosamente', { operation: 'refreshTokens' });
     return {
       success: true,
       access_token: response.data.access_token,
       refresh_token: response.data.refresh_token
     };
   } catch (error) {
-    console.error('Error al renovar tokens:', error);
+    logger.error('Error al renovar tokens', error, { operation: 'refreshTokens' });
     //si el refresh token es invalido, limpiar todo y forzar nuevo login
     logoutUser();
     throw error;

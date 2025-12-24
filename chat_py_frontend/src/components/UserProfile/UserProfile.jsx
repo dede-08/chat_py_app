@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import './UserProfile.css';
 import authService from '../../services/authService';
+import logger from '../../services/logger';
+import { isErrorResponse } from '../../utils/errorHandler';
 
 const UserProfile = () => {
     const [isEditing, setIsEditing] = useState(false);
@@ -40,8 +42,10 @@ const UserProfile = () => {
                 });
 
             } catch (err) {
-                console.error('error al cargar datos del usuario:', err);
-                setError('error al cargar la informacion del perfil');
+                logger.error('Error al cargar datos del usuario', err, { 
+                    operation: 'loadUserData' 
+                });
+                setError('Error al cargar la información del perfil');
             } finally {
                 setLoading(false);
             }
@@ -107,7 +111,9 @@ const UserProfile = () => {
             //llamar al servicio para actualizar
             const result = await authService.updateUserProfile(updateData);
 
-            if(result.success){
+            if(isErrorResponse(result)){
+                setError(result.error);
+            } else if(result.success){
                 //actualizar el estado local
                 setUserInfo({
                     username: editInfo.username,
@@ -121,12 +127,10 @@ const UserProfile = () => {
 
                 //ocultar mensaje de exito despues de 3 segundos
                 setTimeout(() => setShowSuccess(false), 3000);
-            } else{
-                setError(result.error);
             }
         } catch (err) {
-            console.error('error al actualizar perfil:', err);
-            alert('error al actualizar el perfil. intenta de nuevo');
+            logger.error('Error al actualizar perfil', err, { operation: 'updateUserProfile' });
+            setError('Error al actualizar el perfil. Intenta de nuevo.');
         }finally{
             setLoading(false);
         }
