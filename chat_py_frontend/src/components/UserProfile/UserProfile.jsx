@@ -3,6 +3,8 @@ import './UserProfile.css';
 import authService from '../../services/authService';
 import logger from '../../services/logger';
 import { isErrorResponse } from '../../utils/errorHandler';
+import { isValidEmail, validateUsername } from '../../utils/validators';
+import { sanitizeInput } from '../../utils/sanitizer';
 
 const UserProfile = () => {
     const [isEditing, setIsEditing] = useState(false);
@@ -75,21 +77,46 @@ const UserProfile = () => {
 
     const handleChange = (e) => {
         const { name, value } = e.target;
+        //sanitizar input según el tipo
+        const sanitizedValue = sanitizeInput(value, name === 'email' ? 'email' : name === 'username' ? 'username' : 'text');
         setEditInfo(prev => ({
             ...prev,
-            [name]: value
+            [name]: sanitizedValue
         }));
     };
 
     const handleSave = async () => {
-        //validaciones basicas
-        if (editInfo.newPassword && editInfo.newPassword !== editInfo.confirmPassword) {
-            setError('las contraseñas no coinciden');
-            return;
+        //validaciones mejoradas
+        const errors = [];
+
+        //validar email
+        if (editInfo.email && !isValidEmail(editInfo.email)) {
+            errors.push('El email no es válido');
         }
 
-        if (editInfo.newPassword && editInfo.newPassword.length < 8) {
-            setError('la contraseña debe tener al menos 8 caracteres');
+        //validar username
+        if (editInfo.username) {
+            const usernameValidation = validateUsername(editInfo.username);
+            if (!usernameValidation.isValid) {
+                errors.push(usernameValidation.error);
+            }
+        }
+
+        //validar contraseñas
+        if (editInfo.newPassword) {
+            if (editInfo.newPassword !== editInfo.confirmPassword) {
+                errors.push('Las contraseñas no coinciden');
+            }
+            if (editInfo.newPassword.length < 8) {
+                errors.push('La contraseña debe tener al menos 8 caracteres');
+            }
+            if (!editInfo.currentPassword) {
+                errors.push('Debe ingresar su contraseña actual para cambiarla');
+            }
+        }
+
+        if (errors.length > 0) {
+            setError(errors.join('. '));
             return;
         }
 

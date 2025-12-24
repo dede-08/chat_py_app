@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { loginUser, isAuthenticated } from '../services/authService';
 import { isErrorResponse } from '../utils/errorHandler';
 import logger from '../services/logger';
+import { isValidEmail } from '../utils/validators';
+import { sanitizeEmail } from '../utils/sanitizer';
 
 const LoginPage = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -21,7 +23,9 @@ const LoginPage = () => {
 
   const handleChange = e => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    //sanitizar input según el tipo
+    const sanitizedValue = name === 'email' ? sanitizeEmail(value) : value;
+    setFormData({ ...formData, [name]: sanitizedValue });
     
     //limpiar errores del campo cuando el usuario empiece a escribir
     if (formErrors[name]) {
@@ -32,11 +36,11 @@ const LoginPage = () => {
   const validateForm = () => {
     const errors = {};
 
-    //validar email
+    //validar email con validación mejorada
     if (!formData.email) {
       errors.email = 'El email es requerido';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      errors.email = 'El email no es válido';
+    } else if (!isValidEmail(formData.email)) {
+      errors.email = 'El email no es válido. Por favor, ingrese un email válido.';
     }
 
     //validar contraseña

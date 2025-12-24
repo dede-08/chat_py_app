@@ -4,6 +4,8 @@ import authService from '../services/authService';
 import logger from '../services/logger';
 import PasswordStrengthMeter from '../components/PasswordStrengthMeter/PasswordStrengthMeter';
 import SuccessModal from '../components/SuccessModal/SuccessModal';
+import { isValidEmail, validateUsername, validateTelephone } from '../utils/validators';
+import { sanitizeInput } from '../utils/sanitizer';
 
 const RegisterPage = () => {
   const [formData, setFormData] = useState({
@@ -64,7 +66,9 @@ const RegisterPage = () => {
 
   const handleChange = e => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    // Sanitizar input según el tipo
+    const sanitizedValue = sanitizeInput(value, name === 'email' ? 'email' : name === 'username' ? 'username' : 'text');
+    setFormData({ ...formData, [name]: sanitizedValue });
 
     //limpiar errores del campo cuando el usuario empiece a escribir
     if (formErrors[name]) {
@@ -80,22 +84,17 @@ const RegisterPage = () => {
   const validateForm = () => {
     const errors = {};
 
-    //validar email
+    //validar email con validación mejorada
     if (!formData.email) {
       errors.email = 'El email es requerido';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      errors.email = 'El email no es válido';
+    } else if (!isValidEmail(formData.email)) {
+      errors.email = 'El email no es válido. Por favor, ingrese un email válido.';
     }
 
-    //validar username
-    if (!formData.username) {
-      errors.username = 'El nombre de usuario es requerido';
-    } else if (formData.username.length < 3) {
-      errors.username = 'El nombre de usuario debe tener al menos 3 caracteres';
-    } else if (formData.username.length > 50) {
-      errors.username = 'El nombre de usuario no puede tener más de 50 caracteres';
-    } else if (!/^[a-zA-Z0-9_]+$/.test(formData.username)) {
-      errors.username = 'El nombre de usuario solo puede contener letras, números y guiones bajos';
+    //validar username con validación mejorada
+    const usernameValidation = validateUsername(formData.username);
+    if (!usernameValidation.isValid) {
+      errors.username = usernameValidation.error;
     }
 
     //validar contraseña
@@ -105,11 +104,10 @@ const RegisterPage = () => {
       errors.password = 'La contraseña no cumple con los requisitos de seguridad';
     }
 
-    //validar telefono
-    if (!formData.telephone) {
-      errors.telephone = 'El teléfono es requerido';
-    } else if (!/^\+?[\d\s\-()]{7,15}$/.test(formData.telephone)) {
-      errors.telephone = 'Formato de teléfono inválido (ej: +1234567890)';
+    //validar telefono con validación mejorada
+    const telephoneValidation = validateTelephone(formData.telephone);
+    if (!telephoneValidation.isValid) {
+      errors.telephone = telephoneValidation.error;
     }
 
     setFormErrors(errors);

@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import chatService from '../../services/chatService';
 import authService from '../../services/authService';
 import logger from '../../services/logger';
+import { validateChatMessage } from '../../utils/validators';
+import { sanitizeChatMessage } from '../../utils/sanitizer';
 import './ChatArea.css';
 
 const ChatArea = ({ selectedUser }) => {
@@ -9,6 +11,7 @@ const ChatArea = ({ selectedUser }) => {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [messageError, setMessageError] = useState(null);
   const [isTyping, setIsTyping] = useState(false);
   const [otherUserTyping, setOtherUserTyping] = useState(false);
   const messagesEndRef = useRef(null);
@@ -90,13 +93,30 @@ const ChatArea = ({ selectedUser }) => {
 
   const handleSendMessage = (e) => {
     e.preventDefault();
-    if (!newMessage.trim() || !selectedUser) return;
+    if (!selectedUser) return;
+
+    //validar mensaje
+    const validation = validateChatMessage(newMessage);
+    if (!validation.isValid) {
+      setMessageError(validation.error);
+      setTimeout(() => setMessageError(null), 5000);
+      return;
+    }
+
+    //sanitizar mensaje antes de enviar
+    const sanitizedMessage = sanitizeChatMessage(newMessage.trim());
+    
+    if (!sanitizedMessage) {
+      setMessageError('El mensaje no puede estar vacío');
+      setTimeout(() => setMessageError(null), 5000);
+      return;
+    }
 
     const messageData = {
       id: Date.now().toString(), //id temporal
       sender_email: currentUserEmail,
       receiver_email: selectedUser.email,
-      content: newMessage.trim(),
+      content: sanitizedMessage,
       timestamp: new Date().toISOString(),
       is_read: false
     };
@@ -104,11 +124,12 @@ const ChatArea = ({ selectedUser }) => {
     //agregar mensaje localmente inmediatamente
     setMessages(prev => [...prev, messageData]);
 
-    //enviar mensaje
-    chatService.sendMessage(selectedUser.email, newMessage.trim());
+    //enviar mensaje sanitizado
+    chatService.sendMessage(selectedUser.email, sanitizedMessage);
 
-    //limpiar input
+    //limpiar input y errores
     setNewMessage('');
+    setMessageError(null);
 
     //detener indicador de escritura
     setIsTyping(false);
@@ -116,7 +137,17 @@ const ChatArea = ({ selectedUser }) => {
   };
 
   const handleInputChange = (e) => {
-    setNewMessage(e.target.value);
+    const value = e.target.value;
+    
+    //validar longitud en tiempo real (mostrar advertencia si se acerca al límite)
+    const validation = validateChatMessage(value);
+    if (!validation.isValid && value.length > 0) {
+      setMessageError(validation.error);
+    } else {
+      setMessageError(null);
+    }
+    
+    setNewMessage(value);
 
     //manejar indicador de escritura
     if (!isTyping) {
@@ -199,6 +230,7 @@ const ChatArea = ({ selectedUser }) => {
               >
                 <div className="message-content">
                   <p>
+                    {/* React escapa automáticamente el HTML, pero el mensaje ya está sanitizado */}
                     {message.content}
                     <span className="message-meta">
                       <span className="message-time">
@@ -225,6 +257,11 @@ const ChatArea = ({ selectedUser }) => {
       </div>
 
       <form className="message-form" onSubmit={handleSendMessage}>
+        {messageError && (
+          <div className="alert alert-warning alert-sm mb-2" role="alert">
+            <small>{messageError}</small>
+          </div>
+        )}
         <div className="input-container">
           <input
             type="text"
@@ -232,13 +269,19 @@ const ChatArea = ({ selectedUser }) => {
             onChange={handleInputChange}
             placeholder="Escribe un mensaje..."
             disabled={!selectedUser}
+            maxLength={5000}
           />
-          <button type="submit" disabled={!newMessage.trim() || !selectedUser}>
+          <button type="submit" disabled={!newMessage.trim() || !selectedUser || !!messageError}>
             <span class="material-symbols-outlined">
               send
             </span>
           </button>
         </div>
+        {newMessage.length > 0 && (
+          <small className="text-muted ms-2">
+            {newMessage.length}/5000 caracteres
+          </small>
+        )}
       </form>
     </div>
   );
