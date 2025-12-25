@@ -73,7 +73,7 @@ export const loginUser = async (data: LoginData): Promise<ApiResponse<LoginRespo
   } catch (error) {
     const errorInfo = handleAxiosError(error as AxiosError, { operation: 'login' });
     
-    // Mensajes específicos para login
+    //mensajes especificos para login
     if ((error as AxiosError).response?.status === 404) {
       errorInfo.error = 'El usuario no existe. Por favor, regístrese.';
     }
@@ -117,7 +117,7 @@ export const logoutUser = async (): Promise<void> => {
       logger.info('Logout exitoso');
     }
   } catch (error) {
-    // No lanzar error en logout, solo loguear
+    //no lanzar error en logout, solo loguear
     logger.warn('Error en logout (se continúa con limpieza)', { 
       operation: 'logout',
       error: error instanceof Error ? error.message : String(error)
@@ -145,7 +145,7 @@ export const getUserProfile = async (): Promise<ApiResponse<UserProfile>> => {
   } catch (error) {
     const errorInfo = handleAxiosError(error as AxiosError, { operation: 'getUserProfile' });
     
-    // Limpiar localStorage si el token expiró
+    //limpiar localStorage si el token expiró
     if ((error as AxiosError).response?.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('access_token');
@@ -154,7 +154,7 @@ export const getUserProfile = async (): Promise<ApiResponse<UserProfile>> => {
       localStorage.removeItem('username');
     }
     
-    // Mensajes específicos
+    //mensajes especificos
     if ((error as AxiosError).response?.status === 404) {
       errorInfo.error = 'Perfil no encontrado.';
     }
@@ -187,7 +187,7 @@ export const updateUserProfile = async (data: UpdateProfileData): Promise<ApiRes
   } catch (error) {
     const errorInfo = handleAxiosError(error as AxiosError, { operation: 'updateUserProfile' });
     
-    // Limpiar localStorage si el token expiró
+    //limpiar localStorage si el token expiró
     if ((error as AxiosError).response?.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('access_token');
@@ -196,7 +196,7 @@ export const updateUserProfile = async (data: UpdateProfileData): Promise<ApiRes
       localStorage.removeItem('username');
     }
     
-    // Mensajes específicos
+    //mensajes especificos
     if ((error as AxiosError).response?.status === 409) {
       errorInfo.error = 'El nombre de usuario o correo ya está en uso.';
     } else if ((error as AxiosError).response?.status === 422) {
@@ -209,7 +209,7 @@ export const updateUserProfile = async (data: UpdateProfileData): Promise<ApiRes
 
 //obtener access token del localStorage
 export const getToken = (): string | null => {
-  // Priorizar access_token, pero mantener compatibilidad con 'token' antiguo
+  //priorizar access_token, pero mantener compatibilidad con 'token' antiguo
   return localStorage.getItem('access_token') || localStorage.getItem('token');
 };
 

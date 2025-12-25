@@ -1,8 +1,6 @@
-/**
- * Tipos para las respuestas de la API
- */
+//tipos para las respuestas de la API
 
-// Tipos de autenticación
+//tipos de autenticacion
 export interface LoginResponse {
   access_token: string;
   refresh_token: string;
@@ -39,7 +37,7 @@ export interface PasswordValidationResponse {
   errors?: string[];
 }
 
-// Tipos de chat
+//tipos de chat
 export interface ChatMessage {
   id: string;
   sender_email: string;
@@ -63,7 +61,7 @@ export interface User {
   is_online?: boolean;
 }
 
-// Tipos de respuesta estándar
+//tipos de respuesta estandar
 export interface ApiSuccessResponse<T = unknown> {
   success: true;
   data: T;
@@ -81,7 +79,7 @@ export interface ApiErrorResponse {
 
 export type ApiResponse<T = unknown> = ApiSuccessResponse<T> | ApiErrorResponse;
 
-// Tipos de WebSocket
+//tipos de WebSocket
 export interface WebSocketMessage {
   type: string;
   [key: string]: unknown;
