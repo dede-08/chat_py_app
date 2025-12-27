@@ -69,19 +69,16 @@ const Navbar = () => {
                   </a>
                   <ul className="dropdown-menu">
                     <li><Link className="dropdown-item" to="/profile">Perfil</Link></li>
-                  </ul>
-                </li>
-                <li className="nav-item">
-                  <button
-                    className="btn btn-danger ms-2 btn-sm"
+                    <li><button
+                    className="dropdown-item"
                     onClick={handleLogout}
                     disabled={isLoggingOut}
                   >
-                    {isLoggingOut ? 'logging out...' : <span class="material-symbols-outlined">
-                      logout
-                    </span>}
-                  </button>
+                    {isLoggingOut ? 'logging out...' : 'Cerrar Sesión'}
+                  </button></li>
+                  </ul>
                 </li>
+                
               </>
             ) : (
               <>
