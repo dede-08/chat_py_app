@@ -1,6 +1,6 @@
-import authService from './authService';
 import logger from './logger';
 import http from './httpClient';
+import { buildAuthorizedWsUrl } from './wsClient';
 import { handleAxiosError } from '../utils/errorHandler';
 import type { 
   ChatMessage, 
@@ -9,8 +9,6 @@ import type {
   WebSocketMessage,
   WebSocketConnectionStatus,
 } from '../types';
-
-const WS_BASE_URL = import.meta.env.VITE_WS_URL;
 
 type MessageHandler = (data: WebSocketMessage) => void;
 
@@ -34,8 +32,8 @@ class ChatService {
 
     //logica de websocket
     connect(): void {
-        const token = authService.getToken();
-        if (!token) {
+        const wsUrl = buildAuthorizedWsUrl('/ws/chat');
+        if (!wsUrl) {
             logger.error('No hay token disponible para la conexión WebSocket', null, { 
                 operation: 'websocket_connect' 
             });
@@ -59,7 +57,7 @@ class ChatService {
         logger.info('Intentando conectar WebSocket...', { operation: 'websocket_connect' });
 
         try {
-            this.ws = new WebSocket(`${WS_BASE_URL}/ws/chat?token=${token}`);
+            this.ws = new WebSocket(wsUrl);
 
             this.ws.onopen = () => {
                 logger.info('WebSocket conectado exitosamente', { operation: 'websocket_connect' });

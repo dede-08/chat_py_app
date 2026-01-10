@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import authService from '../services/authService';
+import { buildAuthorizedWsUrl, hasWsToken } from '../services/wsClient';
 import logger from '../services/logger';
 
-const useWebSocket = (url, options = {}) => {
+const useWebSocket = (urlOrPath, options = {}) => {
   const {
     reconnectInterval = 3000,
     maxReconnectAttempts = 5,
@@ -37,15 +37,18 @@ const useWebSocket = (url, options = {}) => {
     let reconnectCount = 0;
     let shouldReconnect = true;
 
-    const connect = () => {
-      if (!authService.isAuthenticated() || !shouldReconnect) {
+  const connect = () => {
+      if (!hasWsToken() || !shouldReconnect) {
         setError('No authenticated user or reconnection disabled');
         return;
       }
 
       try {
-        const token = authService.getToken();
-        const wsUrl = `${url}?token=${token}`;
+        const wsUrl = buildAuthorizedWsUrl(urlOrPath);
+        if (!wsUrl) {
+          setError('Missing token for WebSocket');
+          return;
+        }
         ws = new WebSocket(wsUrl, protocols);
         setSocket(ws);
 
@@ -117,7 +120,7 @@ const useWebSocket = (url, options = {}) => {
       setIsConnected(false);
     };
   //el efecto solo debe ejecutarse cuando el URL o protocols cambian.
-  }, [url, protocols, maxReconnectAttempts, reconnectInterval]);
+  }, [urlOrPath, protocols, maxReconnectAttempts, reconnectInterval]);
 
   const sendMessage = useCallback((message) => {
     if (socket && socket.readyState === WebSocket.OPEN) {
