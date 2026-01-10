@@ -1,21 +1,15 @@
 import authService from './authService';
 import logger from './logger';
-import { handleFetchError } from '../utils/errorHandler';
+import http from './httpClient';
+import { handleAxiosError } from '../utils/errorHandler';
 import type { 
   ChatMessage, 
   ChatRoom, 
   User,
   WebSocketMessage,
-  //WebSocketChatMessage,
-  //WebSocketTypingMessage,
-  //WebSocketReadReceipt,
   WebSocketConnectionStatus,
-  //WebSocketMessageSent,
-  //WebSocketUserStatus,
-  //WebSocketError
 } from '../types';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL;
 const WS_BASE_URL = import.meta.env.VITE_WS_URL;
 
 type MessageHandler = (data: WebSocketMessage) => void;
@@ -39,7 +33,6 @@ class ChatService {
     private reconnectInterval: number = 3000; //3 segundos
 
     //logica de websocket
-
     connect(): void {
         const token = authService.getToken();
         if (!token) {
@@ -262,115 +255,56 @@ class ChatService {
 
     async getChatHistory(otherUserEmail: string, limit: number = 50): Promise<ChatMessage[]> {
         try {
-            const token = authService.getToken();
-            const response = await fetch(
-                `${API_BASE_URL}/chat/history/${otherUserEmail}?limit=${limit}`,
-                {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                }
-            );
-            if (!response.ok) {
-                const errorInfo = await handleFetchError(response, { 
-                    operation: 'getChatHistory',
-                    otherUserEmail 
-                });
-                throw new Error(errorInfo.error);
-            }
-            return await response.json() as ChatMessage[];
+            const response = await http.get<ChatMessage[]>(`/chat/history/${otherUserEmail}?limit=${limit}`);
+            return response.data;
         } catch (error) {
-            logger.error('Error al obtener historial de chat', error instanceof Error ? error : null, { 
-                operation: 'getChatHistory',
-                otherUserEmail 
-            });
-            throw error;
+            const info = handleAxiosError(error as any, { operation: 'getChatHistory', otherUserEmail });
+            logger.error('Error al obtener historial de chat', new Error(info.error), { operation: 'getChatHistory', otherUserEmail });
+            throw new Error(info.error);
         }
     }
 
     async getChatRooms(): Promise<ChatRoom[]> {
         try {
-            const token = authService.getToken();
-            const response = await fetch(`${API_BASE_URL}/chat/rooms`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-            if (!response.ok) {
-                const errorInfo = await handleFetchError(response, { operation: 'getChatRooms' });
-                throw new Error(errorInfo.error);
-            }
-            return await response.json() as ChatRoom[];
+            const response = await http.get<ChatRoom[]>(`/chat/rooms`);
+            return response.data;
         } catch (error) {
-            logger.error('Error al obtener salas de chat', error instanceof Error ? error : null, { operation: 'getChatRooms' });
-            throw error;
+            const info = handleAxiosError(error as any, { operation: 'getChatRooms' });
+            logger.error('Error al obtener salas de chat', new Error(info.error), { operation: 'getChatRooms' });
+            throw new Error(info.error);
         }
     }
 
     async getUsers(): Promise<User[]> {
         try {
-            const token = authService.getToken();
-            const response = await fetch(`${API_BASE_URL}/chat/users`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-            if (!response.ok) {
-                const errorInfo = await handleFetchError(response, { operation: 'getUsers' });
-                throw new Error(errorInfo.error);
-            }
-            return await response.json() as User[];
+            const response = await http.get<User[]>(`/chat/users`);
+            return response.data;
         } catch (error) {
-            logger.error('Error al obtener usuarios', error instanceof Error ? error : null, { operation: 'getUsers' });
-            throw error;
+            const info = handleAxiosError(error as any, { operation: 'getUsers' });
+            logger.error('Error al obtener usuarios', new Error(info.error), { operation: 'getUsers' });
+            throw new Error(info.error);
         }
     }
 
     async getUnreadCount(): Promise<number> {
         try {
-            const token = authService.getToken();
-            const response = await fetch(`${API_BASE_URL}/chat/unread-count`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-            if (!response.ok) {
-                const errorInfo = await handleFetchError(response, { operation: 'getUnreadCount' });
-                throw new Error(errorInfo.error);
-            }
-            const data = await response.json() as { unread_count: number };
-            return data.unread_count;
+            const response = await http.get<{ unread_count: number }>(`/chat/unread-count`);
+            return response.data.unread_count;
         } catch (error) {
-            logger.error('Error al obtener conteo de mensajes no leídos', error instanceof Error ? error : null, { 
-                operation: 'getUnreadCount' 
-            });
-            throw error;
+            const info = handleAxiosError(error as any, { operation: 'getUnreadCount' });
+            logger.error('Error al obtener conteo de mensajes no leídos', new Error(info.error), { operation: 'getUnreadCount' });
+            throw new Error(info.error);
         }
     }
 
     async markMessagesAsRead(senderEmail: string): Promise<{ success: boolean }> {
         try {
-            const token = authService.getToken();
-            const response = await fetch(`${API_BASE_URL}/chat/mark-read/${senderEmail}`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-            if (!response.ok) {
-                const errorInfo = await handleFetchError(response, { 
-                    operation: 'markMessagesAsRead',
-                    senderEmail 
-                });
-                throw new Error(errorInfo.error);
-            }
-            return await response.json() as { success: boolean };
+            const response = await http.post<{ success: boolean }>(`/chat/mark-read/${senderEmail}`);
+            return response.data;
         } catch (error) {
-            logger.error('Error al marcar mensajes como leídos', error instanceof Error ? error : null, { 
-                operation: 'markMessagesAsRead',
-                senderEmail 
-            });
-            throw error;
+            const info = handleAxiosError(error as any, { operation: 'markMessagesAsRead', senderEmail });
+            logger.error('Error al marcar mensajes como leídos', new Error(info.error), { operation: 'markMessagesAsRead', senderEmail });
+            throw new Error(info.error);
         }
     }
 }

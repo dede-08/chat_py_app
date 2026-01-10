@@ -26,3 +26,6 @@ dist-ssr
 
 #variables de entorno
 .env
+
+MEJORAS_PROYECTO.md
+REFRESH_TOKENS.md
