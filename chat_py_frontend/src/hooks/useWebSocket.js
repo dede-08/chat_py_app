@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { buildAuthorizedWsUrl, hasWsToken } from '../services/wsClient';
+import { buildAuthorizedWsUrl, 
+  //hasWsToken 
+} from '../services/wsClient';
 import logger from '../services/logger';
 
 const useWebSocket = (urlOrPath, options = {}) => {
@@ -37,13 +39,18 @@ const useWebSocket = (urlOrPath, options = {}) => {
     let reconnectCount = 0;
     let shouldReconnect = true;
 
-  const connect = () => {
-      if (!hasWsToken() || !shouldReconnect) {
-        setError('No authenticated user or reconnection disabled');
+  const connect = async () => {
+      if (!shouldReconnect) {
         return;
       }
 
       try {
+        const { ensureValidAccessToken } = await import('../services/wsClient');
+        const token = await ensureValidAccessToken(30);
+        if (!token) {
+          setError('No authenticated user for WebSocket');
+          return;
+        }
         const wsUrl = buildAuthorizedWsUrl(urlOrPath);
         if (!wsUrl) {
           setError('Missing token for WebSocket');

@@ -31,12 +31,37 @@ class ChatService {
     private reconnectInterval: number = 3000; //3 segundos
 
     //logica de websocket
-    connect(): void {
-        const wsUrl = buildAuthorizedWsUrl('/ws/chat');
-        if (!wsUrl) {
+    async connect(): Promise<void> {
+        //verificar si ya hay una conexion activa o en proceso
+        if (this.ws && (this.ws.readyState === WebSocket.CONNECTING || this.ws.readyState === WebSocket.OPEN)) {
+            logger.debug('WebSocket ya está conectado o en proceso de conexión', { 
+                operation: 'websocket_connect' 
+            });
+            return;
+        }
+
+        if (this.isConnecting) {
+            logger.debug('Ya hay una conexión en proceso', { operation: 'websocket_connect' });
+            return;
+        }
+
+        this.isConnecting = true;
+        logger.info('Intentando conectar WebSocket...', { operation: 'websocket_connect' });
+
+        // asegurar token válido antes de construir URL
+        const token = await (await import('./wsClient')).ensureValidAccessToken(30);
+        if (!token) {
             logger.error('No hay token disponible para la conexión WebSocket', null, { 
                 operation: 'websocket_connect' 
             });
+            this.isConnecting = false;
+            return;
+        }
+
+        const wsUrl = buildAuthorizedWsUrl('/ws/chat');
+        if (!wsUrl) {
+            logger.error('No se pudo construir la URL de WebSocket', null, { operation: 'websocket_connect' });
+            this.isConnecting = false;
             return;
         }
 
