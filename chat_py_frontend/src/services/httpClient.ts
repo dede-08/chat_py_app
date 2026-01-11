@@ -103,7 +103,7 @@ http.interceptors.response.use(
         return http(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
-        // Limpiar storage y redirigir a login
+        //limpiar storage y redirigir a login
         clearAuthStorage();
         if (window.location.pathname !== '/login') {
           window.location.href = '/login';
@@ -114,7 +114,7 @@ http.interceptors.response.use(
       }
     }
 
-    // Otros errores
+    //otros errores
     if (status) {
       logger.warn('HTTP error', { status, url });
     }
