@@ -18,35 +18,35 @@ const PasswordStrengthMeter = ({ password, requirements, onValidationChange }) =
       return;
     }
 
-    // Validación en tiempo real
+    //validacion en tiempo real
     const validationErrors = [];
     
-    // Longitud mínima
+    //longitud minima
     if (requirements?.min_length && password.length < requirements.min_length) {
       validationErrors.push(`Al menos ${requirements.min_length} caracteres`);
     }
     
-    // Longitud máxima
+    //longitud maxima
     if (requirements?.max_length && password.length > requirements.max_length) {
       validationErrors.push(`Máximo ${requirements.max_length} caracteres`);
     }
     
-    // Mayúsculas
+    //mayusculas
     if (requirements?.require_uppercase && !/[A-Z]/.test(password)) {
       validationErrors.push('Al menos una mayúscula');
     }
     
-    // Minúsculas
+    //minusculas
     if (requirements?.require_lowercase && !/[a-z]/.test(password)) {
       validationErrors.push('Al menos una minúscula');
     }
     
-    // Números
+    //numeros
     if (requirements?.require_digits && !/\d/.test(password)) {
       validationErrors.push('Al menos un número');
     }
     
-    // Caracteres especiales
+    //caracteres especiales
     if (requirements?.require_special_chars && requirements?.special_chars) {
       const specialCharsRegex = new RegExp(`[${requirements.special_chars.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}]`);
       if (!specialCharsRegex.test(password)) {
@@ -54,7 +54,7 @@ const PasswordStrengthMeter = ({ password, requirements, onValidationChange }) =
       }
     }
     
-    // Espacios
+    //espacios
     if (password.includes(' ')) {
       validationErrors.push('No puede contener espacios');
     }
@@ -62,28 +62,28 @@ const PasswordStrengthMeter = ({ password, requirements, onValidationChange }) =
     setErrors(validationErrors);
     setIsValid(validationErrors.length === 0);
 
-    // Calcular fortaleza
+    //calcular fortaleza
     let currentScore = 0;
     
-    // Longitud (máximo 3 puntos)
+    //longitud (maximo 3 puntos)
     if (password.length >= 8) currentScore += 1;
     if (password.length >= 12) currentScore += 1;
     if (password.length >= 16) currentScore += 1;
     
-    // Complejidad (máximo 4 puntos)
+    //complejidad (maximo 4 puntos)
     if (/[A-Z]/.test(password)) currentScore += 1;
     if (/[a-z]/.test(password)) currentScore += 1;
     if (/\d/.test(password)) currentScore += 1;
     if (requirements?.special_chars && new RegExp(`[${requirements.special_chars.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}]`).test(password)) currentScore += 1;
     
-    // Variedad (máximo 1 punto)
+    //variedad (maximo 1 punto)
     const uniqueChars = new Set(password).size;
     if (uniqueChars >= 8) currentScore += 1;
 
     setScore(currentScore);
     setMaxScore(8);
 
-    // Determinar fortaleza
+    //determinar fortaleza
     let newStrength;
     if (currentScore <= 2) newStrength = 'débil';
     else if (currentScore <= 4) newStrength = 'media';

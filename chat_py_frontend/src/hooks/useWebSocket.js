@@ -114,13 +114,13 @@ const useWebSocket = (urlOrPath, options = {}) => {
     connect();
 
     return () => {
-      shouldReconnect = false; // evitar reconexion en unmount
+      shouldReconnect = false; //evitar reconexion en unmount
       if (reconnectTimeout) {
         clearTimeout(reconnectTimeout);
       }
       if (ws) {
         //evitar "WebSocket is closed before the connection is established"
-        ws.onclose = () => {}; // deshabilitar el handler onclose primero
+        ws.onclose = () => {}; //deshabilitar el handler onclose primero
         ws.close();
       }
       setSocket(null);

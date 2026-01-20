@@ -248,7 +248,7 @@ const UserProfile = () => {
                                         </div>
                                     </div>
                                 ) : (
-                                    // Formulario de edición
+                                    //formulario de edicion
                                     <div>
                                         <div className="mb-3">
                                             <label className="form-label fw-semibold">

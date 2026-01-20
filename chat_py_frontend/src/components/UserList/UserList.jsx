@@ -70,7 +70,7 @@ const UserList = ({ onUserSelect, selectedUser }) => {
       <div className="user-list-header">
         <h3>Usuarios ({users.length})</h3>
         <button onClick={loadUsers} className="refresh-btn">
-          <span class="material-symbols-outlined">
+          <span className="material-symbols-outlined">
             autorenew
           </span>
         </button>
@@ -90,9 +90,9 @@ const UserList = ({ onUserSelect, selectedUser }) => {
               <div className="user-email">{user.email}</div>
             </div>
             <div className={`user-status ${onlineUsers.has(user.email) ? 'online' : 'offline'}`}>
-              {onlineUsers.has(user.email) ? <span class="material-symbols-outlined">
+              {onlineUsers.has(user.email) ? <span className="material-symbols-outlined">
                 wifi
-              </span> : <span class="material-symbols-outlined">
+              </span> : <span className="material-symbols-outlined">
                 wifi_off
               </span>}
             </div>

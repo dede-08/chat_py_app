@@ -8,7 +8,7 @@ import { ChatContext } from './ChatContextProvider';
 //provider del contexto
 export const ChatProvider = ({ children }) => {
   const [state, dispatch] = useReducer(chatReducer, initialState);
-  // Ref para acceder al estado más reciente sin causar re-renders
+  //ref para acceder al estado mas reciente sin causar re-renders
   const stateRef = useRef(state);
   stateRef.current = state;
 
@@ -133,7 +133,7 @@ export const ChatProvider = ({ children }) => {
       addMessage(data);
       
       //marcar como leido si es del usuario seleccionado
-      // Usar stateRef para acceder al estado más reciente
+      //usar stateRef para acceder al estado mas reciente
       const currentState = stateRef.current;
       if (data.sender_email === currentState.selectedUser?.email) {
         chatService.sendReadReceipt(data.sender_email);
@@ -153,7 +153,7 @@ export const ChatProvider = ({ children }) => {
     //handler para confirmacion de lectura
     const handleReadReceipt = (data) => {
       //actualiza el estado de los mensajes de una sola vez, en lugar de en un bucle
-      // Usar stateRef para acceder al estado más reciente sin causar re-renders innecesarios
+      //usar stateRef para acceder al estado mas reciente sin causar re-renders innecesarios
       const currentState = stateRef.current;
       setMessages(
         currentState.messages.map(msg =>

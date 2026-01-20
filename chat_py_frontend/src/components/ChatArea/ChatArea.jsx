@@ -272,7 +272,7 @@ const ChatArea = ({ selectedUser }) => {
             maxLength={5000}
           />
           <button type="submit" disabled={!newMessage.trim() || !selectedUser || !!messageError}>
-            <span class="material-symbols-outlined">
+            <span className="material-symbols-outlined">
               send
             </span>
           </button>

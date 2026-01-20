@@ -1,4 +1,4 @@
 import { createContext } from 'react';
 
-// Crear contexto
+//crear contexto
 export const ChatContext = createContext();

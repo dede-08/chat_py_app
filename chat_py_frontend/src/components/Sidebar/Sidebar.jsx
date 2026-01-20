@@ -6,7 +6,7 @@ import './Sidebar.css';
 const Sidebar = () => {
   const [selectedUser, setSelectedUser] = useState(null);
 
-  const usersOnline = ['Alice', 'Bob', 'Charlie']; // Simulado, luego irá desde WebSocket
+  const usersOnline = ['Alice', 'Bob', 'Charlie']; //simulado, luego ira desde WebSocket
 
   return (
     <div className="sidebar">
