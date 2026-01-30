@@ -15,7 +15,7 @@ const getRefreshToken = (): string | null => {
 const saveTokens = (access: string, refresh: string): void => {
   localStorage.setItem('access_token', access);
   localStorage.setItem('refresh_token', refresh);
-  // compatibilidad con codigo antiguo que usa 'token'
+  //compatibilidad con código antiguo que usa 'token'
   localStorage.setItem('token', access);
 };
 

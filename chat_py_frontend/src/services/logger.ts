@@ -1,5 +1,4 @@
 //servicio de logging centralizado
-
 const LOG_LEVELS = {
   DEBUG: 0,
   INFO: 1,
@@ -31,9 +30,7 @@ const formatMessage = (level: string, message: string, context: Record<string, u
   return `[${timestamp}] [${level}] ${message}${contextStr}`;
 };
 
-/**
- * logger principal
- */
+//logger principal
 interface LoggerContext {
   [key: string]: unknown;
 }
