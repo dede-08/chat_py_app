@@ -5,11 +5,12 @@ from schemas.chat_schema import MessageResponse, ChatRoomResponse, UserStatus
 from utils.jwt_bearer import JWTBearer
 from utils.jwt_handler import decode_access_token
 from utils.logger import chat_logger
+from fastapi.security import HTTPAuthorizationCredentials
 
 router = APIRouter()
 chat_service = ChatService()
 
-async def get_current_user_email(token: str = Depends(JWTBearer())):
+async def get_current_user_email(credentials: HTTPAuthorizationCredentials = Depends(JWTBearer())):
     """
     Obtener el email del usuario actual desde el token JWT.
     
@@ -25,8 +26,8 @@ async def get_current_user_email(token: str = Depends(JWTBearer())):
     Raises:
         HTTPException: Si el token es inválido, expirado o no contiene email
     """
-    # Usar la función centralizada que valida el tipo de token y expiración
-    payload = decode_access_token(token)
+# Usar la función centralizada que valida el tipo de token y expiración
+    payload = decode_access_token(credentials.credentials)
     
     if not payload:
         chat_logger.warning("Intento de acceso con token inválido o expirado")

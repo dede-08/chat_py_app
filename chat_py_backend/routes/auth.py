@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends, Request
+from fastapi.security import HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from model.user import User
 from schemas.user_schema import UserRegister, UserLogin, PasswordRequirements, RefreshTokenRequest
@@ -21,11 +22,11 @@ import uuid
 router = APIRouter(prefix="/auth")
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-@router.get("/protected", dependencies=[Depends(JWTBearer())])
-async def protected_route(token: str = Depends(JWTBearer())):
+@router.get("/protected")
+async def protected_route(credentials: HTTPAuthorizationCredentials = Depends(JWTBearer())):
     """Endpoint protegido para verificar autenticación"""
     try:
-        payload = decode_access_token(token)
+        payload = decode_access_token(credentials.credentials)
         if not payload:
             raise HTTPException(status_code=401, detail="Token inválido")
         return {
@@ -167,11 +168,11 @@ async def login(user: UserLogin):
         auth_logger.error(f"Error durante el login: {e}")
         raise HTTPException(status_code=500, detail="Error interno del servidor")
 
-@router.post("/logout", dependencies=[Depends(JWTBearer())])
-async def logout(token: str = Depends(JWTBearer())):
+@router.post("/logout")
+async def logout(credentials: HTTPAuthorizationCredentials = Depends(JWTBearer())):
     """Endpoint para logout - invalida todos los refresh tokens del usuario"""
     try:
-        payload = decode_access_token(token)
+        payload = decode_access_token(credentials.credentials)
         if payload and isinstance(payload, dict):
             email = payload.get("email")
             if email:
