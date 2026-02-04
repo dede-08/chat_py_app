@@ -2,15 +2,13 @@
 
 //tipos de autenticacion
 export interface LoginResponse {
-  access_token: string;
-  refresh_token: string;
+  message: string;
   email: string;
   username?: string;
 }
 
 export interface RefreshTokenResponse {
-  access_token: string;
-  refresh_token: string;
+  message: string;
 }
 
 export interface UserProfile {

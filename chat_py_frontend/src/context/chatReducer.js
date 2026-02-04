@@ -1,6 +1,6 @@
 import { CHAT_ACTIONS } from './chatActions';
 
-// Reducer para el estado del chat
+//reducer para el estado del chat
 export const chatReducer = (state, action) => {
   switch (action.type) {
     case CHAT_ACTIONS.SET_USERS:

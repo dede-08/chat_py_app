@@ -2,6 +2,7 @@ import { AxiosError } from 'axios';
 import http from './httpClient';
 import logger from './logger';
 import { handleAxiosError, createSuccessResponse, createErrorResponse } from '../utils/errorHandler';
+import { authService } from './cookieService';
 import type { 
   LoginResponse, 
   UserProfile, 
@@ -9,7 +10,7 @@ import type {
   PasswordValidationResponse,
   ApiResponse,
   ApiSuccessResponse
-} from '../types';
+} from '../types/api';
 
 const API_URL = `${import.meta.env.VITE_API_URL}/auth`;
 
@@ -40,32 +41,31 @@ export const loginUser = async (data: LoginData): Promise<ApiResponse<LoginRespo
   try {
     const response = await http.post<LoginResponse>(`${API_URL}/login`, data);
     
-    if (!response.data.access_token || !response.data.refresh_token) {
-      logger.error('Respuesta de login sin tokens', null, { responseData: response.data });
-      return createErrorResponse('El servidor no devolvió los tokens necesarios');
+    // Los tokens ahora se manejan via cookies desde el backend
+    // Solo necesitamos guardar los datos del usuario
+    
+    if (!response.data.email) {
+      logger.error('Respuesta de login sin datos de usuario', null, { responseData: response.data });
+      return createErrorResponse('El servidor no devolvió los datos necesarios');
     }
     
-    localStorage.setItem('access_token', response.data.access_token);
-    localStorage.setItem('refresh_token', response.data.refresh_token);
-    //compatibilidad con codigo antiguo que usa 'token'
-    localStorage.setItem('token', response.data.access_token);
-    localStorage.setItem('userEmail', response.data.email);
+    // Guardar datos de usuario en localStorage (seguro, no es información sensible).
+    // Las cookies httpOnly las establece el backend y el navegador las envía en cada request.
     const username = response.data.username || response.data.email || 'Usuario';
-    localStorage.setItem('username', username);
-    
-    const savedToken = localStorage.getItem('access_token');
-    if (!savedToken) {
-      logger.error('El token no se guardó correctamente en localStorage', null, { 
-        hasAccessToken: !!response.data.access_token 
-      });
-    }
+    authService.saveUserData(response.data.email, username);
     
     logger.info('Login exitoso', { email: response.data.email });
     return createSuccessResponse(response.data);
   } catch (error) {
     const errorInfo = handleAxiosError(error as AxiosError, { operation: 'login' });
-    if ((error as AxiosError).response?.status === 404) {
+    const status = (error as AxiosError).response?.status;
+    
+    if (status === 404) {
       errorInfo.error = 'El usuario no existe. Por favor, regístrese.';
+    } else if (status === 429) {
+      errorInfo.error = 'Demasiados intentos de inicio de sesión. Por favor, espere un minuto e intente nuevamente.';
+    } else if (status === 500) {
+      errorInfo.error = 'Error del servidor. Por favor, intente más tarde.';
     }
     return errorInfo;
   }
@@ -94,18 +94,16 @@ export const validatePassword = async (password: string): Promise<ApiResponse<Pa
 export const logoutUser = async (): Promise<void> => {
   try {
     await http.post(`${API_URL}/logout`, {});
-    logger.info('Logout exitoso');
+    logger.info('Logout exitoso desde servidor');
   } catch (error) {
-    logger.warn('Error en logout (se continúa con limpieza)', { 
+    logger.warn('Error en logout (se continúa con limpieza local)', { 
       operation: 'logout',
       error: error instanceof Error ? error.message : String(error)
     });
   } finally {
-    localStorage.removeItem('token');
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('userEmail');
-    localStorage.removeItem('username');
+    // Las cookies se limpian desde el backend, pero aseguramos limpieza local
+    authService.clearAll();
+    logger.info('Sesión cerrada correctamente (cliente)');
   }
 };
 
@@ -125,12 +123,23 @@ export const getUserProfile = async (): Promise<ApiResponse<UserProfile>> => {
 export const updateUserProfile = async (data: UpdateProfileData): Promise<ApiResponse<UserProfile>> => {
   try {
     const response = await http.put<UserProfile>(`${API_URL}/profile`, data);
+    
+    //actualizar datos de usuario en localStorage usando el servicio seguro
+    const currentEmail = authService.getUserEmail();
+    const currentUsername = authService.getUsername();
+    
     if (data.username) {
-      localStorage.setItem('username', data.username);
+      authService.saveUserData(
+        data.email || currentEmail || '',
+        data.username
+      );
+    } else if (data.email) {
+      authService.saveUserData(
+        data.email,
+        currentUsername || ''
+      );
     }
-    if (data.email) {
-      localStorage.setItem('userEmail', data.email);
-    }
+    
     logger.info('Perfil actualizado exitosamente', { updatedFields: Object.keys(data) });
     return createSuccessResponse(response.data);
   } catch (error) {
@@ -145,30 +154,30 @@ export const updateUserProfile = async (data: UpdateProfileData): Promise<ApiRes
 };
 
 export const getToken = (): string | null => {
-  return localStorage.getItem('access_token') || localStorage.getItem('token');
+  return authService.getAccessToken();
 };
 
 export const getRefreshToken = (): string | null => {
-  return localStorage.getItem('refresh_token');
+  return authService.getRefreshToken();
 };
 
 export const getUserEmail = (): string | null => {
-  return localStorage.getItem('userEmail');
+  return authService.getUserEmail();
 };
 
 export const getUsername = (): string | null => {
-  return localStorage.getItem('username');
+  return authService.getUsername();
 };
 
 export const isAuthenticated = (): boolean => {
-  return !!getToken();
+  return authService.isAuthenticated();
 };
 
 const confirmEmail = (token: string) => {
     return http.get(`${API_URL}/confirm-email/${token}`);
 };
 
-export default {
+const authServiceExports = {
     register,
     loginUser,
     logoutUser,
@@ -183,4 +192,6 @@ export default {
     getUserProfile,
     updateUserProfile
 };
+
+export default authServiceExports;
 

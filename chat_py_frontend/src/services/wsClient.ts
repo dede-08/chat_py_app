@@ -3,21 +3,34 @@ import http from './httpClient';
 
 export const WS_BASE_URL: string = import.meta.env.VITE_WS_URL as string;
 
-// Indica si hay token disponible
+/** Indica si hay token en JS o sesión por cookie (autenticado) */
 export const hasWsToken = (): boolean => {
-  return !!authService.getToken();
+  return !!authService.getToken() || authService.isAuthenticated();
 };
 
-// Construye una URL WS completa con token; devuelve null si no hay token
+/** URL base del WebSocket sin parámetros (el backend puede usar la cookie) */
+const getWsBaseUrl = (pathOrUrl: string): string => {
+  const isAbsolute = /^wss?:\/\//i.test(pathOrUrl);
+  return isAbsolute ? pathOrUrl : `${WS_BASE_URL}${pathOrUrl}`;
+};
+
+/**
+ * Construye la URL del WebSocket.
+ * Con token en JS: añade ?token=...
+ * Con cookies httpOnly (sin token en JS pero autenticado): devuelve la URL sin token; el backend usa la cookie.
+ */
 export const buildAuthorizedWsUrl = (pathOrUrl: string): string | null => {
   const token = authService.getToken();
-  if (!token) return null;
-
-  const isAbsolute = /^wss?:\/\//i.test(pathOrUrl);
-  const base = isAbsolute ? pathOrUrl : `${WS_BASE_URL}${pathOrUrl}`;
-  const hasQuery = base.includes('?');
-  const sep = hasQuery ? '&' : '?';
-  return `${base}${sep}token=${token}`;
+  const base = getWsBaseUrl(pathOrUrl);
+  if (token) {
+    const hasQuery = base.includes('?');
+    const sep = hasQuery ? '&' : '?';
+    return `${base}${sep}token=${token}`;
+  }
+  if (authService.isAuthenticated()) {
+    return base;
+  }
+  return null;
 };
 
 // --- Helpers JWT ---
@@ -40,12 +53,6 @@ const isAccessTokenFresh = (token: string, skewSeconds = 30): boolean => {
   return payload.exp - now > skewSeconds;
 };
 
-const saveTokens = (access: string, refresh: string): void => {
-  localStorage.setItem('access_token', access);
-  localStorage.setItem('refresh_token', refresh);
-  localStorage.setItem('token', access); // compat
-};
-
 const clearAuthStorage = (): void => {
   localStorage.removeItem('token');
   localStorage.removeItem('access_token');
@@ -54,23 +61,33 @@ const clearAuthStorage = (): void => {
   localStorage.removeItem('username');
 };
 
-// Asegura que exista un access token válido; si no, intenta refrescar
+/**
+ * Asegura sesión válida para WebSocket.
+ * Con token en JS: lo devuelve si es fresco; si no, intenta refresh.
+ * Con cookies httpOnly: no puede leer el token; si está autenticado devuelve '__cookie__'
+ * para que buildAuthorizedWsUrl construya la URL sin token (el backend usa la cookie).
+ */
 export const ensureValidAccessToken = async (skewSeconds = 30): Promise<string | null> => {
   const current = authService.getToken();
   if (current && isAccessTokenFresh(current, skewSeconds)) {
     return current;
   }
-  const refresh = authService.getRefreshToken();
-  if (!refresh) return null;
+  // Con cookies httpOnly no hay token en JS; si estamos autenticados, el backend usará la cookie
+  if (!current && authService.isAuthenticated()) {
+    return '__cookie__';
+  }
   try {
-    const resp = await http.post<{ access_token: string; refresh_token: string }>(
+    const refresh = authService.getRefreshToken();
+    await http.post<{ access_token?: string; refresh_token?: string }>(
       '/auth/refresh',
-      { refresh_token: refresh }
+      refresh ? { refresh_token: refresh } : {}
     );
-    saveTokens(resp.data.access_token, resp.data.refresh_token);
-    return resp.data.access_token;
-  } catch (e) {
-    clearAuthStorage();
+  } catch {
+    if (authService.getToken()) clearAuthStorage();
     return null;
   }
+  const after = authService.getToken();
+  if (after) return after;
+  if (authService.isAuthenticated()) return '__cookie__';
+  return null;
 };
