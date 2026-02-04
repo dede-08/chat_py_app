@@ -17,15 +17,15 @@ conf = ConnectionConfig(
 
 async def send_email(subject: str, recipients: List[str], body: str) -> bool:
     """
-    Enviar correo electrónico
+    enviar correo electronico.
     
     Args:
-        subject: Asunto del correo
-        recipients: Lista de destinatarios
-        body: Cuerpo del correo (HTML)
+        subject: asunto del correo
+        recipients: lista de destinatarios
+        body: cuerpo del correo (HTML)
     
     Returns:
-        bool: True si se envió correctamente, False en caso contrario
+        bool: True si se envio correctamente, False en caso contrario
     """
     try:
         if not recipients:

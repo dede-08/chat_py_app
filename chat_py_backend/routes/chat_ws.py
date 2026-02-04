@@ -75,10 +75,12 @@ async def chat_endpoint(websocket: WebSocket, token: str = Query(None)):
     """
     Endpoint WebSocket para chat en tiempo real.
     
-    Requiere un token JWT válido como query parameter.
+    Acepta token JWT por query parameter o por cookie (access_token).
     Valida el token antes de aceptar la conexión.
     """
-    # Validar que se proporcionó un token
+    # Si no viene en query, intentar leer de cookie (auth por httpOnly)
+    if not token:
+        token = websocket.cookies.get("access_token")
     if not token:
         websocket_logger.warning("Intento de conexión WebSocket sin token")
         await websocket.close(

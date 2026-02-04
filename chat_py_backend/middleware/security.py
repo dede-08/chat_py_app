@@ -63,9 +63,17 @@ class RateLimiter:
                 await asyncio.sleep(60)
 
 #instancias globales de rate limiters
-auth_rate_limiter = RateLimiter(max_requests=5, window_seconds=60)  #5 intentos por minuto
-api_rate_limiter = RateLimiter(max_requests=100, window_seconds=60) #100 requests por minuto
+# Temporalmente más permisivo para desarrollo
+auth_rate_limiter = RateLimiter(max_requests=100, window_seconds=60)  #100 intentos por minuto (temporal)
+api_rate_limiter = RateLimiter(max_requests=1000, window_seconds=60) #1000 requests por minuto (temporal)  
 ws_rate_limiter = RateLimiter(max_requests=1000, window_seconds=60) #1000 mensajes WS por minuto
+
+def clear_rate_limits():
+    """Limpiar todos los rate limiters (para desarrollo)"""
+    auth_rate_limiter.requests.clear()
+    api_rate_limiter.requests.clear()
+    ws_rate_limiter.requests.clear()
+    app_logger.info("Rate limiters limpiados para desarrollo")
 
 async def rate_limit_middleware(request: Request, call_next, limiter: RateLimiter = None):
     #middleware para rate limiting

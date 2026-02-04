@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
+from contextlib import asynccontextmanager
 from routes import auth, chat_ws, chat
 from config.settings import settings
 from database.connection import database, client
@@ -18,49 +19,14 @@ from services.refresh_token_service import refresh_token_service
 import traceback
 import asyncio
 
-app = FastAPI(
-    title="ChatPy API",
-    description="API para aplicación de chat en tiempo real",
-    version="1.0.0"
-)
-
-# Configuración de CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.cors_origins,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["*"],
-)
-
-# Middleware de seguridad
-@app.middleware("http")
-async def security_headers_middleware(request: Request, call_next):
-    return await SecurityHeaders.add_security_headers(request, call_next)
-
-# Middleware de logging
-@app.middleware("http")
-async def logging_middleware(request: Request, call_next):
-    return await RequestLogger.log_requests(request, call_next)
-
-# Middleware de rate limiting para rutas de autenticación
-@app.middleware("http")
-async def auth_rate_limit_middleware(request: Request, call_next):
-    if request.url.path.startswith("/auth"):
-        return await rate_limit_middleware(request, call_next, auth_rate_limiter)
-    return await call_next(request)
-
-# Middleware de rate limiting general
-@app.middleware("http")
-async def api_rate_limit_middleware(request: Request, call_next):
-    return await rate_limit_middleware(request, call_next, api_rate_limiter)
-
-# Evento de inicio: inicializar base de datos y migraciones
-@app.on_event("startup")
-async def startup_event():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manejador de ciclo de vida de la aplicación"""
+    # Startup
     try:
         if client is None or database is None:
             app_logger.error("No se pudo conectar a la base de datos durante el inicio")
+            yield
             return
         
         # Verificar conexión
@@ -92,16 +58,69 @@ async def startup_event():
         app_logger.info("Aplicación iniciada correctamente")
     except Exception as e:
         app_logger.error(f"Error durante el inicio de la aplicación: {e}")
-
-# Evento de cierre: cerrar conexión a base de datos
-@app.on_event("shutdown")
-async def shutdown_event():
+    
+    yield
+    
+    # Shutdown
     try:
         if client:
             client.close()
             app_logger.info("Conexión a MongoDB cerrada correctamente")
     except Exception as e:
         app_logger.error(f"Error al cerrar conexión: {e}")
+
+app = FastAPI(
+    title="ChatPy API",
+    description="API para aplicación de chat en tiempo real",
+    version="1.0.0",
+    lifespan=lifespan
+)
+
+# Configuración de CORS - debe ser el PRIMER middleware
+origins = settings.cors_origins
+# En desarrollo, permitir cualquier origen localhost
+if not origins:
+    origins = [
+        "http://localhost:3000",
+        "http://localhost:5173", 
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:5173",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000"
+    ]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["*"],
+    expose_headers=["set-cookie"],
+)
+
+# Middleware de seguridad - DESPUÉS de CORS
+@app.middleware("http")
+async def security_headers_middleware(request: Request, call_next):
+    return await SecurityHeaders.add_security_headers(request, call_next)
+
+# Middleware de logging
+@app.middleware("http")
+async def logging_middleware(request: Request, call_next):
+    return await RequestLogger.log_requests(request, call_next)
+
+# Middleware de rate limiting para rutas de autenticación
+@app.middleware("http")
+async def auth_rate_limit_middleware(request: Request, call_next):
+    if request.url.path.startswith("/auth"):
+        return await rate_limit_middleware(request, call_next, auth_rate_limiter)
+    return await call_next(request)
+
+# Middleware de rate limiting general
+@app.middleware("http")
+async def api_rate_limit_middleware(request: Request, call_next):
+    return await rate_limit_middleware(request, call_next, api_rate_limiter)
+
+
 
 # Endpoint de health check
 @app.get("/health")
@@ -127,6 +146,14 @@ async def health_check():
             status_code=503,
             content={"status": "unhealthy", "error": str(e)}
         )
+
+# Endpoint de desarrollo para limpiar rate limits
+@app.get("/dev/clear-ratelimits")
+async def clear_rate_limits():
+    """Limpiar rate limiters (solo para desarrollo)"""
+    from middleware.security import clear_rate_limits
+    clear_rate_limits()
+    return {"message": "Rate limits limpiados"}
 
 # Handler global de excepciones
 @app.exception_handler(Exception)

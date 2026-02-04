@@ -5,93 +5,116 @@ import asyncio
 
 class DatabaseMigration:
     
-    #clase para manejar migraciones de base de datos
     def __init__(self, db: AsyncIOMotorDatabase):
         self.db = db
         self.logger = db_logger
     
     async def create_indexes(self):
-        #crear indices para optimizar consultas
-        try:
-            #indices para la colección de usuarios
-            await self.db.users.create_index([
-                ("email", 1)
-            ], unique=True, name="idx_users_email")
+        """Crear índices para optimizar consultas"""
+        index_definitions = [
+            # Índices para usuarios
+            {
+                'collection': self.db.users,
+                'keys': [("email", 1)],
+                'options': {"unique": True, "name": "idx_users_email"}
+            },
+            {
+                'collection': self.db.users,
+                'keys': [("username", 1)],
+                'options': {"unique": True, "name": "idx_users_username"}
+            },
             
-            await self.db.users.create_index([
-                ("username", 1)
-            ], unique=True, name="idx_users_username")
+            # Índices para mensajes
+            {
+                'collection': self.db.messages,
+                'keys': [("sender_email", 1), ("receiver_email", 1), ("timestamp", -1)],
+                'options': {"name": "idx_messages_conversation"}
+            },
+            {
+                'collection': self.db.messages,
+                'keys': [("receiver_email", 1), ("is_read", 1)],
+                'options': {"name": "idx_messages_unread"}
+            },
+            {
+                'collection': self.db.messages,
+                'keys': [("timestamp", -1)],
+                'options': {"name": "idx_messages_timestamp"}
+            },
             
-            #indices para la colección de mensajes
-            await self.db.messages.create_index([
-                ("sender_email", 1),
-                ("receiver_email", 1),
-                ("timestamp", -1)
-            ], name="idx_messages_conversation")
+            # Índices para chat rooms
+            {
+                'collection': self.db.chat_rooms,
+                'keys': [("participants", 1)],
+                'options': {"name": "idx_chatrooms_participants"}
+            },
+            {
+                'collection': self.db.chat_rooms,
+                'keys': [("room_id", 1)],
+                'options': {"unique": True, "name": "idx_chatrooms_room_id"}
+            },
+            {
+                'collection': self.db.chat_rooms,
+                'keys': [("updated_at", -1)],
+                'options': {"name": "idx_chatrooms_updated"}
+            },
             
-            await self.db.messages.create_index([
-                ("receiver_email", 1),
-                ("is_read", 1)
-            ], name="idx_messages_unread")
-            
-            await self.db.messages.create_index([
-                ("timestamp", -1)
-            ], name="idx_messages_timestamp")
-            
-            #indices para salas de chat
-            await self.db.chat_rooms.create_index([
-                ("participants", 1)
-            ], name="idx_chatrooms_participants")
-            
-            await self.db.chat_rooms.create_index([
-                ("room_id", 1)
-            ], unique=True, name="idx_chatrooms_room_id")
-            
-            await self.db.chat_rooms.create_index([
-                ("updated_at", -1)
-            ], name="idx_chatrooms_updated")
-            
-            # Índices para refresh tokens
-            await self.db.refresh_tokens.create_index([
-                ("user_email", 1),
-                ("is_revoked", 1)
-            ], name="idx_refresh_tokens_user")
-            
-            await self.db.refresh_tokens.create_index([
-                ("refresh_token", 1)
-            ], unique=True, name="idx_refresh_tokens_token")
-            
-            await self.db.refresh_tokens.create_index([
-                ("expires_at", 1)
-            ], name="idx_refresh_tokens_expires")
-            
-            await self.db.refresh_tokens.create_index([
-                ("token_id", 1)
-            ], unique=True, name="idx_refresh_tokens_id")
-            
-            self.logger.info("Índices creados exitosamente")
-            
-        except Exception as e:
-            self.logger.error(f"Error al crear índices: {str(e)}")
-            raise
+            # Índices para refresh tokens (excepto expires_at que se maneja en TTL)
+            {
+                'collection': self.db.refresh_tokens,
+                'keys': [("user_email", 1), ("is_revoked", 1)],
+                'options': {"name": "idx_refresh_tokens_user"}
+            },
+            {
+                'collection': self.db.refresh_tokens,
+                'keys': [("refresh_token", 1)],
+                'options': {"unique": True, "name": "idx_refresh_tokens_token"}
+            },
+            {
+                'collection': self.db.refresh_tokens,
+                'keys': [("token_id", 1)],
+                'options': {"unique": True, "name": "idx_refresh_tokens_id"}
+            }
+        ]
+        
+        created_count = 0
+        skipped_count = 0
+        
+        for index_def in index_definitions:
+            try:
+                await index_def['collection'].create_index(
+                    index_def['keys'], 
+                    **index_def['options']
+                )
+                created_count += 1
+                self.logger.debug(f"Índice creado: {index_def['options']['name']}")
+            except Exception as e:
+                error_str = str(e).lower()
+                if "already exists" in error_str or "indexoptionsconflict" in error_str:
+                    skipped_count += 1
+                    self.logger.debug(f"Índice ya existe: {index_def['options']['name']}")
+                else:
+                    self.logger.error(f"Error creando índice {index_def['options']['name']}: {e}")
+                    raise
+        
+        self.logger.info(f"Índices completados: {created_count} creados, {skipped_count} ya existían")
     
     async def setup_ttl_indexes(self):
-        #configurar indices TTL para limpieza automatica
+        """Configurar índices TTL para limpieza automática"""
         try:
-            #TTL para mensajes antiguos (opcional - 1 año)
+            # TTL para mensajes antiguos (opcional - 1 año)
             await self.db.messages.create_index([
                 ("timestamp", 1)
-            ], expireAfterSeconds=31536000, name="idx_messages_ttl")  #365 dias
+            ], expireAfterSeconds=31536000, name="idx_messages_ttl")  # 365 días
             
-            #TTL para logs de conexion (si se implementa)
+            # TTL para logs de conexión (si se implementa)
             try:
                 await self.db.connection_logs.create_index([
                     ("timestamp", 1)
-                ], expireAfterSeconds=604800, name="idx_connection_logs_ttl")  #7 dias
+                ], expireAfterSeconds=604800, name="idx_connection_logs_ttl")  # 7 días
             except Exception:
                 pass  # La colección puede no existir
             
-            # TTL para refresh tokens expirados (limpieza automática después de 7 días)
+            # TTL para refresh tokens expirados (limpieza automática)
             await self.db.refresh_tokens.create_index([
                 ("expires_at", 1)
             ], expireAfterSeconds=0, name="idx_refresh_tokens_ttl")
@@ -99,10 +122,14 @@ class DatabaseMigration:
             self.logger.info("Índices TTL configurados exitosamente")
             
         except Exception as e:
-            self.logger.warning(f"No se pudieron configurar índices TTL: {str(e)}")
+            error_str = str(e).lower()
+            if "already exists" in error_str or "indexoptionsconflict" in error_str:
+                self.logger.info("Índices TTL ya existen")
+            else:
+                self.logger.warning(f"No se pudieron configurar índices TTL: {str(e)}")
     
     async def run_migrations(self):
-        #ejecutar todas las migraciones
+        """Ejecutar todas las migraciones"""
         self.logger.info("Iniciando migraciones de base de datos...")
         
         migration_tasks = [
@@ -115,6 +142,6 @@ class DatabaseMigration:
         self.logger.info("Migraciones completadas")
 
 async def run_database_migrations(db: AsyncIOMotorDatabase):
-    #funcion principal para ejecutar migraciones
+    """Función principal para ejecutar migraciones"""
     migration = DatabaseMigration(db)
     await migration.run_migrations()

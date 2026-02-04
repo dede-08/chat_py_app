@@ -18,9 +18,17 @@ class Settings(BaseSettings):
     refresh_token_expire_days: int = 7  # 7 días de expiración para refresh tokens
     
     # CORS
-    # Valores por defecto solo para desarrollo local
+# Valores por defecto solo para desarrollo local
     frontend_url: str = "http://localhost:5173"
-    allowed_origins: List[str] = []
+    allowed_origins: List[str] = [
+        "http://localhost:3000",
+        "http://localhost:5173", 
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:5173",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+        "null"  # Para file:// protocol
+    ]
     
     # Servidor
     host: str = "0.0.0.0"

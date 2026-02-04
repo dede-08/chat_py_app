@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException, Depends, Request
+from fastapi import APIRouter, HTTPException, Depends, Request, Response, Body
 from fastapi.security import HTTPAuthorizationCredentials
 from pydantic import BaseModel
+from typing import Optional
 from model.user import User
 from schemas.user_schema import UserRegister, UserLogin, PasswordRequirements, RefreshTokenRequest
 from database.connection import users_collection
@@ -12,6 +13,7 @@ from utils.jwt_handler import (
     decode_refresh_token
 )
 from utils.jwt_bearer import JWTBearer
+from utils.cookie_auth import get_current_user_email_cookie
 from utils.password_validator import password_validator
 from utils.email_handler import send_email
 from config.settings import settings
@@ -91,7 +93,7 @@ async def register(user: UserRegister, request: Request):
         auth_logger.error(f"Error al insertar usuario: {e}")
         raise HTTPException(status_code=500, detail="Error al registrar usuario")
 
-    # Enviar correo de confirmación
+    #enviar correo de confirmación
     try:
         confirmation_url = f"{settings.frontend_url}/confirm-email/{confirmation_token}"
         email_body = f"""
@@ -107,7 +109,7 @@ async def register(user: UserRegister, request: Request):
         auth_logger.info(f"Correo de confirmación enviado a: {user.email}")
     except Exception as e:
         auth_logger.error(f"Error al enviar correo de confirmación: {e}")
-        # No fallar el registro si falla el envío de correo, pero loguear el error
+        #no fallar el registro si falla el envío de correo, pero loguear el error
 
     return {"message": "Usuario registrado correctamente. Por favor, revisa tu correo para confirmar tu cuenta."}
 
@@ -132,7 +134,7 @@ async def confirm_email(token: str):
         raise HTTPException(status_code=500, detail="Error interno del servidor")
 
 @router.post("/login")
-async def login(user: UserLogin):
+async def login(user: UserLogin, response: Response):
     try:
         db_user = await users_collection.find_one({"email": user.email})
         if not db_user:
@@ -151,14 +153,38 @@ async def login(user: UserLogin):
         access_token = create_access_token({"email": db_user["email"]})
         refresh_token = create_refresh_token({"email": db_user["email"]})
         
-        # Guardar refresh token en la base de datos
+#guardar refresh token en la base de datos
         await refresh_token_service.save_refresh_token(db_user["email"], refresh_token)
         
         auth_logger.info(f"Login exitoso: {user.email}")
+        
+        #configurar cookies httpOnly y seguras - MÁS PERMISIVAS PARA DESARROLLO
+        response.set_cookie(
+            key="access_token",
+            value=access_token,
+            max_age=settings.jwt_expire_minutes * 60,  #convertir a segundos
+            expires=settings.jwt_expire_minutes * 60,
+            path="/",
+            domain=None,  # Permitir cualquier dominio en localhost
+            secure=False,  #en producción usar True con HTTPS
+            httponly=True,
+            samesite=None  # MÁS PERMISIVO EN DESARROLLO
+        )
+        
+        response.set_cookie(
+            key="refresh_token",
+            value=refresh_token,
+            max_age=settings.refresh_token_expire_days * 24 * 60 * 60,  #convertir a segundos
+            expires=settings.refresh_token_expire_days * 24 * 60 * 60,
+            path="/",
+            domain=None,  # Permitir cualquier dominio en localhost
+            secure=False,  #en producción usar True con HTTPS
+            httponly=True,
+            samesite=None  # MÁS PERMISIVO EN DESARROLLO
+        )
+        
         return {
-            "access_token": access_token,
-            "refresh_token": refresh_token,
-            "token_type": "bearer",
+            "message": "Login exitoso",
             "email": db_user["email"],
             "username": db_user["username"]
         }
@@ -169,30 +195,43 @@ async def login(user: UserLogin):
         raise HTTPException(status_code=500, detail="Error interno del servidor")
 
 @router.post("/logout")
-async def logout(credentials: HTTPAuthorizationCredentials = Depends(JWTBearer())):
-    """Endpoint para logout - invalida todos los refresh tokens del usuario"""
+async def logout(request: Request, response: Response):
+    """endpoint para logout - invalida todos los refresh tokens del usuario y limpia cookies.
+    Acepta autenticación por cookie (preferido) o Authorization header."""
     try:
-        payload = decode_access_token(credentials.credentials)
-        if payload and isinstance(payload, dict):
-            email = payload.get("email")
-            if email:
-                # Revocar todos los refresh tokens del usuario
-                revoked_count = await refresh_token_service.revoke_all_user_tokens(email)
-                auth_logger.info(f"Logout exitoso: {email} - {revoked_count} tokens revocados")
+        email = None
+        try:
+            email = await get_current_user_email_cookie(request)
+        except HTTPException:
+            pass
+        if email:
+            revoked_count = await refresh_token_service.revoke_all_user_tokens(email)
+            auth_logger.info(f"Logout exitoso: {email} - {revoked_count} tokens revocados")
     except Exception as e:
         auth_logger.warning(f"Error durante logout: {e}")
-        # No fallar si hay error, pero loguear
+    finally:
+        response.delete_cookie(key="access_token", path="/")
+        response.delete_cookie(key="refresh_token", path="/")
+    
     return {"message": "Sesión cerrada correctamente"}
 
 @router.post("/refresh")
-async def refresh_token(request: RefreshTokenRequest):
+async def refresh_token_endpoint(request: Request, response: Response, body: Optional[RefreshTokenRequest] = Body(None)):
     """
-    Endpoint para renovar access token usando refresh token
-    Implementa rotación de tokens: genera nuevo access token y nuevo refresh token
+    endpoint para renovar access token usando refresh token.
+    Acepta refresh_token en el body o en la cookie (para uso con httpOnly).
     """
+    # Permitir refresh_token en cookie cuando se usa auth por cookies
+    refresh_token_value = None
+    if body and body.refresh_token:
+        refresh_token_value = body.refresh_token
+    if not refresh_token_value:
+        refresh_token_value = request.cookies.get("refresh_token")
+    if not refresh_token_value:
+        auth_logger.warning("Intento de refresh sin token")
+        raise HTTPException(status_code=401, detail="Refresh token no proporcionado")
     try:
-        # Decodificar refresh token
-        payload = decode_refresh_token(request.refresh_token)
+        payload = decode_refresh_token(refresh_token_value)
         if not payload:
             auth_logger.warning("Intento de refresh con token inválido")
             raise HTTPException(status_code=401, detail="Refresh token inválido o expirado")
@@ -202,7 +241,7 @@ async def refresh_token(request: RefreshTokenRequest):
             auth_logger.warning("Refresh token sin email en payload")
             raise HTTPException(status_code=401, detail="Refresh token inválido")
         
-        # Verificar que el usuario existe y está confirmado
+        #verificar que el usuario existe y está confirmado
         db_user = await users_collection.find_one({"email": user_email})
         if not db_user:
             auth_logger.warning(f"Intento de refresh con usuario inexistente: {user_email}")
@@ -212,33 +251,57 @@ async def refresh_token(request: RefreshTokenRequest):
             auth_logger.warning(f"Intento de refresh con email no confirmado: {user_email}")
             raise HTTPException(status_code=403, detail="Correo electrónico no confirmado")
         
-        # Validar que el refresh token existe en la base de datos y no está revocado
+        #validar que el refresh token existe en la base de datos y no está revocado
         is_valid = await refresh_token_service.validate_refresh_token(
-            request.refresh_token, 
+            refresh_token_value, 
             user_email
         )
         if not is_valid:
             auth_logger.warning(f"Intento de refresh con token revocado o inválido: {user_email}")
             raise HTTPException(status_code=401, detail="Refresh token inválido o revocado")
         
-        # Revocar el refresh token usado (rotación de tokens)
-        await refresh_token_service.revoke_refresh_token(request.refresh_token, user_email)
+        #revocar el refresh token usado (rotación de tokens)
+        await refresh_token_service.revoke_refresh_token(refresh_token_value, user_email)
         
-        # Generar nuevos tokens
+        #generar nuevos tokens
         new_access_token = create_access_token({"email": user_email})
         new_refresh_token = create_refresh_token({"email": user_email})
         
-        # Guardar el nuevo refresh token
+        #guardar el nuevo refresh token
         await refresh_token_service.save_refresh_token(user_email, new_refresh_token)
         
         auth_logger.info(f"Tokens renovados exitosamente para: {user_email}")
+        
+        #actualizar cookies con nuevos tokens
+        response.set_cookie(
+            key="access_token",
+            value=new_access_token,
+            max_age=settings.jwt_expire_minutes * 60,
+            expires=settings.jwt_expire_minutes * 60,
+            path="/",
+            domain=None,
+            secure=False,  #en produccion usar True con HTTPS
+            httponly=True,
+            samesite="lax"
+        )
+        
+        response.set_cookie(
+            key="refresh_token",
+            value=new_refresh_token,
+            max_age=settings.refresh_token_expire_days * 24 * 60 * 60,
+            expires=settings.refresh_token_expire_days * 24 * 60 * 60,
+            path="/",
+            domain=None,
+            secure=False,  #en produccion usar True con HTTPS
+            httponly=True,
+            samesite="lax"
+        )
+        
         return {
-            "access_token": new_access_token,
-            "refresh_token": new_refresh_token,
-            "token_type": "bearer"
+            "message": "Tokens renovados exitosamente"
         }
     except HTTPException:
         raise
     except Exception as e:
-        auth_logger.error(f"Error durante refresh token: {e}")
+        auth_logger.error(f"Error durante refresh de token: {e}")
         raise HTTPException(status_code=500, detail="Error interno del servidor")

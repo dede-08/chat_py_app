@@ -1,24 +1,22 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from typing import List
 from services.chat_service import ChatService
 from schemas.chat_schema import MessageResponse, ChatRoomResponse, UserStatus
-from utils.jwt_bearer import JWTBearer
-from utils.jwt_handler import decode_access_token
+from utils.cookie_auth import get_current_user_email_cookie
 from utils.logger import chat_logger
-from fastapi.security import HTTPAuthorizationCredentials
 
 router = APIRouter()
 chat_service = ChatService()
 
-async def get_current_user_email(credentials: HTTPAuthorizationCredentials = Depends(JWTBearer())):
+async def get_current_user_email(request: Request):
     """
-    Obtener el email del usuario actual desde el token JWT.
+    Obtener el email del usuario actual desde cookies o Authorization header.
     
-    Usa la función centralizada decode_access_token para validar el token
-    y verificar que sea un access token válido (no expirado).
+    Prioriza cookies sobre Authorization header para mayor seguridad.
+    Valida que sea un access token válido (no expirado).
     
     Args:
-        token: Token JWT obtenido del header Authorization
+        request: Objeto Request de FastAPI
         
     Returns:
         Email del usuario autenticado
@@ -26,8 +24,7 @@ async def get_current_user_email(credentials: HTTPAuthorizationCredentials = Dep
     Raises:
         HTTPException: Si el token es inválido, expirado o no contiene email
     """
-# Usar la función centralizada que valida el tipo de token y expiración
-    payload = decode_access_token(credentials.credentials)
+    return await get_current_user_email_cookie(request)
     
     if not payload:
         chat_logger.warning("Intento de acceso con token inválido o expirado")
