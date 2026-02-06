@@ -1,5 +1,6 @@
 import React, { useReducer, useEffect, useCallback, useRef } from 'react';
 import chatService from '../services/chatService';
+import authService from '../services/authService';
 import { chatReducer } from './chatReducer';
 import { CHAT_ACTIONS } from './chatActions';
 import { initialState } from './initialState';
@@ -112,14 +113,15 @@ export const ChatProvider = ({ children }) => {
     }
   };
 
-  //iniciar y cerrar la conexion WebSocket
+  // Conectar WebSocket solo cuando el usuario está autenticado (ChatProvider solo monta en /chat protegido)
   useEffect(() => {
-    chatService.connect();
-
+    if (authService.isAuthenticated()) {
+      chatService.connect();
+    }
     return () => {
       chatService.disconnect();
     };
-  }, []); //se ejecuta solo al montar y desmontar el provider
+  }, []);
 
   //configurar listeners de WebSocket
   useEffect(() => {
