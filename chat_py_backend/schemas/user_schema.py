@@ -1,4 +1,5 @@
 from pydantic import BaseModel, EmailStr, validator
+from typing import Optional
 from utils.password_validator import password_validator
 
 class UserRegister(BaseModel):
@@ -51,4 +52,39 @@ class PasswordRequirements(BaseModel):
     special_chars: str
 
 class RefreshTokenRequest(BaseModel):
-    refresh_token: str
+    refresh_token: Optional[str] = None
+
+
+class UserProfileResponse(BaseModel):
+    email: str
+    username: str
+    telephone: str
+
+
+class UserProfileUpdate(BaseModel):
+    username: Optional[str] = None
+    email: Optional[EmailStr] = None
+    telephone: Optional[str] = None
+    currentPassword: Optional[str] = None  # noqa: N815 (camelCase para coincidir con frontend)
+    newPassword: Optional[str] = None  # noqa: N815
+
+    @validator("username")
+    def validate_username_optional(cls, v):
+        if v is None or v == "":
+            return v
+        if len(v) < 3:
+            raise ValueError("El nombre de usuario debe tener al menos 3 caracteres")
+        if len(v) > 50:
+            raise ValueError("El nombre de usuario no puede tener más de 50 caracteres")
+        if not v.replace("_", "").replace("-", "").isalnum():
+            raise ValueError("El nombre de usuario solo puede contener letras, números, guiones y guiones bajos")
+        return v
+
+    @validator("newPassword")
+    def validate_new_password(cls, v):
+        if v is None or v == "":
+            return v
+        is_valid, errors = password_validator.validate_password(v)
+        if not is_valid:
+            raise ValueError(f"Contraseña inválida: {'; '.join(errors)}")
+        return v

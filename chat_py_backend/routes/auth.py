@@ -3,7 +3,14 @@ from fastapi.security import HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from typing import Optional
 from model.user import User
-from schemas.user_schema import UserRegister, UserLogin, PasswordRequirements, RefreshTokenRequest
+from schemas.user_schema import (
+    UserRegister,
+    UserLogin,
+    PasswordRequirements,
+    RefreshTokenRequest,
+    UserProfileResponse,
+    UserProfileUpdate,
+)
 from database.connection import users_collection
 from passlib.context import CryptContext
 from utils.jwt_handler import (
@@ -162,25 +169,22 @@ async def login(user: UserLogin, response: Response):
         response.set_cookie(
             key="access_token",
             value=access_token,
-            max_age=settings.jwt_expire_minutes * 60,  #convertir a segundos
-            expires=settings.jwt_expire_minutes * 60,
+            max_age=settings.jwt_expire_minutes * 60,  # segundos
             path="/",
-            domain=None,  # Permitir cualquier dominio en localhost
-            secure=False,  #en producción usar True con HTTPS
+            domain=None,
+            secure=False,  # en producción usar True con HTTPS
             httponly=True,
-            samesite=None  # MÁS PERMISIVO EN DESARROLLO
+            samesite=None,
         )
-        
         response.set_cookie(
             key="refresh_token",
             value=refresh_token,
-            max_age=settings.refresh_token_expire_days * 24 * 60 * 60,  #convertir a segundos
-            expires=settings.refresh_token_expire_days * 24 * 60 * 60,
+            max_age=settings.refresh_token_expire_days * 24 * 60 * 60,  # segundos
             path="/",
-            domain=None,  # Permitir cualquier dominio en localhost
-            secure=False,  #en producción usar True con HTTPS
+            domain=None,
+            secure=False,
             httponly=True,
-            samesite=None  # MÁS PERMISIVO EN DESARROLLO
+            samesite=None,
         )
         
         return {
@@ -193,6 +197,71 @@ async def login(user: UserLogin, response: Response):
     except Exception as e:
         auth_logger.error(f"Error durante el login: {e}")
         raise HTTPException(status_code=500, detail="Error interno del servidor")
+
+@router.get("/profile", response_model=UserProfileResponse)
+async def get_profile(current_user_email: str = Depends(get_current_user_email_cookie)):
+    """Obtener perfil del usuario autenticado."""
+    db_user = await users_collection.find_one({"email": current_user_email})
+    if not db_user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    return UserProfileResponse(
+        email=db_user["email"],
+        username=db_user["username"],
+        telephone=db_user.get("telephone", ""),
+    )
+
+
+@router.put("/profile", response_model=UserProfileResponse)
+async def update_profile(
+    data: UserProfileUpdate,
+    current_user_email: str = Depends(get_current_user_email_cookie),
+):
+    """Actualizar perfil del usuario autenticado."""
+    db_user = await users_collection.find_one({"email": current_user_email})
+    if not db_user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    update_fields = {}
+
+    if data.username is not None and data.username != db_user.get("username"):
+        existing = await users_collection.find_one({"username": data.username})
+        if existing:
+            raise HTTPException(status_code=409, detail="El nombre de usuario ya está en uso")
+        update_fields["username"] = data.username
+
+    if data.email is not None and data.email != db_user.get("email"):
+        existing = await users_collection.find_one({"email": data.email})
+        if existing:
+            raise HTTPException(status_code=409, detail="El email ya está registrado")
+        update_fields["email"] = data.email
+
+    if data.newPassword:
+        if not data.currentPassword:
+            raise HTTPException(status_code=400, detail="Debe indicar la contraseña actual para cambiarla")
+        if not pwd_context.verify(data.currentPassword, db_user["password"]):
+            raise HTTPException(status_code=400, detail="Contraseña actual incorrecta")
+        update_fields["password"] = pwd_context.hash(data.newPassword)
+
+    if data.telephone is not None:
+        import re
+        phone_pattern = re.compile(r"^\+?[\d\s\-\(\)]{7,15}$")
+        if not phone_pattern.match(data.telephone):
+            raise HTTPException(status_code=400, detail="Formato de teléfono inválido")
+        update_fields["telephone"] = data.telephone
+
+    if update_fields:
+        await users_collection.update_one(
+            {"email": current_user_email},
+            {"$set": update_fields},
+        )
+        db_user = {**db_user, **update_fields}
+
+    return UserProfileResponse(
+        email=db_user.get("email"),
+        username=db_user.get("username"),
+        telephone=db_user.get("telephone", ""),
+    )
+
 
 @router.post("/logout")
 async def logout(request: Request, response: Response):
@@ -277,24 +346,21 @@ async def refresh_token_endpoint(request: Request, response: Response, body: Opt
             key="access_token",
             value=new_access_token,
             max_age=settings.jwt_expire_minutes * 60,
-            expires=settings.jwt_expire_minutes * 60,
             path="/",
             domain=None,
-            secure=False,  #en produccion usar True con HTTPS
+            secure=False,
             httponly=True,
-            samesite="lax"
+            samesite="lax",
         )
-        
         response.set_cookie(
             key="refresh_token",
             value=new_refresh_token,
             max_age=settings.refresh_token_expire_days * 24 * 60 * 60,
-            expires=settings.refresh_token_expire_days * 24 * 60 * 60,
             path="/",
             domain=None,
-            secure=False,  #en produccion usar True con HTTPS
+            secure=False,
             httponly=True,
-            samesite="lax"
+            samesite="lax",
         )
         
         return {

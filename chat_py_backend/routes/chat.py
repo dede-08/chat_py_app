@@ -11,31 +11,9 @@ chat_service = ChatService()
 async def get_current_user_email(request: Request):
     """
     Obtener el email del usuario actual desde cookies o Authorization header.
-    
     Prioriza cookies sobre Authorization header para mayor seguridad.
-    Valida que sea un access token válido (no expirado).
-    
-    Args:
-        request: Objeto Request de FastAPI
-        
-    Returns:
-        Email del usuario autenticado
-        
-    Raises:
-        HTTPException: Si el token es inválido, expirado o no contiene email
     """
     return await get_current_user_email_cookie(request)
-    
-    if not payload:
-        chat_logger.warning("Intento de acceso con token inválido o expirado")
-        raise HTTPException(status_code=401, detail="Token inválido o expirado")
-    
-    email = payload.get("email")
-    if not email:
-        chat_logger.warning("Token válido pero sin email en el payload")
-        raise HTTPException(status_code=401, detail="Token inválido: email no encontrado")
-    
-    return email
 
 @router.get("/chat/history/{other_user_email}", response_model=List[MessageResponse])
 async def get_chat_history(
