@@ -22,7 +22,8 @@ interface QueueMessage {
 
 class ChatService {
     private ws: WebSocket | null = null;
-    private messageHandlers: Map<string, MessageHandler> = new Map();
+    //multiples handlers por tipo para que contexto y componentes puedan suscribirse al mismo evento
+    private messageHandlers: Map<string, Set<MessageHandler>> = new Map();
     private isConnected: boolean = false;
     private isConnecting: boolean = false;
     private messageQueue: QueueMessage[] = [];
@@ -48,7 +49,7 @@ class ChatService {
         this.isConnecting = true;
         logger.info('Intentando conectar WebSocket...', { operation: 'websocket_connect' });
 
-        // Asegurar sesión válida (token en JS o cookie); si no hay sesión, no es error (ej. usuario no logueado)
+        //asegurar sesion valida (token en JS o cookie)
         const token = await (await import('./wsClient')).ensureValidAccessToken(30);
         if (!token) {
             logger.debug('WebSocket: sin sesión activa, no se conecta', { operation: 'websocket_connect' });
@@ -234,30 +235,42 @@ class ChatService {
     }
 
     handleMessage(data: WebSocketMessage): void {
-        const handler = this.messageHandlers.get(data.type);
-        if (handler) {
-            handler(data);
+        const handlers = this.messageHandlers.get(data.type);
+        if (handlers) {
+            handlers.forEach((handler) => {
+                try {
+                    handler(data);
+                } catch (err) {
+                    logger.error('Error en handler WebSocket', err instanceof Error ? err : null, { type: data.type });
+                }
+            });
         }
     }
 
     onMessage(type: string, handler: MessageHandler): void {
-        this.messageHandlers.set(type, handler);
+        let set = this.messageHandlers.get(type);
+        if (!set) {
+            set = new Set();
+            this.messageHandlers.set(type, set);
+        }
+        set.add(handler);
     }
 
     offMessage(type: string, handler: MessageHandler): void {
-        const currentHandler = this.messageHandlers.get(type);
-        if (currentHandler === handler) {
-            this.messageHandlers.delete(type);
+        const set = this.messageHandlers.get(type);
+        if (set) {
+            set.delete(handler);
+            if (set.size === 0) {
+                this.messageHandlers.delete(type);
+            }
         }
     }
 
-    //metodo para limpiar todos los listeners
     clearAllListeners(): void {
         this.messageHandlers.clear();
     }
 
     //metodos de la API
-
     async getChatHistory(otherUserEmail: string, limit: number = 50): Promise<ChatMessage[]> {
         try {
             const response = await http.get<ChatMessage[]>(`/chat/history/${otherUserEmail}?limit=${limit}`);

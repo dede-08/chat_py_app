@@ -16,37 +16,45 @@ const UserProfile = () => {
     const [userInfo, setUserInfo] = useState({
         username: '',
         email: '',
+        telephone: '',
         password: '*********',
     });
 
     const [editInfo, setEditInfo] = useState({
         username: '',
         email: '',
+        telephone: '',
         currentPassword: '',
         newPassword: '',
         confirmPassword: ''
     });
 
-
     useEffect(() => {
         const loadUserData = async () => {
             try {
-
                 setLoading(true);
-
-                const username = authService.getUsername();
-                const email = authService.getUserEmail();
-
-                setUserInfo({
-                    username: username || 'usuario',
-                    email: email || 'email@example.com',
-                    password: '********'
-                });
-
+                setError(null);
+                const result = await authService.getUserProfile();
+                if (result.success && result.data) {
+                    const { username, email, telephone } = result.data;
+                    setUserInfo({
+                        username: username || '',
+                        email: email || '',
+                        telephone: telephone || '',
+                        password: '********'
+                    });
+                } else {
+                    const username = authService.getUsername();
+                    const email = authService.getUserEmail();
+                    setUserInfo({
+                        username: username || 'usuario',
+                        email: email || 'email@example.com',
+                        telephone: '',
+                        password: '********'
+                    });
+                }
             } catch (err) {
-                logger.error('Error al cargar datos del usuario', err, { 
-                    operation: 'loadUserData' 
-                });
+                logger.error('Error al cargar datos del usuario', err, { operation: 'loadUserData' });
                 setError('Error al cargar la información del perfil');
             } finally {
                 setLoading(false);
@@ -60,6 +68,7 @@ const UserProfile = () => {
         setEditInfo({
             username: userInfo.username,
             email: userInfo.email,
+            telephone: userInfo.telephone || '',
             currentPassword: '',
             newPassword: '',
             confirmPassword: ''
@@ -127,24 +136,24 @@ const UserProfile = () => {
             const updateData = {
                 username: editInfo.username,
                 email: editInfo.email,
+                telephone: editInfo.telephone || undefined,
             };
 
-            //solo incluir password si se esta cambiando
-            if (editInfo.newPassword){
+            if (editInfo.newPassword) {
                 updateData.currentPassword = editInfo.currentPassword;
                 updateData.newPassword = editInfo.newPassword;
             }
 
-            //llamar al servicio para actualizar
             const result = await authService.updateUserProfile(updateData);
 
-            if(isErrorResponse(result)){
+            if (isErrorResponse(result)) {
                 setError(result.error);
-            } else if(result.success){
-                //actualizar el estado local
+            } else if (result.success && result.data) {
+                const { username, email, telephone } = result.data;
                 setUserInfo({
-                    username: editInfo.username,
-                    email: editInfo.email,
+                    username: username || editInfo.username,
+                    email: email || editInfo.email,
+                    telephone: telephone || '',
                     password: '********'
                 });
 
@@ -239,6 +248,16 @@ const UserProfile = () => {
                                             </div>
                                         </div>
 
+                                        {userInfo.telephone && (
+                                            <div className="mb-4">
+                                                <label className="small mb-1">Teléfono</label>
+                                                <div className="d-flex align-items-center">
+                                                    <i className="bi bi-telephone text-primary me-2"></i>
+                                                    <h6 className="mb-0">{userInfo.telephone}</h6>
+                                                </div>
+                                            </div>
+                                        )}
+
                                         <div className="mb-3">
                                             <label className="small mb-1">Contraseña</label>
                                             <div className="d-flex align-items-center">
@@ -265,7 +284,7 @@ const UserProfile = () => {
                                             />
                                         </div>
 
-                                        <div className="mb-4">
+                                        <div className="mb-3">
                                             <label className="form-label fw-semibold">
                                                 <i className="bi bi-envelope me-1"></i>
                                                 Correo electrónico
@@ -277,6 +296,21 @@ const UserProfile = () => {
                                                 value={editInfo.email}
                                                 onChange={handleChange}
                                                 required
+                                            />
+                                        </div>
+
+                                        <div className="mb-4">
+                                            <label className="form-label fw-semibold">
+                                                <i className="bi bi-telephone me-1"></i>
+                                                Teléfono
+                                            </label>
+                                            <input
+                                                type="tel"
+                                                className="form-control"
+                                                name="telephone"
+                                                value={editInfo.telephone}
+                                                onChange={handleChange}
+                                                placeholder="Ej: +34 600 000 000"
                                             />
                                         </div>
 

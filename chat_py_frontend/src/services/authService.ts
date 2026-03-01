@@ -29,6 +29,7 @@ interface LoginData {
 interface UpdateProfileData {
   username?: string;
   email?: string;
+  telephone?: string;
   currentPassword?: string;
   newPassword?: string;
 }
@@ -41,16 +42,16 @@ export const loginUser = async (data: LoginData): Promise<ApiResponse<LoginRespo
   try {
     const response = await http.post<LoginResponse>(`${API_URL}/login`, data);
     
-    // Los tokens ahora se manejan via cookies desde el backend
-    // Solo necesitamos guardar los datos del usuario
+    //los tokens ahora se manejan via cookies desde el backend
+    //solo necesitamos guardar los datos del usuario
     
     if (!response.data.email) {
       logger.error('Respuesta de login sin datos de usuario', null, { responseData: response.data });
       return createErrorResponse('El servidor no devolvió los datos necesarios');
     }
     
-    // Guardar datos de usuario en localStorage (seguro, no es información sensible).
-    // Las cookies httpOnly las establece el backend y el navegador las envía en cada request.
+    //guardar datos de usuario en localStorage
+    //las cookies httpOnly las establece el backend y el navegador las envia en cada request
     const username = response.data.username || response.data.email || 'Usuario';
     authService.saveUserData(response.data.email, username);
     
@@ -101,7 +102,7 @@ export const logoutUser = async (): Promise<void> => {
       error: error instanceof Error ? error.message : String(error)
     });
   } finally {
-    // Las cookies se limpian desde el backend, pero aseguramos limpieza local
+    //las cookies se limpian desde el backend, pero aseguramos limpieza local
     authService.clearAll();
     logger.info('Sesión cerrada correctamente (cliente)');
   }
@@ -123,23 +124,14 @@ export const getUserProfile = async (): Promise<ApiResponse<UserProfile>> => {
 export const updateUserProfile = async (data: UpdateProfileData): Promise<ApiResponse<UserProfile>> => {
   try {
     const response = await http.put<UserProfile>(`${API_URL}/profile`, data);
-    
-    //actualizar datos de usuario en localStorage usando el servicio seguro
-    const currentEmail = authService.getUserEmail();
-    const currentUsername = authService.getUsername();
-    
-    if (data.username) {
+
+    if (response.data?.email != null) {
       authService.saveUserData(
-        data.email || currentEmail || '',
-        data.username
-      );
-    } else if (data.email) {
-      authService.saveUserData(
-        data.email,
-        currentUsername || ''
+        response.data.email,
+        response.data.username ?? authService.getUsername() ?? ''
       );
     }
-    
+
     logger.info('Perfil actualizado exitosamente', { updatedFields: Object.keys(data) });
     return createSuccessResponse(response.data);
   } catch (error) {

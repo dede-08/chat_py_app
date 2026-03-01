@@ -70,13 +70,14 @@ export const ChatProvider = ({ children }) => {
     dispatch({ type: CHAT_ACTIONS.CLEAR_ERROR });
   }, []);
 
-  //funciones de utilidad
+  //usar authService.getUserEmail() como fuente de verdad del usuario actual para evitar currentUser desactualizado
   const sendMessage = (content) => {
     if (!state.selectedUser || !content.trim()) return false;
 
+    const currentUserEmail = authService.getUserEmail();
     const tempMessage = {
       id: `temp-${Date.now()}`,
-      sender_email: state.currentUser,
+      sender_email: currentUserEmail ?? '',
       receiver_email: state.selectedUser.email,
       content: content.trim(),
       timestamp: new Date().toISOString(),
@@ -84,10 +85,7 @@ export const ChatProvider = ({ children }) => {
       is_temporary: true
     };
 
-    //agregar mensaje temporalmente
     addMessage(tempMessage);
-
-    //enviar mediante WebSocket
     return chatService.sendMessage(state.selectedUser.email, content.trim());
   };
 
@@ -113,7 +111,7 @@ export const ChatProvider = ({ children }) => {
     }
   };
 
-  // Conectar WebSocket solo cuando el usuario está autenticado (ChatProvider solo monta en /chat protegido)
+  //conectar WebSocket solo cuando el usuario esta autenticado (ChatProvider solo monta en /chat protegido)
   useEffect(() => {
     if (authService.isAuthenticated()) {
       chatService.connect();
@@ -152,14 +150,13 @@ export const ChatProvider = ({ children }) => {
       setUserOnlineStatus(data.user_email, data.is_online);
     };
 
-    //handler para confirmacion de lectura
+    //handler para confirmacion de lectura (usar authService para email actual, no state.currentUser)
     const handleReadReceipt = (data) => {
-      //actualiza el estado de los mensajes de una sola vez, en lugar de en un bucle
-      //usar stateRef para acceder al estado mas reciente sin causar re-renders innecesarios
+      const currentUserEmail = authService.getUserEmail();
       const currentState = stateRef.current;
       setMessages(
         currentState.messages.map(msg =>
-          (msg.sender_email === currentState.currentUser && msg.receiver_email === data.reader_email && !msg.is_read)
+          (currentUserEmail && msg.sender_email === currentUserEmail && msg.receiver_email === data.reader_email && !msg.is_read)
             ? { ...msg, is_read: true }
             : msg
         )
@@ -179,9 +176,7 @@ export const ChatProvider = ({ children }) => {
       chatService.clearAllListeners();
     };
   }, [
-      //se quita state.messages y se añaden las funciones que realmente se usan.
       state.selectedUser,
-      state.currentUser,
       addMessage,
       setMessages,
       setUserTyping,

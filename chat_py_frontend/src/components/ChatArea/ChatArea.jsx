@@ -70,15 +70,16 @@ const ChatArea = ({ selectedUser }) => {
   }, [selectedUser, loadChatHistory]);
 
   useEffect(() => {
-    //configurar manejadores de mensajes
     chatService.onMessage('message', handleNewMessage);
     chatService.onMessage('typing', handleTypingIndicator);
     chatService.onMessage('read_receipt', handleReadReceipt);
     chatService.onMessage('message_sent', handleMessageSent);
 
     return () => {
-      //limpiar manejadores
-      chatService.messageHandlers.clear();
+      chatService.offMessage('message', handleNewMessage);
+      chatService.offMessage('typing', handleTypingIndicator);
+      chatService.offMessage('read_receipt', handleReadReceipt);
+      chatService.offMessage('message_sent', handleMessageSent);
     };
   }, [handleNewMessage, handleTypingIndicator, handleReadReceipt]);
 
