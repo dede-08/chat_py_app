@@ -27,7 +27,7 @@ class UserRegister(BaseModel):
 
     @validator('telephone')
     def validate_telephone(cls, v):
-        #validación basica de telefono
+        #validacion basica de telefono
         import re
         phone_pattern = re.compile(r'^\+?[\d\s\-\(\)]{7,15}$')
         if not phone_pattern.match(v):

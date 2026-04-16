@@ -22,35 +22,35 @@ import asyncio
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manejador de ciclo de vida de la aplicación"""
-    # Startup
+    #startup
     try:
         if client is None or database is None:
             app_logger.error("No se pudo conectar a la base de datos durante el inicio")
             yield
             return
         
-        # Verificar conexión
+        #verificar conexion
         await client.admin.command('ping')
         app_logger.info("Conexión a MongoDB verificada exitosamente")
         
-        # Ejecutar migraciones
+        #ejecutar migraciones
         await run_database_migrations(database)
         
-        # Iniciar tarea de limpieza del rate limiter
+        #iniciar tarea de limpieza del rate limiter
         asyncio.create_task(auth_rate_limiter.cleanup_old_entries())
         asyncio.create_task(api_rate_limiter.cleanup_old_entries())
         app_logger.info("Tareas de limpieza de rate limiter iniciadas")
         
-        # Iniciar tarea de limpieza de refresh tokens expirados
+        #iniciar tarea de limpieza de refresh tokens expirados
         async def cleanup_refresh_tokens():
             """Tarea periódica para limpiar refresh tokens expirados"""
             while True:
                 try:
-                    await asyncio.sleep(3600)  # Ejecutar cada hora
+                    await asyncio.sleep(3600)  #ejecutar cada hora
                     await refresh_token_service.cleanup_expired_tokens()
                 except Exception as e:
                     app_logger.error(f"Error en limpieza de refresh tokens: {e}")
-                    await asyncio.sleep(60)  # Esperar 1 minuto antes de reintentar
+                    await asyncio.sleep(60)  #esperar 1 minuto antes de reintentar
         
         asyncio.create_task(cleanup_refresh_tokens())
         app_logger.info("Tarea de limpieza de refresh tokens iniciada")
@@ -61,7 +61,7 @@ async def lifespan(app: FastAPI):
     
     yield
     
-    # Shutdown
+    #shutdown
     try:
         if client:
             client.close()
@@ -76,9 +76,9 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Configuración de CORS - debe ser el PRIMER middleware
+#configuración de CORS - debe ser el PRIMER middleware
 origins = settings.cors_origins
-# En desarrollo, permitir cualquier origen localhost
+#en desarrollo, permitir cualquier origen localhost
 if not origins:
     origins = [
         "http://localhost:3000",
@@ -98,34 +98,34 @@ app.add_middleware(
     expose_headers=["set-cookie"],
 )
 
-# Middleware de seguridad - DESPUÉS de CORS
+#middleware de seguridad - DESPUÉS de CORS
 @app.middleware("http")
 async def security_headers_middleware(request: Request, call_next):
     return await SecurityHeaders.add_security_headers(request, call_next)
 
-# Middleware de logging
+#middleware de logging
 @app.middleware("http")
 async def logging_middleware(request: Request, call_next):
     return await RequestLogger.log_requests(request, call_next)
 
-# Middleware de rate limiting para rutas de autenticación
+#middleware de rate limiting para rutas de autenticación
 @app.middleware("http")
 async def auth_rate_limit_middleware(request: Request, call_next):
     if request.url.path.startswith("/auth"):
         return await rate_limit_middleware(request, call_next, auth_rate_limiter)
     return await call_next(request)
 
-# Middleware de rate limiting general
+#middleware de rate limiting general
 @app.middleware("http")
 async def api_rate_limit_middleware(request: Request, call_next):
     return await rate_limit_middleware(request, call_next, api_rate_limiter)
 
 
 
-# Endpoint de health check
+#endpoint de health check
 @app.get("/health")
 async def health_check():
-    """Endpoint para verificar el estado de la API"""
+    """endpoint para verificar el estado de la API"""
     try:
         if client is None or database is None:
             return JSONResponse(
@@ -147,7 +147,7 @@ async def health_check():
             content={"status": "unhealthy", "error": str(e)}
         )
 
-# Endpoint de desarrollo para limpiar rate limits
+#endpoint de desarrollo para limpiar rate limits
 @app.get("/dev/clear-ratelimits")
 async def clear_rate_limits():
     """Limpiar rate limiters (solo para desarrollo)"""
@@ -155,7 +155,7 @@ async def clear_rate_limits():
     clear_rate_limits()
     return {"message": "Rate limits limpiados"}
 
-# Handler global de excepciones
+#handler global de excepciones
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     """Manejar todas las excepciones no capturadas"""
@@ -173,7 +173,7 @@ async def global_exception_handler(request: Request, exc: Exception):
         }
     )
 
-# Handler para errores de validación
+#handler para errores de validacion
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     """Manejar errores de validación de Pydantic"""
@@ -186,7 +186,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         }
     )
 
-# Handler para HTTPException
+#handler para HTTPException
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
     """Manejar HTTPExceptions de forma consistente"""
@@ -198,7 +198,7 @@ async def http_exception_handler(request: Request, exc: HTTPException):
         }
     )
 
-# Incluir routers
+#incluir routers
 app.include_router(auth.router)
 app.include_router(chat_ws.router)
 app.include_router(chat.router)

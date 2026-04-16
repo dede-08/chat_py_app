@@ -33,5 +33,5 @@ def initialize_database():
         refresh_tokens_collection = None
         raise
 
-# Inicializar automáticamente al importar el módulo
+#inicializar automaticamente al importar el modulo
 initialize_database()

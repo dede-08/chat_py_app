@@ -63,7 +63,6 @@ class RateLimiter:
                 await asyncio.sleep(60)
 
 #instancias globales de rate limiters
-# Temporalmente más permisivo para desarrollo
 auth_rate_limiter = RateLimiter(max_requests=100, window_seconds=60)  #100 intentos por minuto (temporal)
 api_rate_limiter = RateLimiter(max_requests=1000, window_seconds=60) #1000 requests por minuto (temporal)  
 ws_rate_limiter = RateLimiter(max_requests=1000, window_seconds=60) #1000 mensajes WS por minuto
@@ -115,13 +114,13 @@ class SecurityHeaders:
         Returns:
             String con la política CSP completa
         """
-        # Obtener el origen del frontend para permitir conexiones
+        #obtener el origen del frontend para permitir conexiones
         frontend_origin = settings.frontend_url
         
-        # Construir lista de orígenes permitidos para conexiones
+        #construir lista de origenes permitidos para conexiones
         connect_sources = ["'self'", frontend_origin]
         
-        # En desarrollo, permitir conexiones WebSocket en localhost
+        #en desarrollo, permitir conexiones WebSocket en localhost
         if "localhost" in frontend_origin or "127.0.0.1" in frontend_origin:
             connect_sources.extend([
                 "ws://localhost:*",
@@ -130,8 +129,8 @@ class SecurityHeaders:
                 "wss://127.0.0.1:*"
             ])
         else:
-            # En producción, permitir WebSockets al mismo origen
-            # Extraer el protocolo y host del frontend_url
+            #en produccion, permitir WebSockets al mismo origen
+            #extraer el protocolo y host del frontend_url
             if frontend_origin.startswith("https://"):
                 ws_origin = frontend_origin.replace("https://", "wss://")
             elif frontend_origin.startswith("http://"):
@@ -183,13 +182,13 @@ class SecurityHeaders:
         """
         response = await call_next(request)
         
-        # Headers de seguridad
+        #headers de seguridad
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         
-        # Content Security Policy - construido dinámicamente
+        #content security policy - construido dinámicamente
         csp_policy = SecurityHeaders._build_csp_policy()
         response.headers["Content-Security-Policy"] = csp_policy
         

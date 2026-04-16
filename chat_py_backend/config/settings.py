@@ -47,11 +47,11 @@ class Settings(BaseSettings):
     ws_connection_timeout: int = 60
 
     # Configuración de correo
-    mail_username: str = "your_email@example.com"
-    mail_password: str = "your_password"
-    mail_from: EmailStr = "your_email@example.com"
+    mail_username: str = "[EMAIL_ADDRESS]"
+    mail_password: str = "[PASSWORD]"
+    mail_from: EmailStr = "[EMAIL_ADDRESS]"
     mail_port: int = 587
-    mail_server: str = "smtp.example.com"
+    mail_server: str = "smtp.gmail.com"
     mail_starttls: bool = True
     mail_ssl_tls: bool = False
     

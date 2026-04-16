@@ -100,7 +100,7 @@ async def register(user: UserRegister, request: Request):
         auth_logger.error(f"Error al insertar usuario: {e}")
         raise HTTPException(status_code=500, detail="Error al registrar usuario")
 
-    #enviar correo de confirmación
+    #enviar correo de confirmacion
     try:
         confirmation_url = f"{settings.frontend_url}/confirm-email/{confirmation_token}"
         email_body = f"""
@@ -160,19 +160,19 @@ async def login(user: UserLogin, response: Response):
         access_token = create_access_token({"email": db_user["email"]})
         refresh_token = create_refresh_token({"email": db_user["email"]})
         
-#guardar refresh token en la base de datos
+        #guardar refresh token en la base de datos
         await refresh_token_service.save_refresh_token(db_user["email"], refresh_token)
         
         auth_logger.info(f"Login exitoso: {user.email}")
         
-        #configurar cookies httpOnly y seguras - MÁS PERMISIVAS PARA DESARROLLO
+        #configurar cookies httpOnly y seguras
         response.set_cookie(
             key="access_token",
             value=access_token,
-            max_age=settings.jwt_expire_minutes * 60,  # segundos
+            max_age=settings.jwt_expire_minutes * 60, #segundos
             path="/",
             domain=None,
-            secure=False,  # en producción usar True con HTTPS
+            secure=False, #en produccion usar True con HTTPS
             httponly=True,
             samesite=None,
         )
@@ -290,7 +290,7 @@ async def refresh_token_endpoint(request: Request, response: Response, body: Opt
     endpoint para renovar access token usando refresh token.
     Acepta refresh_token en el body o en la cookie (para uso con httpOnly).
     """
-    # Permitir refresh_token en cookie cuando se usa auth por cookies
+    #permitir refresh_token en cookie cuando se usa auth por cookies
     refresh_token_value = None
     if body and body.refresh_token:
         refresh_token_value = body.refresh_token
