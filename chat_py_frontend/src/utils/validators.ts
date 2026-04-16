@@ -1,37 +1,32 @@
 /**
  * Utilidades de validación centralizadas
  * Proporciona funciones de validación consistentes en todo el frontend
- */
+*/
 
-/**
- * Resultado de una validación
- */
+//resultado de validacion
 export interface ValidationResult {
   isValid: boolean;
   error: string | null;
 }
 
-/**
- * Valida un email usando una regex más robusta
- */
+
+//valida un email usando regex mas robusta
 export const isValidEmail = (email: string): boolean => {
   if (!email || typeof email !== 'string') return false;
   
-  // Regex más robusta para validar email
-  // Basada en RFC 5322 (simplificada pero efectiva)
+  //regex mas robusta para validar email, basada en RFC 5322 pero simplificada para la mayoría de casos comunes
   const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
   
-  // Validaciones adicionales
-  if (email.length > 254) return false; // RFC 5321 límite
+  //validaciones adicionales para evitar casos problematicos
+  if (email.length > 254) return false; //RFC 5321 limite
   if (email.startsWith('.') || email.startsWith('@')) return false;
-  if (email.includes('..')) return false; // No permite puntos consecutivos
+  if (email.includes('..')) return false; //no permite puntos consecutivos
   
   return emailRegex.test(email.trim());
 };
 
-/**
- * Valida un nombre de usuario
- */
+
+//valida un nombre de usuario 
 export const validateUsername = (username: string): ValidationResult => {
   if (!username || typeof username !== 'string') {
     return { isValid: false, error: 'El nombre de usuario es requerido' };
@@ -47,12 +42,12 @@ export const validateUsername = (username: string): ValidationResult => {
     return { isValid: false, error: 'El nombre de usuario no puede tener más de 50 caracteres' };
   }
   
-  // Solo letras, números, guiones y guiones bajos
+  //solo letras, numeros, guiones y guiones bajos
   if (!/^[a-zA-Z0-9_-]+$/.test(trimmed)) {
     return { isValid: false, error: 'El nombre de usuario solo puede contener letras, números, guiones y guiones bajos' };
   }
   
-  // No puede empezar o terminar con guión o guión bajo
+  //no puede empezar o terminar con (- o _)
   if (/^[-_]|[-_]$/.test(trimmed)) {
     return { isValid: false, error: 'El nombre de usuario no puede empezar o terminar con guión o guión bajo' };
   }
@@ -60,9 +55,7 @@ export const validateUsername = (username: string): ValidationResult => {
   return { isValid: true, error: null };
 };
 
-/**
- * Valida un número de teléfono
- */
+//valida un numero de telefono
 export const validateTelephone = (telephone: string): ValidationResult => {
   if (!telephone || typeof telephone !== 'string') {
     return { isValid: false, error: 'El teléfono es requerido' };
@@ -70,15 +63,14 @@ export const validateTelephone = (telephone: string): ValidationResult => {
   
   const trimmed = telephone.trim();
   
-  // Regex para validar formato de teléfono internacional
-  // Permite: +1234567890, 1234567890, (123) 456-7890, etc.
+  //regex para validar formato de telefono internacional
   const phoneRegex = /^\+?[\d\s\-()]{7,15}$/;
   
   if (!phoneRegex.test(trimmed)) {
     return { isValid: false, error: 'Formato de teléfono inválido (ej: +1234567890)' };
   }
   
-  // Contar solo dígitos
+  //contar solo digitos
   const digitsOnly = trimmed.replace(/\D/g, '');
   if (digitsOnly.length < 7 || digitsOnly.length > 15) {
     return { isValid: false, error: 'El teléfono debe tener entre 7 y 15 dígitos' };
@@ -87,9 +79,8 @@ export const validateTelephone = (telephone: string): ValidationResult => {
   return { isValid: true, error: null };
 };
 
-/**
- * Valida el contenido de un mensaje de chat
- */
+
+//valida el contenido de un mensaje de chat, asegurando que no este vacio y no exceda un limite de caracteres
 export const validateChatMessage = (message: string, maxLength: number = 5000): ValidationResult => {
   if (!message || typeof message !== 'string') {
     return { isValid: false, error: 'El mensaje no puede estar vacío' };
@@ -111,9 +102,7 @@ export const validateChatMessage = (message: string, maxLength: number = 5000): 
   return { isValid: true, error: null };
 };
 
-/**
- * Valida que un campo no esté vacío
- */
+//valida que el campo no este vacio
 export const validateRequired = (value: string, fieldName: string = 'Campo'): ValidationResult => {
   if (!value || (typeof value === 'string' && value.trim().length === 0)) {
     return { isValid: false, error: `${fieldName} es requerido` };
@@ -121,9 +110,7 @@ export const validateRequired = (value: string, fieldName: string = 'Campo'): Va
   return { isValid: true, error: null };
 };
 
-/**
- * Valida la longitud de un string
- */
+//valida la longitud de un string
 export const validateLength = (
   value: string, 
   min: number | null, 
