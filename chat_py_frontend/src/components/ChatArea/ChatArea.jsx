@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Send, AlertTriangle, MessageSquare } from 'lucide-react';
 import chatService from '../../services/chatService';
 import authService from '../../services/authService';
 import logger from '../../services/logger';
 import { validateChatMessage } from '../../utils/validators';
 import { sanitizeChatMessage } from '../../utils/sanitizer';
-import './ChatArea.css';
 
 const ChatArea = ({ selectedUser }) => {
   const [messages, setMessages] = useState([]);
@@ -20,17 +21,13 @@ const ChatArea = ({ selectedUser }) => {
 
   const loadChatHistory = useCallback(async () => {
     if (!selectedUser) return;
-
     try {
-      setLoading(true);
-      setError(null);
+      setLoading(true); setError(null);
       const history = await chatService.getChatHistory(selectedUser.email);
       setMessages(history);
     } catch (error) {
-      logger.error('Error al cargar historial de chat', error, { 
-        selectedUser: selectedUser?.email 
-      });
-      setError('No se pudo cargar el historial de mensajes. Por favor, intente nuevamente.');
+      logger.error('Error al cargar historial', error, { selectedUser: selectedUser?.email });
+      setError('No se pudo cargar el historial.');
     } finally {
       setLoading(false);
     }
@@ -39,7 +36,6 @@ const ChatArea = ({ selectedUser }) => {
   const handleNewMessage = useCallback((data) => {
     if (data.sender_email === selectedUser?.email) {
       setMessages(prev => [...prev, data]);
-      //marcar como leido
       chatService.sendReadReceipt(data.sender_email);
     }
   }, [selectedUser]);
@@ -51,20 +47,14 @@ const ChatArea = ({ selectedUser }) => {
   }, [selectedUser]);
 
   const handleReadReceipt = useCallback((data) => {
-    //actualizar estado de lectura de mensajes
-    setMessages(prev =>
-      prev.map(msg =>
-        msg.sender_email === currentUserEmail && msg.receiver_email === data.reader_email
-          ? { ...msg, is_read: true }
-          : msg
-      )
-    );
+    setMessages(prev => prev.map(msg =>
+      msg.sender_email === currentUserEmail && msg.receiver_email === data.reader_email ? { ...msg, is_read: true } : msg
+    ));
   }, [currentUserEmail]);
 
   useEffect(() => {
     if (selectedUser) {
       loadChatHistory();
-      //marcar mensajes como leidos
       chatService.markMessagesAsRead(selectedUser.email);
     }
   }, [selectedUser, loadChatHistory]);
@@ -73,217 +63,149 @@ const ChatArea = ({ selectedUser }) => {
     chatService.onMessage('message', handleNewMessage);
     chatService.onMessage('typing', handleTypingIndicator);
     chatService.onMessage('read_receipt', handleReadReceipt);
-    chatService.onMessage('message_sent', handleMessageSent);
-
     return () => {
       chatService.offMessage('message', handleNewMessage);
       chatService.offMessage('typing', handleTypingIndicator);
       chatService.offMessage('read_receipt', handleReadReceipt);
-      chatService.offMessage('message_sent', handleMessageSent);
     };
   }, [handleNewMessage, handleTypingIndicator, handleReadReceipt]);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const handleMessageSent = (data) => {
-    //mensaje enviado exitosamente
-    logger.debug('Mensaje enviado exitosamente', { messageId: data.message_id });
-  };
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, otherUserTyping]);
 
   const handleSendMessage = (e) => {
     e.preventDefault();
     if (!selectedUser) return;
-
-    //validar mensaje
     const validation = validateChatMessage(newMessage);
     if (!validation.isValid) {
-      setMessageError(validation.error);
-      setTimeout(() => setMessageError(null), 5000);
-      return;
+      setMessageError(validation.error); setTimeout(() => setMessageError(null), 5000); return;
     }
-
-    //sanitizar mensaje antes de enviar
     const sanitizedMessage = sanitizeChatMessage(newMessage.trim());
-    
-    if (!sanitizedMessage) {
-      setMessageError('El mensaje no puede estar vacío');
-      setTimeout(() => setMessageError(null), 5000);
-      return;
-    }
+    if (!sanitizedMessage) return;
 
     const messageData = {
-      id: Date.now().toString(), //id temporal
-      sender_email: currentUserEmail,
-      receiver_email: selectedUser.email,
-      content: sanitizedMessage,
-      timestamp: new Date().toISOString(),
-      is_read: false
+      id: Date.now().toString(), sender_email: currentUserEmail, receiver_email: selectedUser.email,
+      content: sanitizedMessage, timestamp: new Date().toISOString(), is_read: false
     };
 
-    //agregar mensaje localmente inmediatamente
     setMessages(prev => [...prev, messageData]);
-
-    //enviar mensaje sanitizado
     chatService.sendMessage(selectedUser.email, sanitizedMessage);
-
-    //limpiar input y errores
-    setNewMessage('');
-    setMessageError(null);
-
-    //detener indicador de escritura
-    setIsTyping(false);
+    setNewMessage(''); setMessageError(null); setIsTyping(false);
     chatService.sendTypingIndicator(selectedUser.email, false);
   };
 
   const handleInputChange = (e) => {
     const value = e.target.value;
-    
-    //validar longitud en tiempo real (mostrar advertencia si se acerca al límite)
     const validation = validateChatMessage(value);
-    if (!validation.isValid && value.length > 0) {
-      setMessageError(validation.error);
-    } else {
-      setMessageError(null);
-    }
-    
+    setMessageError(!validation.isValid && value.length > 0 ? validation.error : null);
     setNewMessage(value);
 
-    //manejar indicador de escritura
     if (!isTyping) {
-      setIsTyping(true);
-      chatService.sendTypingIndicator(selectedUser?.email, true);
+      setIsTyping(true); chatService.sendTypingIndicator(selectedUser?.email, true);
     }
-
-    //limpiar timeout anterior
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
-
-    //configurar nuevo timeout
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     typingTimeoutRef.current = setTimeout(() => {
-      setIsTyping(false);
-      chatService.sendTypingIndicator(selectedUser?.email, false);
+      setIsTyping(false); chatService.sendTypingIndicator(selectedUser?.email, false);
     }, 1000);
   };
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  const formatTime = (timestamp) => {
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString('es-ES', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
+  const formatTime = (ts) => new Date(ts).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
 
   if (!selectedUser) {
     return (
-      <div className="chat-area">
-        <div className="no-chat-selected">
-          <div className="no-chat-icon"><span className="material-symbols-outlined text-primary fs-1">chat_bubble</span></div>
-          <h3>Selecciona un usuario para empezar a chatear</h3>
-          <p>Elige un usuario de la lista para comenzar una conversación</p>
-        </div>
+      <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 bg-slate-700">
+        <MessageSquare className="w-16 h-16 mb-4 text-slate-500 opacity-50" />
+        <h3 className="text-xl font-medium text-slate-300">Selecciona un usuario</h3>
+        <p className="mt-2 text-slate-500">Elige un usuario de la lista para comenzar a chatear.</p>
       </div>
     );
   }
 
   return (
-    <div className="chat-area">
-      <div className="chat-header">
-        <div className="chat-user-info">
-          <div className="chat-user-avatar">
-            {selectedUser.username ? selectedUser.username.charAt(0).toUpperCase() : 'U'}
-          </div>
-          <div>
-            <h3>{selectedUser.username || selectedUser.email}</h3>
-            <span className="user-email">{selectedUser.email}</span>
-          </div>
+    <div className="flex flex-col h-full w-full bg-slate-800">
+      {/* Header */}
+      <div className="p-4 border-b border-slate-800 bg-slate-700 flex items-center z-10 shadow-sm">
+        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold mr-3 shadow-md">
+          {selectedUser.username ? selectedUser.username.charAt(0).toUpperCase() : 'U'}
+        </div>
+        <div>
+          <h3 className="text-slate-100 font-semibold">{selectedUser.username || selectedUser.email}</h3>
+          <span className="text-slate-400 text-xs">{selectedUser.email}</span>
         </div>
       </div>
 
-      <div className="messages-container">
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar bg-slate-700">
         {error && (
-          <div className="alert alert-warning m-3" role="alert">
-            <i className="fas fa-exclamation-triangle me-2"></i>
-            {error}
-            <button 
-              type="button" 
-              className="btn btn-sm btn-outline-warning ms-2"
-              onClick={() => loadChatHistory()}
-            >
-              Reintentar
-            </button>
+          <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm flex justify-between items-center">
+            <span className="flex items-center gap-2"><AlertTriangle className="w-4 h-4" /> {error}</span>
+            <button onClick={loadChatHistory} className="px-3 py-1 bg-red-500/20 rounded-md hover:bg-red-500/30">Reintentar</button>
           </div>
         )}
+
         {loading ? (
-          <div className="loading-messages">Cargando mensajes...</div>
+          <div className="h-full flex items-center justify-center text-slate-400">Cargando mensajes...</div>
         ) : (
-          <>
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`message ${message.sender_email === currentUserEmail ? 'sent' : 'received'}`}
-              >
-                <div className="message-content">
-                  <p>
-                    {/* React escapa automáticamente el HTML, pero el mensaje ya está sanitizado */}
-                    {message.content}
-                    <span className="message-meta">
-                      <span className="message-time">
-                        {formatTime(message.timestamp)}
+          <AnimatePresence>
+            {messages.map((message) => {
+              const isSent = message.sender_email === currentUserEmail;
+              return (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                  key={message.id}
+                  className={`flex flex-col max-w-[75%] ${isSent ? 'self-end items-end ml-auto' : 'self-start items-start mr-auto'}`}
+                >
+                  <div className={`px-4 py-2 rounded-2xl ${isSent ? 'bg-blue-600 text-white rounded-br-none shadow-blue-500/20 shadow-sm' : 'bg-slate-800 text-slate-100 rounded-bl-none shadow-sm'}`}>
+                    <p className="break-words">{message.content}</p>
+                  </div>
+                  <div className="flex items-center gap-1 mt-1 px-1">
+                    <span className="text-xs text-slate-500">{formatTime(message.timestamp)}</span>
+                    {isSent && (
+                      <span className={`text-xs ml-1 ${message.is_read ? 'text-blue-400' : 'text-slate-500'}`}>
+                        {message.is_read ? '✓✓' : '✓'}
                       </span>
-                      {message.sender_email === currentUserEmail && (
-                        <span className="message-status">
-                          {message.is_read ? '✓✓' : '✓'}
-                        </span>
-                      )}
-                    </span>
-                  </p>
-                </div>
-              </div>
-            ))}
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })}
             {otherUserTyping && (
-              <div className="typing-indicator">
-                <span>{selectedUser.username || selectedUser.email} está escribiendo...</span>
-              </div>
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex self-start items-center p-3 bg-slate-800 rounded-2xl rounded-bl-none text-slate-400 text-sm w-max">
+                Escribiendo<span className="animate-pulse ml-1">...</span>
+              </motion.div>
             )}
             <div ref={messagesEndRef} />
-          </>
+          </AnimatePresence>
         )}
       </div>
 
-      <form className="message-form" onSubmit={handleSendMessage}>
-        {messageError && (
-          <div className="alert alert-warning alert-sm mb-2" role="alert">
-            <small>{messageError}</small>
+      {/* Input Form */}
+      <div className="p-4 bg-slate-700 border-t border-slate-800">
+        <form onSubmit={handleSendMessage} className="relative">
+          {messageError && <div className="absolute -top-8 left-0 text-red-400 text-xs bg-slate-900/80 px-2 py-1 rounded">{messageError}</div>}
+          <div className="flex gap-2 items-end">
+            <div className="flex-1 relative">
+              <input
+                type="text"
+                value={newMessage}
+                onChange={handleInputChange}
+                placeholder="Escribe un mensaje..."
+                disabled={!selectedUser}
+                maxLength={5000}
+                className="w-full bg-slate-800 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={!newMessage.trim() || !selectedUser || !!messageError}
+              className="bg-blue-600 disabled:opacity-50 disabled:hover:bg-blue-600 hover:bg-blue-500 text-white rounded-xl p-3 shadow-sm transition-all flex items-center justify-center shrink-0"
+            >
+              <Send className="w-5 h-5 ml-1" />
+            </button>
           </div>
-        )}
-        <div className="input-container">
-          <input
-            type="text"
-            value={newMessage}
-            onChange={handleInputChange}
-            placeholder="Escribe un mensaje..."
-            disabled={!selectedUser}
-            maxLength={5000}
-          />
-          <button type="submit" disabled={!newMessage.trim() || !selectedUser || !!messageError}>
-            <span className="material-symbols-outlined">
-              send
-            </span>
-          </button>
-        </div>
-        {newMessage.length > 0 && (
-          <small className="text-muted ms-2">
-            {newMessage.length}/5000 caracteres
-          </small>
-        )}
-      </form>
+        </form>
+      </div>
     </div>
   );
 };

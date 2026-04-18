@@ -1,58 +1,77 @@
-:root {
-  --bg-discord: #212529;
-  --bg-discord-elevated: #313338;
-  --text-primary: #e3e5e8;
-  --text-secondary: #b5bac1;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply text-slate-100 font-sans antialiased m-0 p-0;
+    min-height: 100vh;
+    background-color: #1e293b;
+  }
+
+  #root {
+    @apply min-h-screen flex flex-col;
+  }
+
+  /* Custom Scrollbar for a premium look */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: #1e1f22;
+    border-radius: 9999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: #111214;
+  }
 }
 
-html, body, #root {
-  height: 100%;
+@layer components {
+  .glass-panel {
+    @apply shadow-xl;
+    background-color: #2b2d31;
+    border: 1px solid #1e1f22;
+  }
+
+  .premium-input {
+    @apply w-full text-slate-100 rounded-lg px-4 py-3 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-300;
+    background-color: #1e1f22;
+    border: 1px solid #1e1f22;
+  }
+
+  .premium-btn {
+    @apply w-full font-medium rounded-lg px-4 py-3 hover:opacity-90 transition-all duration-300 flex items-center justify-center gap-2 text-white;
+    background-color: #1a237e;
+    box-shadow: 0 4px 6px -1px rgba(26, 35, 126, 0.4);
+  }
+
+  .premium-btn-secondary {
+    @apply w-full font-medium rounded-lg px-4 py-3 transition-all duration-300 text-slate-300;
+    background-color: #2b2d31;
+    border: 1px solid #1e1f22;
+  }
+
+  .premium-btn-secondary:hover {
+    background-color: #1e1f22;
+  }
 }
 
-body {
-  margin: 0;
-  padding: 0;
-  background-color: var(--bg-discord);
-  color: var(--text-primary);
-  font-family: Arial, sans-serif;
+/* Base styles cleanup that conflicts with tailwind */
+.fullscreen-container,
+.form-container,
+.form-control,
+.btn {
+  /* We remove all legacy bootstrap-like overrides here and rely on tailwind classes */
 }
 
-.fullscreen-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  padding: 20px;
-  background-color: var(--bg-discord);
-}
-
-.form-container{
-  background-color: var(--bg-discord-elevated);
-  color: var(--text-primary);
-  border-radius: 10px;
-  width: 100%;
-  max-width: 400px;
-  padding: 30px;
-}
-
-.form-control {
-  background-color: var(--bg-discord) !important;
-  color: var(--text-primary) !important;
-  border: 1px solid var(--bg-discord-elevated) !important;
-}
-
-.form-control::placeholder {
-  color: var(--text-secondary) !important;
-}
-
-.form-control:focus {
-  background-color: var(--bg-discord) !important;
-  color: var(--text-primary) !important;
-  border-color: var(--text-primary) !important;
-  box-shadow: none !important;
-}
-
-.text-center{
-  display: flex;
-  justify-content: center;
+/* Background animated shapes */
+.bg-shape {
+  display: none;
 }

@@ -6,7 +6,6 @@ import RegisterPage from './pages/RegisterPage';
 import ProfilePage from './pages/ProfilePage';
 import ConfirmEmailPage from './pages/ConfirmEmailPage';
 import './App.css'
-import 'bootstrap/dist/css/bootstrap.min.css';
 import ChatPage from './pages/ChatPage';
 
 import authService from './services/authService';

@@ -1,5 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import './UserProfile.css';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  User, Mail, Phone, Lock, Edit2, X, Check, Eye, EyeOff, 
+  ShieldCheck, AlertTriangle, CheckCircle2, Info, Loader2 
+} from 'lucide-react';
 import authService from '../../services/authService';
 import logger from '../../services/logger';
 import { isErrorResponse } from '../../utils/errorHandler';
@@ -86,7 +90,6 @@ const UserProfile = () => {
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        //sanitizar input según el tipo
         const sanitizedValue = sanitizeInput(value, name === 'email' ? 'email' : name === 'username' ? 'username' : 'text');
         setEditInfo(prev => ({
             ...prev,
@@ -95,15 +98,12 @@ const UserProfile = () => {
     };
 
     const handleSave = async () => {
-        //validaciones mejoradas
         const errors = [];
 
-        //validar email
         if (editInfo.email && !isValidEmail(editInfo.email)) {
             errors.push('El email no es válido');
         }
 
-        //validar username
         if (editInfo.username) {
             const usernameValidation = validateUsername(editInfo.username);
             if (!usernameValidation.isValid) {
@@ -111,7 +111,6 @@ const UserProfile = () => {
             }
         }
 
-        //validar contraseñas
         if (editInfo.newPassword) {
             if (editInfo.newPassword !== editInfo.confirmPassword) {
                 errors.push('Las contraseñas no coinciden');
@@ -160,257 +159,187 @@ const UserProfile = () => {
                 setIsEditing(false);
                 setShowSuccess(true);
                 setShowPassword(false);
-
-                //ocultar mensaje de exito despues de 3 segundos
                 setTimeout(() => setShowSuccess(false), 3000);
             }
         } catch (err) {
             logger.error('Error al actualizar perfil', err, { operation: 'updateUserProfile' });
             setError('Error al actualizar el perfil. Intenta de nuevo.');
-        }finally{
+        } finally {
             setLoading(false);
         }
     };
 
     if (loading && !userInfo.username) {
         return (
-            <div className="min-vh-100 bg-light d-flex align-items-center justify-content-center">
-                <div className="spinner-border text-primary" role="status">
-                    <span className="visually-hidden">Cargando...</span>
-                </div>
+            <div className="min-h-screen flex items-center justify-center">
+                <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
             </div>
         );
     }
 
     return (
-        <div className="profile-container">
-            <div className="container">
-                <div className="row justify-content-center">
-                    <div className="col-lg-8 col-xl-7">
+        <div className="min-h-screen pt-24 pb-12 px-4 flex justify-center relative overflow-hidden">
+            {/* Background shapes */}
+            <div className="bg-shape bg-blue-500/10 top-20 left-10 w-[500px] h-[500px]"></div>
+            <div className="bg-shape bg-purple-500/10 bottom-10 right-10 w-[400px] h-[400px]"></div>
 
-                        {/* Alerta de éxito */}
-                        {showSuccess && (
-                            <div className="alert alert-success alert-dismissible fade show" role="alert">
-                                <i className="bi bi-check-circle-fill me-2"></i>
-                                ¡Perfil actualizado exitosamente!
-                                <button type="button" className="btn-close" onClick={() => setShowSuccess(false)}></button>
+            <div className="w-full max-w-2xl relative z-10">
+                <AnimatePresence>
+                    {showSuccess && (
+                        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="mb-4 p-4 bg-green-500/10 border border-green-500/20 rounded-xl text-green-400 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <CheckCircle2 className="w-5 h-5 shrink-0" />
+                                <span>¡Perfil actualizado exitosamente!</span>
                             </div>
-                        )}
+                            <button onClick={() => setShowSuccess(false)} className="text-green-400 hover:text-green-300"><X className="w-4 h-4" /></button>
+                        </motion.div>
+                    )}
 
-                         {/* Alerta de error */}
-                         {error && (
-                            <div className="alert alert-danger alert-dismissible fade show" role="alert">
-                                <i className="bi bi-exclamation-triangle-fill me-2"></i>
-                                {error}
-                                <button type="button" className="btn-close" onClick={() => setError(null)}></button>
+                    {error && (
+                        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="mb-4 p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <AlertTriangle className="w-5 h-5 shrink-0" />
+                                <span>{error}</span>
                             </div>
-                        )}
+                            <button onClick={() => setError(null)} className="text-red-400 hover:text-red-300"><X className="w-4 h-4" /></button>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
-                        {/* Tarjeta de perfil */}
-                        <div className="card profile-card">
-                            <div className="card-header profile-card-header py-3">
-                                <div className="d-flex align-items-center justify-content-between">
-                                    <div className="d-flex align-items-center">
-                                        <div className="profile-icon-container rounded-circle d-flex align-items-center justify-content-center me-3" style={{ width: '50px', height: '50px' }}>
-                                            <i className="bi bi-person-fill fs-3"></i>
-                                        </div>
-                                        <div>
-                                            <h5 className="mb-0">Mi Perfil</h5>
-                                            <small className="opacity-75">Información de la cuenta</small>
-                                        </div>
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="glass-panel rounded-2xl overflow-hidden"
+                >
+                    <div className="p-6 border-b border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                            <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-500 flex items-center justify-center shadow-lg">
+                                <User className="w-7 h-7 text-white" />
+                            </div>
+                            <div>
+                                <h1 className="text-2xl font-bold text-slate-100">Mi Perfil</h1>
+                                <p className="text-slate-400 text-sm">Información de la cuenta</p>
+                            </div>
+                        </div>
+                        {!isEditing && (
+                            <button onClick={handleEdit} className="premium-btn-secondary py-2 px-4 w-auto self-start sm:self-auto flex items-center gap-2">
+                                <Edit2 className="w-4 h-4" /> Editar
+                            </button>
+                        )}
+                    </div>
+
+                    <div className="p-6">
+                        {!isEditing ? (
+                            <div className="space-y-6">
+                                <div>
+                                    <label className="text-xs text-slate-500 mb-1 block">Nombre de usuario</label>
+                                    <div className="flex items-center gap-3 text-slate-200">
+                                        <User className="w-5 h-5 text-blue-400" />
+                                        <span className="font-medium text-lg">{userInfo.username}</span>
                                     </div>
-                                    {!isEditing && (
-                                        <button className="btn btn-light btn-sm" onClick={handleEdit}>
-                                            <i className="bi bi-pencil-fill me-1"></i>
-                                            Editar
-                                        </button>
-                                    )}
                                 </div>
-                            </div>
-
-                            <div className="card-body profile-card-body">
-                                {!isEditing ? (
-                                    //vista de solo lectura
-                                    <div>
-                                        <div className="mb-4">
-                                            <label className="small mb-1">Nombre de usuario</label>
-                                            <div className="d-flex align-items-center">
-                                                <i className="bi bi-person text-primary me-2"></i>
-                                                <h6 className="mb-0">{userInfo.username}</h6>
-                                            </div>
-                                        </div>
-
-                                        <div className="mb-4">
-                                            <label className="small mb-1">Correo electrónico</label>
-                                            <div className="d-flex align-items-center">
-                                                <i className="bi bi-envelope text-primary me-2"></i>
-                                                <h6 className="mb-0">{userInfo.email}</h6>
-                                            </div>
-                                        </div>
-
-                                        {userInfo.telephone && (
-                                            <div className="mb-4">
-                                                <label className="small mb-1">Teléfono</label>
-                                                <div className="d-flex align-items-center">
-                                                    <i className="bi bi-telephone text-primary me-2"></i>
-                                                    <h6 className="mb-0">{userInfo.telephone}</h6>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        <div className="mb-3">
-                                            <label className="small mb-1">Contraseña</label>
-                                            <div className="d-flex align-items-center">
-                                                <i className="bi bi-lock text-primary me-2"></i>
-                                                <h6 className="mb-0">{userInfo.password}</h6>
-                                            </div>
-                                        </div>
+                                
+                                <div>
+                                    <label className="text-xs text-slate-500 mb-1 block">Correo electrónico</label>
+                                    <div className="flex items-center gap-3 text-slate-200">
+                                        <Mail className="w-5 h-5 text-blue-400" />
+                                        <span className="font-medium text-lg">{userInfo.email}</span>
                                     </div>
-                                ) : (
-                                    //formulario de edicion
+                                </div>
+
+                                {userInfo.telephone && (
                                     <div>
-                                        <div className="mb-3">
-                                            <label className="form-label fw-semibold">
-                                                <i className="bi bi-person me-1"></i>
-                                                Nombre de usuario
-                                            </label>
-                                            <input
-                                                type="text"
-                                                className="form-control"
-                                                name="username"
-                                                value={editInfo.username}
-                                                onChange={handleChange}
-                                                required
-                                            />
-                                        </div>
-
-                                        <div className="mb-3">
-                                            <label className="form-label fw-semibold">
-                                                <i className="bi bi-envelope me-1"></i>
-                                                Correo electrónico
-                                            </label>
-                                            <input
-                                                type="email"
-                                                className="form-control"
-                                                name="email"
-                                                value={editInfo.email}
-                                                onChange={handleChange}
-                                                required
-                                            />
-                                        </div>
-
-                                        <div className="mb-4">
-                                            <label className="form-label fw-semibold">
-                                                <i className="bi bi-telephone me-1"></i>
-                                                Teléfono
-                                            </label>
-                                            <input
-                                                type="tel"
-                                                className="form-control"
-                                                name="telephone"
-                                                value={editInfo.telephone}
-                                                onChange={handleChange}
-                                                placeholder="Ej: +34 600 000 000"
-                                            />
-                                        </div>
-
-                                        <hr className="my-4" />
-
-                                        <h6 className="mb-3">
-                                            <i className="bi bi-shield-lock me-2"></i>
-                                            Cambiar contraseña (opcional)
-                                        </h6>
-
-                                        <div className="mb-3">
-                                            <label className="form-label">Contraseña actual</label>
-                                            <div className="input-group">
-                                                <input
-                                                    type={showPassword ? "text" : "password"}
-                                                    className="form-control"
-                                                    name="currentPassword"
-                                                    value={editInfo.currentPassword}
-                                                    onChange={handleChange}
-                                                    placeholder="Ingresa tu contraseña actual"
-                                                />
-                                                <button
-                                                    className="btn btn-outline-secondary"
-                                                    type="button"
-                                                    onClick={() => setShowPassword(!showPassword)}
-                                                >
-                                                    <i className={`bi bi-eye${showPassword ? '-slash' : ''}`}></i>
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <div className="mb-3">
-                                            <label className="form-label">Nueva contraseña</label>
-                                            <input
-                                                type={showPassword ? "text" : "password"}
-                                                className="form-control"
-                                                name="newPassword"
-                                                value={editInfo.newPassword}
-                                                onChange={handleChange}
-                                                placeholder="Mínimo 8 caracteres"
-                                            />
-                                        </div>
-
-                                        <div className="mb-4">
-                                            <label className="form-label">Confirmar nueva contraseña</label>
-                                            <input
-                                                type={showPassword ? "text" : "password"}
-                                                className="form-control"
-                                                name="confirmPassword"
-                                                value={editInfo.confirmPassword}
-                                                onChange={handleChange}
-                                                placeholder="Repite la nueva contraseña"
-                                            />
-                                        </div>
-
-                                        <div className="d-flex gap-2 justify-content-end">
-                                            <button
-                                                type="button"
-                                                className="btn btn-secondary"
-                                                onClick={handleCancel}
-                                            >
-                                                <i className="bi bi-x-lg me-1"></i>
-                                                Cancelar
-                                            </button>
-                                            <button
-                                                type="button"
-                                                className="btn btn-primary"
-                                                onClick={handleSave}
-                                            >
-                                                <i className="bi bi-check-lg me-1"></i>
-                                                Guardar cambios
-                                            </button>
+                                        <label className="text-xs text-slate-500 mb-1 block">Teléfono</label>
+                                        <div className="flex items-center gap-3 text-slate-200">
+                                            <Phone className="w-5 h-5 text-blue-400" />
+                                            <span className="font-medium text-lg">{userInfo.telephone}</span>
                                         </div>
                                     </div>
                                 )}
-                            </div>
 
-                            {!isEditing && (
-                                <div className="card-footer small">
-                                    <i className="bi bi-info-circle me-1"></i>
-                                    Última actualización: {new Date().toLocaleDateString('es-ES')}
+                                <div>
+                                    <label className="text-xs text-slate-500 mb-1 block">Contraseña</label>
+                                    <div className="flex items-center gap-3 text-slate-200">
+                                        <Lock className="w-5 h-5 text-blue-400" />
+                                        <span className="font-medium text-lg tracking-widest">{userInfo.password}</span>
+                                    </div>
                                 </div>
-                            )}
-                        </div>
-
-
-                        <div className="card mt-3 border-0 bg-transparent profile-card">
-                            <div className="card-body text-center">
-                                <small className="">
-                                    <i className="bi bi-shield-check me-1"></i>
-                                    Tu información está protegida y segura
-                                </small>
                             </div>
-                        </div>
+                        ) : (
+                            <div className="space-y-5">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-300 mb-1 flex items-center gap-2">
+                                        <User className="w-4 h-4" /> Nombre de usuario
+                                    </label>
+                                    <input type="text" name="username" className="premium-input" value={editInfo.username} onChange={handleChange} required />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-300 mb-1 flex items-center gap-2">
+                                        <Mail className="w-4 h-4" /> Correo electrónico
+                                    </label>
+                                    <input type="email" name="email" className="premium-input" value={editInfo.email} onChange={handleChange} required />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-300 mb-1 flex items-center gap-2">
+                                        <Phone className="w-4 h-4" /> Teléfono
+                                    </label>
+                                    <input type="tel" name="telephone" className="premium-input" placeholder="Ej: +34 600 000 000" value={editInfo.telephone} onChange={handleChange} />
+                                </div>
+
+                                <div className="pt-4 border-t border-white/10 mt-6">
+                                    <h3 className="text-sm font-medium text-slate-200 mb-4 flex items-center gap-2">
+                                        <Lock className="w-4 h-4 text-blue-400" /> Cambiar contraseña (Opcional)
+                                    </h3>
+                                    
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-xs text-slate-400 mb-1">Contraseña actual</label>
+                                            <div className="relative">
+                                                <input type={showPassword ? "text" : "password"} name="currentPassword" placeholder="Ingresa tu contraseña actual" className="premium-input pr-10" value={editInfo.currentPassword} onChange={handleChange} />
+                                                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200">
+                                                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                                </button>
+                                            </div>
+                                        </div>
+                                        
+                                        <div>
+                                            <label className="block text-xs text-slate-400 mb-1">Nueva contraseña</label>
+                                            <input type={showPassword ? "text" : "password"} name="newPassword" placeholder="Mínimo 8 caracteres" className="premium-input" value={editInfo.newPassword} onChange={handleChange} />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-xs text-slate-400 mb-1">Confirmar nueva contraseña</label>
+                                            <input type={showPassword ? "text" : "password"} name="confirmPassword" placeholder="Repite la nueva contraseña" className="premium-input" value={editInfo.confirmPassword} onChange={handleChange} />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-col sm:flex-row gap-3 justify-end pt-4">
+                                    <button type="button" onClick={handleCancel} disabled={loading} className="premium-btn-secondary py-2 justify-center">
+                                        <X className="w-4 h-4" /> Cancelar
+                                    </button>
+                                    <button type="button" onClick={handleSave} disabled={loading} className="premium-btn py-2 justify-center sm:w-auto">
+                                        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Check className="w-4 h-4" /> Guardar cambios</>}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
+
+                    {!isEditing && (
+                        <div className="bg-slate-800/30 p-4 border-t border-white/5 flex items-center justify-center gap-2 text-xs text-slate-500">
+                            <Info className="w-4 h-4" /> Última actualización: {new Date().toLocaleDateString('es-ES')}
+                        </div>
+                    )}
+                </motion.div>
+
+                <div className="text-center mt-6 text-slate-500 text-sm flex items-center justify-center gap-2">
+                    <ShieldCheck className="w-4 h-4" />
+                    Tu información está protegida y segura
                 </div>
             </div>
-
-
-            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" />
         </div>
     );
 };

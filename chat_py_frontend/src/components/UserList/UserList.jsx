@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { RefreshCw, Wifi, WifiOff, Users } from 'lucide-react';
 import chatService from '../../services/chatService';
 import logger from '../../services/logger';
-import './UserList.css';
 
 const UserList = ({ onUserSelect, selectedUser }) => {
   const [users, setUsers] = useState([]);
@@ -12,7 +13,6 @@ const UserList = ({ onUserSelect, selectedUser }) => {
   useEffect(() => {
     loadUsers();
 
-    //escuchar cambios de estado de usuarios
     chatService.onMessage('user_status', (data) => {
       setOnlineUsers(prev => {
         const newSet = new Set(prev);
@@ -43,61 +43,72 @@ const UserList = ({ onUserSelect, selectedUser }) => {
     onUserSelect(user);
   };
 
-  if (loading) {
-    return (
-      <div className="user-list">
-        <div className="user-list-header">
-          <h3>Online</h3>
-        </div>
-        <div className="loading">Cargando usuarios...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="user-list">
-        <div className="user-list-header">
-          <h3>Usuarios</h3>
-        </div>
-        <div className="error">{error}</div>
-      </div>
-    );
-  }
-
   return (
-    <div className="user-list">
-      <div className="user-list-header">
-        <h3>Usuarios ({users.length})</h3>
-        <button onClick={loadUsers} className="refresh-btn">
-          <span className="material-symbols-outlined">
-            autorenew
-          </span>
+    <div className="w-80 flex-shrink-0 flex flex-col glass-panel rounded-2xl overflow-hidden">
+      <div className="p-4 border-b border-white/10 bg-slate-800/50 flex justify-between items-center">
+        <div className="flex items-center gap-2 text-slate-100 font-semibold">
+          <Users className="w-5 h-5 text-blue-400" />
+          <span>Usuarios ({users.length})</span>
+        </div>
+        <button
+          onClick={loadUsers}
+          className="p-2 rounded-lg bg-slate-700/50 text-slate-300 hover:text-white hover:bg-slate-700 transition-colors"
+          title="Actualizar"
+        >
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
         </button>
       </div>
-      <div className="users-container">
-        {users.map((user) => (
-          <div
-            key={user.id}
-            className={`user-item ${selectedUser?.email === user.email ? 'selected' : ''}`}
-            onClick={() => handleUserClick(user)}
-          >
-            <div className="user-avatar">
-              {user.username ? user.username.charAt(0).toUpperCase() : 'U'}
-            </div>
-            <div className="user-info">
-              <div className="user-name">{user.username || user.email}</div>
-              <div className="user-email">{user.email}</div>
-            </div>
-            <div className={`user-status ${onlineUsers.has(user.email) ? 'online' : 'offline'}`}>
-              {onlineUsers.has(user.email) ? <span className="material-symbols-outlined">
-                wifi
-              </span> : <span className="material-symbols-outlined">
-                wifi_off
-              </span>}
-            </div>
+
+      <div className="flex-1 overflow-y-auto p-2 space-y-1">
+        {loading ? (
+          <div className="flex justify-center items-center h-32 text-slate-400">
+            <RefreshCw className="w-6 h-6 animate-spin" />
           </div>
-        ))}
+        ) : error ? (
+          <div className="p-4 text-red-400 text-sm">{error}</div>
+        ) : (
+          <AnimatePresence>
+            {users.map((user) => {
+              const isSelected = selectedUser?.email === user.email;
+              const isOnline = onlineUsers.has(user.email);
+
+              return (
+                <motion.div
+                  key={user.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => handleUserClick(user)}
+                  className={`
+                    flex items-center p-3 rounded-xl cursor-pointer transition-all duration-200
+                    ${isSelected ? 'bg-blue-600/20 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.5)]' : 'hover:bg-slate-800/60'}
+                  `}
+                >
+                  <div className="relative">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold text-lg shadow-lg">
+                      {user.username ? user.username.charAt(0).toUpperCase() : 'U'}
+                    </div>
+                    <div className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-slate-900 ${isOnline ? 'bg-green-500' : 'bg-slate-500'}`}></div>
+                  </div>
+
+                  <div className="ml-3 flex-1 overflow-hidden">
+                    <div className="text-slate-100 font-medium truncate">{user.username || 'Usuario'}</div>
+                    <div className="text-slate-400 text-xs truncate">{user.email}</div>
+                  </div>
+
+                  <div className="ml-2">
+                    {isOnline ? (
+                      <Wifi className="w-4 h-4 text-green-400" />
+                    ) : (
+                      <WifiOff className="w-4 h-4 text-slate-600" />
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+        )}
       </div>
     </div>
   );
