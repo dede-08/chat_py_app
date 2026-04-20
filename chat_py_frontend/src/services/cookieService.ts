@@ -89,7 +89,7 @@ export class TokenService {
       path: '/',
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax'
-      // Nota: httpOnly no se puede establecer desde JavaScript
+      //
     });
 
     //refresh token con larga duración (7 días por defecto)
@@ -148,17 +148,12 @@ export class TokenService {
   }
 }
 
-/**
- * Servicio para datos de usuario no sensibles
- * Estos pueden quedarse en localStorage ya que no comprometen la seguridad
- */
+
 export class UserDataService {
   private static readonly EMAIL_KEY = 'userEmail';
   private static readonly USERNAME_KEY = 'username';
 
-  /**
-   * Guardar datos de usuario
-   */
+  //guardar datos de usuario
   static saveUserData(email: string, username?: string): void {
     localStorage.setItem(this.EMAIL_KEY, email);
     if (username) {
@@ -166,41 +161,32 @@ export class UserDataService {
     }
   }
 
-  /**
-   * Obtener email del usuario
-   */
+  //obtener email del usuario
   static getUserEmail(): string | null {
     return localStorage.getItem(this.EMAIL_KEY);
   }
 
-  /**
-   * Obtener nombre de usuario
-   */
+  //obtener nombre de usuario
   static getUsername(): string | null {
     return localStorage.getItem(this.USERNAME_KEY);
   }
 
-  /**
-   * Limpiar datos de usuario
-   */
+  //limpiar datos de usuario
   static clearUserData(): void {
     localStorage.removeItem(this.EMAIL_KEY);
     localStorage.removeItem(this.USERNAME_KEY);
   }
 
-  /**
-   * Verificar si hay datos de usuario
-   */
+  //verificar si hay datos de usuario
   static hasUserData(): boolean {
     return this.getUserEmail() !== null;
   }
 }
 
-/**
- * Servicio combinado de autenticación
- */
+
+//servicio de autenticación que combina manejo de tokens y datos de usuario
 export const authService = {
-  // Métodos de tokens
+  //metodos de tokens
   saveTokens: TokenService.saveTokens.bind(TokenService),
   getAccessToken: TokenService.getAccessToken.bind(TokenService),
   getRefreshToken: TokenService.getRefreshToken.bind(TokenService),
@@ -210,16 +196,13 @@ export const authService = {
   clearTokens: TokenService.clearTokens.bind(TokenService),
   migrateFromLocalStorage: TokenService.migrateFromLocalStorage.bind(TokenService),
 
-  // Métodos de datos de usuario
+  //metodos de datos de usuario
   saveUserData: UserDataService.saveUserData.bind(UserDataService),
   getUserEmail: UserDataService.getUserEmail.bind(UserDataService),
   getUsername: UserDataService.getUsername.bind(UserDataService),
   clearUserData: UserDataService.clearUserData.bind(UserDataService),
   hasUserData: UserDataService.hasUserData.bind(UserDataService),
 
-  // Métodos combinados
-  // Con cookies httpOnly el token no es legible desde JS; usamos datos de usuario
-  // guardados en login. Se limpian en logout o cuando el servidor devuelve 401.
   isAuthenticated(): boolean {
     return this.hasUserData();
   },

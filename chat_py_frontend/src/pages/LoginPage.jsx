@@ -119,7 +119,7 @@ const LoginPage = () => {
 
         {generalError && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm flex gap-2">
-            <span className="shrink-0 mt-0.5">⚠️</span>
+            <span className="material-symbols-outlined shrink-0 mt-0.5">warning</span>
             <p>{generalError}</p>
           </motion.div>
         )}

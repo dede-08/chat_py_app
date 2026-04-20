@@ -3,22 +3,19 @@ import http from './httpClient';
 
 export const WS_BASE_URL: string = import.meta.env.VITE_WS_URL as string;
 
-/** Indica si hay token en JS o sesión por cookie (autenticado) */
+
 export const hasWsToken = (): boolean => {
   return !!authService.getToken() || authService.isAuthenticated();
 };
 
-/** URL base del WebSocket sin parámetros (el backend puede usar la cookie) */
+
 const getWsBaseUrl = (pathOrUrl: string): string => {
   const isAbsolute = /^wss?:\/\//i.test(pathOrUrl);
   return isAbsolute ? pathOrUrl : `${WS_BASE_URL}${pathOrUrl}`;
 };
 
-/**
- * Construye la URL del WebSocket.
- * Con token en JS: añade ?token=...
- * Con cookies httpOnly (sin token en JS pero autenticado): devuelve la URL sin token; el backend usa la cookie.
- */
+
+//construye la URL del WebSocket con token
 export const buildAuthorizedWsUrl = (pathOrUrl: string): string | null => {
   const token = authService.getToken();
   const base = getWsBaseUrl(pathOrUrl);
@@ -61,18 +58,13 @@ const clearAuthStorage = (): void => {
   localStorage.removeItem('username');
 };
 
-/**
- * Asegura sesión válida para WebSocket.
- * Con token en JS: lo devuelve si es fresco; si no, intenta refresh.
- * Con cookies httpOnly: no puede leer el token; si está autenticado devuelve '__cookie__'
- * para que buildAuthorizedWsUrl construya la URL sin token (el backend usa la cookie).
- */
+//asegura que el token de acceso es valido
 export const ensureValidAccessToken = async (skewSeconds = 30): Promise<string | null> => {
   const current = authService.getToken();
   if (current && isAccessTokenFresh(current, skewSeconds)) {
     return current;
   }
-  // Con cookies httpOnly no hay token en JS; si estamos autenticados, el backend usará la cookie
+
   if (!current && authService.isAuthenticated()) {
     return '__cookie__';
   }

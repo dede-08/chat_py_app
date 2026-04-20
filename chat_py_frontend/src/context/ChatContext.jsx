@@ -31,30 +31,30 @@ export const ChatProvider = ({ children }) => {
   }, []);
 
   const updateMessageStatus = useCallback((messageId, field, value) => {
-    dispatch({ 
-      type: CHAT_ACTIONS.UPDATE_MESSAGE_STATUS, 
-      payload: { messageId, field, value } 
+    dispatch({
+      type: CHAT_ACTIONS.UPDATE_MESSAGE_STATUS,
+      payload: { messageId, field, value }
     });
   }, []);
 
   const setUserTyping = useCallback((userEmail, isTyping) => {
-    dispatch({ 
-      type: CHAT_ACTIONS.SET_USER_TYPING, 
-      payload: { userEmail, isTyping } 
+    dispatch({
+      type: CHAT_ACTIONS.SET_USER_TYPING,
+      payload: { userEmail, isTyping }
     });
   }, []);
 
   const setUserOnlineStatus = useCallback((userEmail, isOnline) => {
-    dispatch({ 
-      type: CHAT_ACTIONS.SET_USER_ONLINE_STATUS, 
-      payload: { userEmail, isOnline } 
+    dispatch({
+      type: CHAT_ACTIONS.SET_USER_ONLINE_STATUS,
+      payload: { userEmail, isOnline }
     });
   }, []);
 
   const setUnreadCount = useCallback((userEmail, count) => {
-    dispatch({ 
-      type: CHAT_ACTIONS.SET_UNREAD_COUNT, 
-      payload: { userEmail, count } 
+    dispatch({
+      type: CHAT_ACTIONS.SET_UNREAD_COUNT,
+      payload: { userEmail, count }
     });
   }, []);
 
@@ -131,9 +131,8 @@ export const ChatProvider = ({ children }) => {
     //handler para mensajes nuevos
     const handleNewMessage = (data) => {
       addMessage(data);
-      
+
       //marcar como leido si es del usuario seleccionado
-      //usar stateRef para acceder al estado mas reciente
       const currentState = stateRef.current;
       if (data.sender_email === currentState.selectedUser?.email) {
         chatService.sendReadReceipt(data.sender_email);
@@ -176,20 +175,20 @@ export const ChatProvider = ({ children }) => {
       chatService.clearAllListeners();
     };
   }, [
-      state.selectedUser,
-      addMessage,
-      setMessages,
-      setUserTyping,
-      setUserOnlineStatus,
-      setConnectionStatus
+    state.selectedUser,
+    addMessage,
+    setMessages,
+    setUserTyping,
+    setUserOnlineStatus,
+    setConnectionStatus
   ]);
 
   //valor del contexto
   const contextValue = {
-    
+
     //estado
     ...state,
-    
+
     //acciones
     setUsers,
     setSelectedUser,
@@ -202,12 +201,12 @@ export const ChatProvider = ({ children }) => {
     setConnectionStatus,
     setError,
     clearError,
-    
+
     //funciones
     sendMessage,
     loadChatHistory,
     loadUsers,
-    
+
     //utilidades
     isUserOnline: (userEmail) => state.onlineUsers.has(userEmail),
     isUserTyping: (userEmail) => state.typingUsers.has(userEmail),

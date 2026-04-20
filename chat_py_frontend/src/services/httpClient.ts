@@ -5,7 +5,6 @@ import type { RefreshTokenResponse } from '../types/api';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL as string;
 
-// Migrar desde localStorage si es necesario (ejecutar una sola vez)
 if (localStorage.getItem('access_token') && !authService.hasAccessToken()) {
   authService.migrateFromLocalStorage();
   logger.info('Tokens migrados desde localStorage a cookies');
@@ -26,16 +25,16 @@ const clearAuthStorage = (): void => {
 
 const http = axios.create({ 
   baseURL: API_BASE_URL,
-  withCredentials: true  // Importante para cookies en CORS
+  withCredentials: true  //importante para cookies en CORS
 });
 
 //adjuntar Authorization solo si no hay cookies (fallback para endpoints legacy)
 http.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  // Verificar si hay cookies de autenticación (método preferido)
+  //verificar si hay cookies de autenticacion
   const hasCookie = authService.hasAccessToken();
   
   if (!hasCookie) {
-    // Fallback: enviar Authorization header si no hay cookies
+    //fallback: enviar Authorization header si no hay cookies
     const token = getAccessToken();
     if (token) {
       if (!config.headers) config.headers = {} as any;
@@ -73,10 +72,10 @@ http.interceptors.response.use(
 
     if (status === 401 && !originalRequest._retry && !isAuthEndpoint) {
       if (isRefreshing && refreshPromise) {
-        // Esperar a que el refresh actual termine
+        //esperar a que el refresh actual termine
         return refreshPromise
           .then(() => {
-            // Reintentar la solicitud original
+            //reintentar la solicitud original
             return http(originalRequest);
           })
           .catch((err) => Promise.reject(err));
@@ -87,21 +86,21 @@ http.interceptors.response.use(
 
       refreshPromise = (async () => {
         try {
-          // Con cookies httpOnly el refresh token va en la cookie; el backend lo lee de ahí
+          //con cookies httpOnly el refresh token va en la cookie; el backend lo lee de ahí
           const refresh = getRefreshToken();
           await http.post<RefreshTokenResponse>(
             '/auth/refresh',
             refresh ? { refresh_token: refresh } : {}
           );
 
-          // Esperar un momento para que las cookies se actualicen
+          //esperar un momento para que las cookies se actualicen
           await new Promise(resolve => setTimeout(resolve, 200));
           
           const newToken = getAccessToken();
           processQueue(null, newToken);
         } catch (refreshError) {
           processQueue(refreshError, null);
-          // Limpiar storage y redirigir a login
+          //limpiar storage y redirigir a login
           clearAuthStorage();
           if (window.location.pathname !== '/login') {
             window.location.href = '/login';
@@ -114,7 +113,7 @@ http.interceptors.response.use(
 
       return refreshPromise
         .then(() => {
-          // Reintentar la solicitud original sin Authorization header (usará cookies)
+          //reintentar la solicitud original sin Authorization header
           return http(originalRequest);
         })
         .catch((err) => Promise.reject(err));

@@ -109,7 +109,18 @@ const RegisterPage = () => {
       setSuccessMessage(response.data.message);
       setShowSuccessModal(true);
     } catch (error) {
-      const errorMessage = error.response?.data?.detail || 'Error de conexión. Inténtalo de nuevo.';
+      let errorMessage = error.response?.data?.detail || 'Error de conexión. Inténtalo de nuevo.';
+
+      if (error.response?.status === 422 && error.response?.data?.errors) {
+        //extraer los mensajes de error específicos del backend
+        const validationErrors = error.response.data.errors;
+        const messages = validationErrors.map(err => {
+          const field = err.loc ? err.loc[err.loc.length - 1] : 'campo';
+          return `${field}: ${err.msg}`;
+        }).join(' | ');
+        errorMessage = `Datos inválidos - ${messages}`;
+      }
+
       setFormErrors(prev => ({ ...prev, general: errorMessage }));
     } finally {
       setIsLoading(false);
@@ -163,7 +174,7 @@ const RegisterPage = () => {
 
         {formErrors.general && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm flex gap-2">
-            <span className="shrink-0 mt-0.5">⚠️</span>
+            <span className="material-symbols-outlined shrink-0 mt-0.5">error</span>
             <p>{formErrors.general}</p>
           </motion.div>
         )}

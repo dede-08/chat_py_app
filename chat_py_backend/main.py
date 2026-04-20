@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
+from fastapi.encoders import jsonable_encoder
 from contextlib import asynccontextmanager
 from routes import auth, chat_ws, chat
 from config.settings import settings
@@ -177,12 +178,13 @@ async def global_exception_handler(request: Request, exc: Exception):
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     """Manejar errores de validación de Pydantic"""
-    app_logger.warning(f"Error de validación en {request.url.path}: {exc.errors()}")
+    errors = jsonable_encoder(exc.errors())
+    app_logger.warning(f"Error de validación en {request.url.path}: {errors}")
     return JSONResponse(
         status_code=422,
         content={
             "detail": "Error de validación en los datos enviados",
-            "errors": exc.errors()
+            "errors": errors
         }
     )
 
