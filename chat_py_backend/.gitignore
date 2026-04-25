@@ -30,5 +30,3 @@ logs/
 # OS
 .DS_Store
 Thumbs.db
-
-REFRESH_TOKENS.md
