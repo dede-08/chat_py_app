@@ -24,4 +24,3 @@ Una aplicación de chat moderna construida con FastAPI (backend) y React (fronte
 - **Hash de contraseñas**: Bcrypt para almacenamiento seguro
 - **Validación de datos**: Pydantic para validación de esquemas
 - **CORS**: Configurado para permitir solo el frontend autorizado
-- 
