@@ -40,7 +40,7 @@ const Navbar = () => {
     };
   }, []);
 
-  // Close mobile menu on route change
+  //cerrar menu movil al cambiar de ruta
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
@@ -68,10 +68,11 @@ const Navbar = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
 
-          {/* Logo */}
           <Link to="/" className="flex items-center gap-2 group">
-            <div className="bg-gradient-to-tr from-blue-500 to-indigo-500 p-2 rounded-lg group-hover:scale-105 transition-transform">
-              <MessageSquare className="w-5 h-5 text-white" />
+            <div className="flex items-center justify-center p-2 rounded-lg group-hover:scale-105 transition-transform">
+              <span className="material-symbols-outlined text-2xl leading-none flex items-center mt-1">
+                chat_bubble
+              </span>
             </div>
             <span className="font-bold text-xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-300">
               ChatPy

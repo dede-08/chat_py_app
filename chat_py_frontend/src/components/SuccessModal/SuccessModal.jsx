@@ -20,7 +20,7 @@ const SuccessModal = ({ isOpen, onClose, title, message, onConfirm }) => {
         
         <div className="modal-footer">
           <button 
-            className="btn btn-primary" 
+            className="premium-btn w-auto" 
             onClick={onConfirm}
           >
             Continuar

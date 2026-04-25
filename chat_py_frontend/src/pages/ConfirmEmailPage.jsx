@@ -26,8 +26,8 @@ const ConfirmEmailPage = () => {
         <div className="confirm-email-container">
             <div className="confirm-email-card">
                 {status === 'loading' && (
-                    <div className="spinner-border text-primary" role="status">
-                        <span className="visually-hidden">Confirmando...</span>
+                    <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto" role="status">
+                        <span className="sr-only">Confirmando...</span>
                     </div>
                 )}
                 {status !== 'loading' && (
@@ -42,7 +42,7 @@ const ConfirmEmailPage = () => {
                 }</h2>
                 <p className="mt-2">{message}</p>
                 {status !== 'loading' && (
-                    <Link to="/login" className="btn btn-primary mt-3">
+                    <Link to="/login" className="premium-btn mt-6 inline-block w-auto px-6">
                         Ir a Iniciar Sesión
                     </Link>
                 )}

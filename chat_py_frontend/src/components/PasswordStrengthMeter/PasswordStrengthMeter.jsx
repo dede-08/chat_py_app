@@ -122,10 +122,10 @@ const PasswordStrengthMeter = ({ password, requirements, onValidationChange }) =
   const getStrengthIcon = () => {
     switch (strength) {
       case 'débil': return '';
-      case 'media': return '⚡';
-      case 'fuerte': return '🛡️';
-      case 'muy_fuerte': return '🔒';
-      default: return '❓';
+      case 'media': return '';
+      case 'fuerte': return '';
+      case 'muy_fuerte': return '';
+      default: return '';
     }
   };
 
@@ -170,7 +170,7 @@ const PasswordStrengthMeter = ({ password, requirements, onValidationChange }) =
           <ul className="errors-list">
             {errors.map((error, index) => (
               <li key={index} className="error-item">
-                <span className="error-icon">❌</span>
+                <span className="material-symbols-outlined error-icon">error</span>
                 <span className="error-text">{error}</span>
               </li>
             ))}
@@ -180,7 +180,7 @@ const PasswordStrengthMeter = ({ password, requirements, onValidationChange }) =
 
       {isValid && (
         <div className="password-valid">
-          <span className="valid-icon">✅</span>
+          <span className="material-symbols-outlined valid-icon">check_circle</span>
           <span className="valid-text">¡Contraseña válida y segura!</span>
         </div>
       )}

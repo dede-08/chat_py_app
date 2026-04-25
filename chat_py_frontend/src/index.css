@@ -63,13 +63,6 @@
   }
 }
 
-/* Base styles cleanup that conflicts with tailwind */
-.fullscreen-container,
-.form-container,
-.form-control,
-.btn {
-  /* We remove all legacy bootstrap-like overrides here and rely on tailwind classes */
-}
 
 /* Background animated shapes */
 .bg-shape {

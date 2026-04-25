@@ -163,8 +163,10 @@ const RegisterPage = () => {
         className="glass-panel w-full max-w-md p-8 rounded-2xl relative z-10"
       >
         <div className="text-center mb-8">
-          <div className="mx-auto bg-gradient-to-br from-indigo-500 to-purple-600 w-16 h-16 rounded-xl flex items-center justify-center mb-4 shadow-lg shadow-indigo-500/30">
-            <UserPlus className="w-8 h-8 text-white" />
+          <div className="mx-auto w-16 h-16 rounded-xl flex items-center justify-center mb-4 shadow-lg shadow-indigo-500/30">
+            <span class="material-symbols-outlined text-6xl">
+              person_add
+            </span>
           </div>
           <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400">
             Crear Cuenta

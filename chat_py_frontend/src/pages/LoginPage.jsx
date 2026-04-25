@@ -108,8 +108,10 @@ const LoginPage = () => {
         className="glass-panel w-full max-w-md p-8 rounded-2xl relative z-10"
       >
         <div className="text-center mb-8">
-          <div className="mx-auto bg-gradient-to-br from-blue-500 to-indigo-600 w-16 h-16 rounded-xl flex items-center justify-center mb-4 shadow-lg shadow-blue-500/30">
-            <MessageSquare className="w-8 h-8 text-white" />
+          <div className="mx-auto w-16 h-16 rounded-xl flex items-center justify-center mb-4">
+            <span className="material-symbols-outlined text-6xl">
+              chat_bubble
+            </span>
           </div>
           <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400">
             Bienvenido

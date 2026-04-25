@@ -126,41 +126,6 @@
     box-shadow: none;
 }
 
-.profile-card .form-control::placeholder {
-    color: var(--text-secondary);
-}
-
-.profile-card .btn-primary {
-    background-color: #5865f2;
-    border-color: #5865f2;
-}
-
-.profile-card .btn-primary:hover {
-    background-color: #4752c4;
-    border-color: #4752c4;
-}
-
-.profile-card .btn-secondary {
-    background-color: #4f545c;
-    border-color: #4f545c;
-}
-
-.profile-card .btn-secondary:hover {
-    background-color: #5a6067;
-    border-color: #5a6067;
-}
-
-.profile-card .alert-success {
-    background-color: #28a745;
-    color: white;
-    border-color: #28a745;
-}
-
-.profile-card .alert-danger {
-    background-color: #dc3545;
-    color: white;
-    border-color: #dc3545;
-}
 
 .profile-icon-container {
     background-color: #4f545c;
