@@ -1,26 +1,40 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, type ChangeEvent, type FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Mail, User, Lock, Phone, UserPlus, Eye, EyeOff, MessageSquare } from 'lucide-react';
+import { AxiosError } from 'axios';
 import authService from '../services/authService';
 import logger from '../services/logger';
 import PasswordStrengthMeter from '../components/PasswordStrengthMeter/PasswordStrengthMeter';
 import SuccessModal from '../components/SuccessModal/SuccessModal';
 import { isValidEmail, validateUsername, validateTelephone } from '../utils/validators';
 import { sanitizeInput } from '../utils/sanitizer';
+import type { PasswordRequirements } from '../types';
+
+interface RegisterFormData {
+  email: string;
+  username: string;
+  password: string;
+  telephone: string;
+}
+
+interface BackendValidationError {
+  loc?: (string | number)[];
+  msg: string;
+}
+
+interface BackendErrorResponse {
+  detail?: string;
+  errors?: BackendValidationError[];
+}
 
 const RegisterPage = () => {
-  const [formData, setFormData] = useState({
-    email: '',
-    username: '',
-    password: '',
-    telephone: ''
-  });
+  const [formData, setFormData] = useState<RegisterFormData>({ email: '', username: '', password: '', telephone: '' });
   const [isLoading, setIsLoading] = useState(false);
   const [alreadyAuthenticated, setAlreadyAuthenticated] = useState(false);
-  const [passwordRequirements, setPasswordRequirements] = useState(null);
+  const [passwordRequirements, setPasswordRequirements] = useState<PasswordRequirements | null>(null);
   const [passwordValid, setPasswordValid] = useState(false);
-  const [formErrors, setFormErrors] = useState({});
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [requirementsLoading, setRequirementsLoading] = useState(true);
@@ -29,20 +43,14 @@ const RegisterPage = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const checkAuth = () => {
-      if (authService.isAuthenticated()) setAlreadyAuthenticated(true);
-    };
-    checkAuth();
-
+    if (authService.isAuthenticated()) setAlreadyAuthenticated(true);
     const loadRequirements = async () => {
       setRequirementsLoading(true);
       try {
         const result = await authService.getPasswordRequirements();
         setPasswordRequirements(result.data);
       } catch (error) {
-        logger.error('Error al cargar requisitos de contrase√±a', error, {
-          operation: 'getPasswordRequirements'
-        });
+        logger.error('Error al cargar requisitos de contraseùa', error instanceof Error ? error : null, { operation: 'getPasswordRequirements' });
         setPasswordRequirements({
           min_length: 8,
           max_length: 128,
@@ -50,7 +58,7 @@ const RegisterPage = () => {
           require_lowercase: true,
           require_digits: true,
           require_special_chars: true,
-          special_chars: '!@#$%^&*()_+-=[]{}|;:,.<>?'
+          special_chars: '!@#$%^&*()_+-=[]{}|;:,.<>?',
         });
       } finally {
         setRequirementsLoading(false);
@@ -59,48 +67,35 @@ const RegisterPage = () => {
     loadRequirements();
   }, []);
 
-  const handleChange = e => {
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    //sanitizar input segun el tipo
     const sanitizedValue = sanitizeInput(value, name === 'email' ? 'email' : name === 'username' ? 'username' : 'text');
-    setFormData({ ...formData, [name]: sanitizedValue });
-
-    if (formErrors[name]) setFormErrors(prev => ({ ...prev, [name]: '' }));
-    if (formErrors.general) setFormErrors(prev => ({ ...prev, general: '' }));
+    setFormData((prev) => ({ ...prev, [name]: sanitizedValue }));
+    if (formErrors[name]) setFormErrors((prev) => ({ ...prev, [name]: '' }));
+    if (formErrors.general) setFormErrors((prev) => ({ ...prev, general: '' }));
   };
 
   const validateForm = () => {
-    const errors = {};
-    if (!formData.email) {
-      errors.email = 'El email es requerido';
-    } else if (!isValidEmail(formData.email)) {
-      errors.email = 'El email no es v√°lido. Por favor, ingrese un email v√°lido.';
-    }
-
+    const errors: Record<string, string> = {};
+    if (!formData.email) errors.email = 'El email es requerido';
+    else if (!isValidEmail(formData.email)) errors.email = 'El email no es vùlido. Por favor, ingrese un email vùlido.';
     const usernameValidation = validateUsername(formData.username);
-    if (!usernameValidation.isValid) errors.username = usernameValidation.error;
-
-    if (!formData.password) {
-      errors.password = 'La contrase√±a es requerida';
-    } else if (!passwordValid) {
-      errors.password = 'La contrase√±a no cumple con los requisitos de seguridad';
-    }
-
+    if (!usernameValidation.isValid && usernameValidation.error) errors.username = usernameValidation.error;
+    if (!formData.password) errors.password = 'La contraseùa es requerida';
+    else if (!passwordValid) errors.password = 'La contraseùa no cumple con los requisitos de seguridad';
     const telephoneValidation = validateTelephone(formData.telephone);
-    if (!telephoneValidation.isValid) errors.telephone = telephoneValidation.error;
-
+    if (!telephoneValidation.isValid && telephoneValidation.error) errors.telephone = telephoneValidation.error;
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
-  const handlePasswordValidation = useCallback((isValid) => {
+  const handlePasswordValidation = useCallback((isValid: boolean) => {
     setPasswordValid(isValid);
   }, []);
 
-  const handleSubmit = async e => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
-
     setIsLoading(true);
     setIsSubmitting(true);
 
@@ -109,19 +104,18 @@ const RegisterPage = () => {
       setSuccessMessage(response.data.message);
       setShowSuccessModal(true);
     } catch (error) {
-      let errorMessage = error.response?.data?.detail || 'Error de conexi√≥n. Int√©ntalo de nuevo.';
-
-      if (error.response?.status === 422 && error.response?.data?.errors) {
-        //extraer los mensajes de error espec√≠ficos del backend
-        const validationErrors = error.response.data.errors;
-        const messages = validationErrors.map(err => {
-          const field = err.loc ? err.loc[err.loc.length - 1] : 'campo';
-          return `${field}: ${err.msg}`;
-        }).join(' | ');
-        errorMessage = `Datos inv√°lidos - ${messages}`;
+      const axiosError = error as AxiosError<BackendErrorResponse>;
+      let errorMessage = axiosError.response?.data?.detail || 'Error de conexiùn. Intùntalo de nuevo.';
+      if (axiosError.response?.status === 422 && axiosError.response?.data?.errors) {
+        const messages = axiosError.response.data.errors
+          .map((err) => {
+            const field = err.loc ? String(err.loc[err.loc.length - 1]) : 'campo';
+            return `${field}: ${err.msg}`;
+          })
+          .join(' | ');
+        errorMessage = `Datos invùlidos - ${messages}`;
       }
-
-      setFormErrors(prev => ({ ...prev, general: errorMessage }));
+      setFormErrors((prev) => ({ ...prev, general: errorMessage }));
     } finally {
       setIsLoading(false);
       setIsSubmitting(false);
@@ -129,22 +123,26 @@ const RegisterPage = () => {
   };
 
   const isFormValid = () => {
-    return formData.email && formData.username && formData.password && formData.telephone && passwordValid && !isLoading;
+    return Boolean(formData.email && formData.username && formData.password && formData.telephone && passwordValid && !isLoading);
   };
 
   if (alreadyAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
-        <div className="bg-shape bg-blue-500/20 top-10 left-10 w-96 h-96"></div>
+        <div className="bg-shape bg-blue-500/20 top-10 left-10 w-96 h-96" />
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="glass-panel p-8 rounded-2xl w-full max-w-md text-center">
           <div className="mx-auto bg-blue-500/10 p-4 rounded-full w-20 h-20 flex items-center justify-center mb-4">
             <MessageSquare className="w-10 h-10 text-blue-400" />
           </div>
-          <h2 className="text-2xl font-bold mb-2">Ya est√°s conectado</h2>
-          <p className="text-slate-400 mb-6">Parece que ya tienes una sesi√≥n activa.</p>
+          <h2 className="text-2xl font-bold mb-2">Ya estùs conectado</h2>
+          <p className="text-slate-400 mb-6">Parece que ya tienes una sesiùn activa.</p>
           <div className="space-y-3">
-            <button onClick={() => navigate('/chat')} className="premium-btn">Ir al Chat</button>
-            <button onClick={() => setAlreadyAuthenticated(false)} className="premium-btn-secondary">Continuar con Registro</button>
+            <button onClick={() => navigate('/chat')} className="premium-btn">
+              Ir al Chat
+            </button>
+            <button onClick={() => setAlreadyAuthenticated(false)} className="premium-btn-secondary">
+              Continuar con Registro
+            </button>
           </div>
         </motion.div>
       </div>
@@ -153,25 +151,16 @@ const RegisterPage = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden py-10 px-4">
-      <div className="bg-shape bg-indigo-500/20 top-20 left-10 w-96 h-96"></div>
-      <div className="bg-shape bg-blue-500/20 bottom-10 right-10 w-96 h-96"></div>
+      <div className="bg-shape bg-indigo-500/20 top-20 left-10 w-96 h-96" />
+      <div className="bg-shape bg-blue-500/20 bottom-10 right-10 w-96 h-96" />
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="glass-panel w-full max-w-md p-8 rounded-2xl relative z-10"
-      >
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="glass-panel w-full max-w-md p-8 rounded-2xl relative z-10">
         <div className="text-center mb-8">
           <div className="mx-auto w-16 h-16 rounded-xl flex items-center justify-center mb-4 shadow-lg shadow-indigo-500/30">
-            <span class="material-symbols-outlined text-6xl">
-              person_add
-            </span>
+            <span className="material-symbols-outlined text-6xl">person_add</span>
           </div>
-          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400">
-            Crear Cuenta
-          </h1>
-          <p className="text-slate-400 mt-2">√önete a nuestra plataforma de chat y descubre una nueva experiencia.</p>
+          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400">Crear Cuenta</h1>
+          <p className="text-slate-400 mt-2">ùnete a nuestra plataforma de chat y descubre una nueva experiencia.</p>
         </div>
 
         {formErrors.general && (
@@ -187,12 +176,7 @@ const RegisterPage = () => {
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                 <Mail className="h-5 w-5 text-slate-500" />
               </div>
-              <input
-                type="email" name="email"
-                className={`premium-input pl-11 ${formErrors.email ? 'border-red-500/50 focus:ring-red-500' : ''}`}
-                placeholder="Correo electr√≥nico"
-                value={formData.email} onChange={handleChange} disabled={isSubmitting}
-              />
+              <input type="email" name="email" className={`premium-input pl-11 ${formErrors.email ? 'border-red-500/50 focus:ring-red-500' : ''}`} placeholder="Correo electrùnico" value={formData.email} onChange={handleChange} disabled={isSubmitting} />
             </div>
             {formErrors.email && <p className="text-red-400 text-xs mt-1.5 ml-1">{formErrors.email}</p>}
           </div>
@@ -202,12 +186,7 @@ const RegisterPage = () => {
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                 <User className="h-5 w-5 text-slate-500" />
               </div>
-              <input
-                type="text" name="username"
-                className={`premium-input pl-11 ${formErrors.username ? 'border-red-500/50 focus:ring-red-500' : ''}`}
-                placeholder="Nombre de usuario"
-                value={formData.username} onChange={handleChange} disabled={isSubmitting}
-              />
+              <input type="text" name="username" className={`premium-input pl-11 ${formErrors.username ? 'border-red-500/50 focus:ring-red-500' : ''}`} placeholder="Nombre de usuario" value={formData.username} onChange={handleChange} disabled={isSubmitting} />
             </div>
             {formErrors.username && <p className="text-red-400 text-xs mt-1.5 ml-1">{formErrors.username}</p>}
           </div>
@@ -217,27 +196,14 @@ const RegisterPage = () => {
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                 <Lock className="h-5 w-5 text-slate-500" />
               </div>
-              <input
-                type={showPassword ? "text" : "password"} name="password"
-                className={`premium-input pl-11 pr-11 ${formErrors.password ? 'border-red-500/50 focus:ring-red-500' : ''}`}
-                placeholder="Contrase√±a"
-                value={formData.password} onChange={handleChange} disabled={isSubmitting}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-200"
-              >
+              <input type={showPassword ? 'text' : 'password'} name="password" className={`premium-input pl-11 pr-11 ${formErrors.password ? 'border-red-500/50 focus:ring-red-500' : ''}`} placeholder="Contraseùa" value={formData.password} onChange={handleChange} disabled={isSubmitting} />
+              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-200">
                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
             </div>
             {formErrors.password && <p className="text-red-400 text-xs mt-1.5 ml-1">{formErrors.password}</p>}
 
-            <div className="mt-3">
-              {!requirementsLoading && (
-                <PasswordStrengthMeter password={formData.password} requirements={passwordRequirements} onValidationChange={handlePasswordValidation} />
-              )}
-            </div>
+            <div className="mt-3">{!requirementsLoading && <PasswordStrengthMeter password={formData.password} requirements={passwordRequirements} onValidationChange={handlePasswordValidation} />}</div>
           </div>
 
           <div>
@@ -245,12 +211,7 @@ const RegisterPage = () => {
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                 <Phone className="h-5 w-5 text-slate-500" />
               </div>
-              <input
-                type="text" name="telephone"
-                className={`premium-input pl-11 ${formErrors.telephone ? 'border-red-500/50 focus:ring-red-500' : ''}`}
-                placeholder="Tel√©fono (ej: +1234567890)"
-                value={formData.telephone} onChange={handleChange} disabled={isSubmitting}
-              />
+              <input type="text" name="telephone" className={`premium-input pl-11 ${formErrors.telephone ? 'border-red-500/50 focus:ring-red-500' : ''}`} placeholder="Telùfono (ej: +1234567890)" value={formData.telephone} onChange={handleChange} disabled={isSubmitting} />
             </div>
             {formErrors.telephone && <p className="text-red-400 text-xs mt-1.5 ml-1">{formErrors.telephone}</p>}
           </div>
@@ -268,20 +229,25 @@ const RegisterPage = () => {
         </form>
 
         <p className="text-center text-slate-400 text-sm mt-6">
-          ¬øYa tienes una cuenta?{' '}
+          ùYa tienes una cuenta?{' '}
           <Link to="/login" className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors">
-            Inicia sesi√≥n aqu√≠
+            Inicia sesiùn aquù
           </Link>
         </p>
       </motion.div>
 
       <SuccessModal
         isOpen={showSuccessModal}
-        onClose={() => { setShowSuccessModal(false); navigate('/login'); }}
-        title="¬°Registro Exitoso!"
+        onClose={() => {
+          setShowSuccessModal(false);
+          navigate('/login');
+        }}
+        title="ùRegistro Exitoso!"
         message={successMessage}
-        onConfirm={() => { setShowSuccessModal(false); navigate('/login'); }}
-        confirmButtonText="Ir a Iniciar Sesi√≥n"
+        onConfirm={() => {
+          setShowSuccessModal(false);
+          navigate('/login');
+        }}
       />
     </div>
   );

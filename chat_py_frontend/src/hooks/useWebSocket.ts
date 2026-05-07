@@ -1,25 +1,24 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { buildAuthorizedWsUrl, 
-  //hasWsToken 
-} from '../services/wsClient';
+import { buildAuthorizedWsUrl } from '../services/wsClient';
 import logger from '../services/logger';
 
-const useWebSocket = (urlOrPath, options = {}) => {
-  const {
-    reconnectInterval = 3000,
-    maxReconnectAttempts = 5,
-    onOpen,
-    onMessage,
-    onClose,
-    onError,
-    protocols
-  } = options;
+interface WebSocketOptions {
+  reconnectInterval?: number;
+  maxReconnectAttempts?: number;
+  onOpen?: (event: Event) => void;
+  onMessage?: (data: Record<string, unknown>, event: MessageEvent) => void;
+  onClose?: (event: CloseEvent) => void;
+  onError?: (event: Event) => void;
+  protocols?: string | string[];
+}
 
-  const [socket, setSocket] = useState(null);
+const useWebSocket = (urlOrPath: string, options: WebSocketOptions = {}) => {
+  const { reconnectInterval = 3000, maxReconnectAttempts = 5, onOpen, onMessage, onClose, onError, protocols } = options;
+
+  const [socket, setSocket] = useState<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
-  //usar refs para mantener las callbacks y evitar re-renders
   const onOpenRef = useRef(onOpen);
   const onMessageRef = useRef(onMessage);
   const onCloseRef = useRef(onClose);
@@ -31,18 +30,16 @@ const useWebSocket = (urlOrPath, options = {}) => {
     onErrorRef.current = onError;
   });
 
-  const messageHandlersRef = useRef(new Map());
-  
+  const messageHandlersRef = useRef(new Map<string, (data: Record<string, unknown>) => void>());
+
   useEffect(() => {
-    let ws = null;
-    let reconnectTimeout = null;
+    let ws: WebSocket | null = null;
+    let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
     let reconnectCount = 0;
     let shouldReconnect = true;
 
-  const connect = async () => {
-      if (!shouldReconnect) {
-        return;
-      }
+    const connect = async () => {
+      if (!shouldReconnect) return;
 
       try {
         const { ensureValidAccessToken } = await import('../services/wsClient');
@@ -69,44 +66,43 @@ const useWebSocket = (urlOrPath, options = {}) => {
 
         ws.onmessage = (event) => {
           try {
-            const data = JSON.parse(event.data);
-            const handler = messageHandlersRef.current.get(data.type);
-            if (handler) {
-              handler(data);
-            }
+            const data = JSON.parse(event.data) as Record<string, unknown>;
+            const type = String(data.type ?? '');
+            const handler = messageHandlersRef.current.get(type);
+            if (handler) handler(data);
             onMessageRef.current?.(data, event);
-          } catch (error) {
-            logger.error('Error parsing WebSocket message', error, { 
-              operation: 'useWebSocket_message' 
+          } catch (parseError) {
+            logger.error('Error parsing WebSocket message', parseError instanceof Error ? parseError : null, {
+              operation: 'useWebSocket_message',
             });
           }
         };
 
         ws.onclose = (event) => {
-          logger.info('WebSocket disconnected', { 
+          logger.info('WebSocket disconnected', {
             operation: 'useWebSocket_close',
             code: event.code,
-            reason: event.reason 
+            reason: event.reason,
           });
           setIsConnected(false);
           setSocket(null);
           onCloseRef.current?.(event);
 
           if (shouldReconnect && reconnectCount < maxReconnectAttempts) {
-            reconnectCount++;
+            reconnectCount += 1;
             reconnectTimeout = setTimeout(connect, reconnectInterval);
           }
         };
 
         ws.onerror = (event) => {
-          logger.error('WebSocket error', event, { operation: 'useWebSocket_error' });
+          logger.error('WebSocket error', null, { operation: 'useWebSocket_error' });
           setError('WebSocket connection error');
           onErrorRef.current?.(event);
-          //el evento onclose se ejecutara next, que maneja la reconexion.
         };
-
       } catch (err) {
-        logger.error('Error creating WebSocket', err, { operation: 'useWebSocket_create' });
+        logger.error('Error creating WebSocket', err instanceof Error ? err : null, {
+          operation: 'useWebSocket_create',
+        });
         setError('Failed to create WebSocket connection');
       }
     };
@@ -114,46 +110,38 @@ const useWebSocket = (urlOrPath, options = {}) => {
     connect();
 
     return () => {
-      shouldReconnect = false; //evitar reconexion en unmount
-      if (reconnectTimeout) {
-        clearTimeout(reconnectTimeout);
-      }
+      shouldReconnect = false;
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
       if (ws) {
-        //evitar "WebSocket is closed before the connection is established"
-        ws.onclose = () => {}; //deshabilitar el handler onclose primero
+        ws.onclose = () => {};
         ws.close();
       }
       setSocket(null);
       setIsConnected(false);
     };
-  //el efecto solo debe ejecutarse cuando el URL o protocols cambian.
   }, [urlOrPath, protocols, maxReconnectAttempts, reconnectInterval]);
 
-  const sendMessage = useCallback((message) => {
-    if (socket && socket.readyState === WebSocket.OPEN) {
-      const messageStr = typeof message === 'string' ? message : JSON.stringify(message);
-      socket.send(messageStr);
-      return true;
-    } else {
+  const sendMessage = useCallback(
+    (message: string | Record<string, unknown>) => {
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        const messageStr = typeof message === 'string' ? message : JSON.stringify(message);
+        socket.send(messageStr);
+        return true;
+      }
       logger.warn('WebSocket is not connected', { operation: 'useWebSocket_sendMessage' });
       return false;
-    }
-  }, [socket]);
+    },
+    [socket]
+  );
 
-  const onMessageType = useCallback((type, handler) => {
+  const onMessageType = useCallback((type: string, handler: (data: Record<string, unknown>) => void) => {
     messageHandlersRef.current.set(type, handler);
     return () => {
       messageHandlersRef.current.delete(type);
     };
   }, []);
 
-  return {
-    socket,
-    isConnected,
-    error,
-    sendMessage,
-    onMessageType,
-  };
+  return { socket, isConnected, error, sendMessage, onMessageType };
 };
 
 export default useWebSocket;
