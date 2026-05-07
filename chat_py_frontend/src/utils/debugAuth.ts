@@ -1,4 +1,4 @@
-//utilidad para desarrollo - limpiar rate limits
+//UTILIDAD PARA DESARROLLO - LIMPIAR RATELIMIT
 export const clearRateLimits = async (): Promise<void> => {
   try {
     const response = await fetch(`${import.meta.env.VITE_API_URL}/dev/clear-ratelimits`);
@@ -33,12 +33,12 @@ export const debugAuth = async (): Promise<void> => {
     userEmail: localStorage.getItem('userEmail'),
     username: localStorage.getItem('username')
   });
-  
+
   //limpiar rate limits
   await clearRateLimits();
-  
+
   //limpiar cookies cliente
   clearClientCookies();
-  
+
   console.log('=== Limpieza completada ===');
 };

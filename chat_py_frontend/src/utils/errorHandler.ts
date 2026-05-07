@@ -1,14 +1,9 @@
-/**
- * Utilidad centralizada para manejo de errores
- * Proporciona funciones para procesar y formatear errores de manera consistente
- */
+//UTILIDAD CENTRALIZADA PARA EL MANEJO DE ERRORES
 
 import logger from '../services/logger';
 import type { ApiErrorResponse, ApiSuccessResponse, ApiResponse } from '../types';
 
-/**
- * Tipos de errores comunes
- */
+//tipos de errores comunes
 export const ErrorTypes = {
   NETWORK: 'NETWORK',
   AUTHENTICATION: 'AUTHENTICATION',
@@ -21,9 +16,7 @@ export const ErrorTypes = {
 
 export type ErrorType = typeof ErrorTypes[keyof typeof ErrorTypes];
 
-/**
- * Error de Axios con tipado
- */
+//error de axios con tipado
 import type { AxiosError as AxiosErrorType } from 'axios';
 
 interface CustomAxiosError {
@@ -40,23 +33,21 @@ interface CustomAxiosError {
 
 type AxiosError = AxiosErrorType | CustomAxiosError;
 
-/**
- * Extrae el mensaje de error de una respuesta HTTP
- */
+//extrae el mensaje de error de una respuesta HTTP
 const extractErrorMessage = (error: AxiosError): string => {
   const responseData = error.response?.data;
-  
-  // Verificar si es CustomAxiosError con estructura conocida
+
+  //verificar si es CustomAxiosError con estructura conocida
   if (responseData && typeof responseData === 'object' && 'detail' in responseData) {
     const detail = (responseData as { detail?: string | Array<{ msg?: string; message?: string }> }).detail;
-    
+
     if (detail) {
-      // FastAPI devuelve errores en el campo 'detail'
+      //fastapi devuelve errores en el campo 'detail'
       if (typeof detail === 'string') {
         return detail;
       }
       if (Array.isArray(detail)) {
-        // Errores de validación de FastAPI
+        //errores de validación de FastAPI
         return detail
           .map((err: { msg?: string; message?: string }) => err.msg || err.message || JSON.stringify(err))
           .join(', ');
@@ -64,45 +55,41 @@ const extractErrorMessage = (error: AxiosError): string => {
       return JSON.stringify(detail);
     }
   }
-  
-  // Verificar si tiene message
+
+  //verificar si tiene message
   if (responseData && typeof responseData === 'object' && 'message' in responseData) {
     const message = (responseData as { message?: string }).message;
     if (message) {
       return message;
     }
   }
-  
-  // Verificar si es AxiosErrorType de axios
+
+  //verificar si es AxiosErrorType de axios
   if ('message' in error && error.message) {
     return error.message;
   }
-  
+
   return 'Ha ocurrido un error desconocido';
 };
 
-/**
- * Determina el tipo de error basado en el código de estado HTTP
- */
+//determina el tipo de error basado en el codigo de estado HTTP
 const getErrorType = (statusCode: number | undefined): ErrorType => {
   if (!statusCode) return ErrorTypes.UNKNOWN;
-  
+
   if (statusCode === 401) return ErrorTypes.AUTHENTICATION;
   if (statusCode === 403) return ErrorTypes.AUTHORIZATION;
   if (statusCode === 404) return ErrorTypes.NOT_FOUND;
   if (statusCode === 422) return ErrorTypes.VALIDATION;
   if (statusCode >= 500) return ErrorTypes.SERVER;
   if (statusCode >= 400) return ErrorTypes.VALIDATION;
-  
+
   return ErrorTypes.UNKNOWN;
 };
 
-/**
- * Obtiene un mensaje de error amigable para el usuario
- */
+//obtine un mensaje de error amigable para el usuario
 const getUserFriendlyMessage = (
-  errorType: ErrorType, 
-  statusCode: number | undefined, 
+  errorType: ErrorType,
+  statusCode: number | undefined,
   defaultMessage: string | null
 ): string => {
   const messages: Record<ErrorType, string> = {
@@ -114,45 +101,41 @@ const getUserFriendlyMessage = (
     [ErrorTypes.SERVER]: 'Error en el servidor. Por favor, intente más tarde.',
     [ErrorTypes.UNKNOWN]: defaultMessage || 'Ha ocurrido un error inesperado.'
   };
-  
-  // Mensajes específicos por código de estado
+
+  //mensajes específicos por código de estado
   if (statusCode === 401) {
     return 'Credenciales incorrectas. Verifique su usuario y contraseña.';
   }
   if (statusCode === 409) {
     return 'El nombre de usuario o correo ya está en uso.';
   }
-  
+
   return messages[errorType] || defaultMessage || messages[ErrorTypes.UNKNOWN];
 };
 
-/**
- * Opciones para manejo de errores
- */
+//opciones para manejo de errores
 interface HandleErrorOptions {
   context?: Record<string, unknown>;
   logError?: boolean;
   defaultMessage?: string | null;
 }
 
-/**
- * Procesa un error y devuelve un objeto estandarizado
- */
+//Procesa un error y devuelve un objeto estandarizado
 export const handleError = (error: AxiosError | Error, options: HandleErrorOptions = {}): ApiErrorResponse => {
   const {
     context = {},
     logError = true,
     defaultMessage = null
   } = options;
-  
-  // Determinar si es un error de red
+
+  //determinar si es un error de red
   const isNetworkError = !('response' in error) && 'request' in error;
-  
+
   const statusCode = 'response' in error ? error.response?.status : undefined;
   const errorType = isNetworkError ? ErrorTypes.NETWORK : getErrorType(statusCode);
   const rawMessage = extractErrorMessage('response' in error ? error : { message: error.message });
   const userMessage = getUserFriendlyMessage(errorType, statusCode, defaultMessage || rawMessage);
-  
+
   const errorInfo: ApiErrorResponse = {
     success: false,
     error: userMessage,
@@ -161,8 +144,8 @@ export const handleError = (error: AxiosError | Error, options: HandleErrorOptio
     rawMessage,
     timestamp: new Date().toISOString()
   };
-  
-  // Log del error
+
+  //log del error
   if (logError) {
     logger.error(
       `Error procesado: ${userMessage}`,
@@ -175,29 +158,24 @@ export const handleError = (error: AxiosError | Error, options: HandleErrorOptio
       }
     );
   }
-  
+
   return errorInfo;
 };
 
-/**
- * Procesa un error de axios y devuelve un objeto estandarizado
- * Esta es una función de conveniencia específica para errores de axios
- */
+//procesa un error de axios y devuelve un objeto estandarizado
 export const handleAxiosError = (error: AxiosError, context: Record<string, unknown> = {}): ApiErrorResponse => {
   return handleError(error, { context, defaultMessage: null });
 };
 
-/**
- * Procesa un error de fetch y devuelve un objeto estandarizado
- */
+//procesa un error de fetch y devuelve un objeto estandarizado
 export const handleFetchError = async (
-  response: Response, 
+  response: Response,
   context: Record<string, unknown> = {}
 ): Promise<ApiErrorResponse> => {
   let errorData: { detail?: string | Array<{ msg?: string; message?: string }>; message?: string } = {};
   try {
     const jsonData = await response.json();
-    // Asegurar que tiene la estructura correcta
+    //asegurar que tiene la estructura correcta
     if (jsonData && typeof jsonData === 'object') {
       if ('detail' in jsonData) {
         errorData.detail = jsonData.detail as string | Array<{ msg?: string; message?: string }>;
@@ -215,23 +193,21 @@ export const handleFetchError = async (
       errorData = { detail: 'Error desconocido' };
     }
   }
-  
+
   const error: CustomAxiosError = {
     response: {
       status: response.status,
       data: errorData
     }
   };
-  
+
   return handleError(error, { context });
 };
 
-/**
- * Crea un objeto de respuesta de error estandarizado
- */
+//crea un objeto de respuesta de error estandarizado
 export const createErrorResponse = (
-  message: string, 
-  errorType: ErrorType = ErrorTypes.UNKNOWN, 
+  message: string,
+  errorType: ErrorType = ErrorTypes.UNKNOWN,
   statusCode: number | null = null
 ): ApiErrorResponse => {
   return {
@@ -243,9 +219,7 @@ export const createErrorResponse = (
   };
 };
 
-/**
- * Crea un objeto de respuesta de éxito estandarizado
- */
+//crea un objeto de respuesta de éxito estandarizado
 export const createSuccessResponse = <T = unknown>(data: T | null = null): ApiSuccessResponse<T> => {
   return {
     success: true,
@@ -254,16 +228,12 @@ export const createSuccessResponse = <T = unknown>(data: T | null = null): ApiSu
   };
 };
 
-/**
- * Verifica si una respuesta es exitosa
- */
+//verifica si una respuesta es exitosa
 export const isSuccessResponse = <T = unknown>(response: ApiResponse<T>): response is ApiSuccessResponse<T> => {
   return response && response.success === true;
 };
 
-/**
- * Verifica si una respuesta es un error
- */
+//verifica si una respuesta es un error
 export const isErrorResponse = (response: ApiResponse): response is ApiErrorResponse => {
   return response && response.success === false;
 };

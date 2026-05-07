@@ -1,4 +1,4 @@
-//tipos para las respuestas de la API
+//TIPOS PARA LA RESPUESTA DE LA API
 
 //tipos de autenticacion
 export interface LoginResponse {
@@ -56,6 +56,7 @@ export interface User {
   id: string;
   email: string;
   username?: string;
+  telephone?: string;
   is_online?: boolean;
 }
 

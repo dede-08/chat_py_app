@@ -1,47 +1,30 @@
-import React, { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RefreshCw, Wifi, WifiOff, Users } from 'lucide-react';
-import chatService from '../../services/chatService';
 import logger from '../../services/logger';
+import { useChat } from '../../context';
 
-const UserList = ({ onUserSelect, selectedUser }) => {
-  const [users, setUsers] = useState([]);
+const UserList = () => {
+  const { users, selectedUser, setSelectedUser, loadUsers, isUserOnline } = useChat();
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [onlineUsers, setOnlineUsers] = useState(new Set());
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadUsers();
-
-    chatService.onMessage('user_status', (data) => {
-      setOnlineUsers(prev => {
-        const newSet = new Set(prev);
-        if (data.is_online) {
-          newSet.add(data.user_email);
-        } else {
-          newSet.delete(data.user_email);
-        }
-        return newSet;
-      });
-    });
-  }, []);
-
-  const loadUsers = async () => {
+  const reloadUsers = async () => {
     try {
       setLoading(true);
-      const usersData = await chatService.getUsers();
-      setUsers(usersData);
+      setError(null);
+      await loadUsers();
     } catch (err) {
       setError('Error al cargar usuarios');
-      logger.error('Error al cargar usuarios', err, { operation: 'loadUsers' });
+      logger.error('Error al cargar usuarios', err instanceof Error ? err : null, { operation: 'loadUsers' });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleUserClick = (user) => {
-    onUserSelect(user);
-  };
+  useEffect(() => {
+    reloadUsers();
+  }, []);
 
   return (
     <div className="w-80 flex-shrink-0 flex flex-col glass-panel rounded-2xl overflow-hidden">
@@ -51,7 +34,7 @@ const UserList = ({ onUserSelect, selectedUser }) => {
           <span>Usuarios ({users.length})</span>
         </div>
         <button
-          onClick={loadUsers}
+          onClick={reloadUsers}
           className="p-2 rounded-lg bg-slate-700/50 text-slate-300 hover:text-white hover:bg-slate-700 transition-colors"
           title="Actualizar"
         >
@@ -70,7 +53,7 @@ const UserList = ({ onUserSelect, selectedUser }) => {
           <AnimatePresence>
             {users.map((user) => {
               const isSelected = selectedUser?.email === user.email;
-              const isOnline = onlineUsers.has(user.email);
+              const isOnline = isUserOnline(user.email);
 
               return (
                 <motion.div
@@ -79,7 +62,7 @@ const UserList = ({ onUserSelect, selectedUser }) => {
                   animate={{ opacity: 1, y: 0 }}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={() => handleUserClick(user)}
+                  onClick={() => setSelectedUser(user)}
                   className={`
                     flex items-center p-3 rounded-xl cursor-pointer transition-all duration-200
                     ${isSelected ? 'bg-blue-600/20 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.5)]' : 'hover:bg-slate-800/60'}
@@ -89,7 +72,7 @@ const UserList = ({ onUserSelect, selectedUser }) => {
                     <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold text-lg shadow-lg">
                       {user.username ? user.username.charAt(0).toUpperCase() : 'U'}
                     </div>
-                    <div className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-slate-900 ${isOnline ? 'bg-green-500' : 'bg-slate-500'}`}></div>
+                    <div className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-slate-900 ${isOnline ? 'bg-green-500' : 'bg-slate-500'}`} />
                   </div>
 
                   <div className="ml-3 flex-1 overflow-hidden">
@@ -97,13 +80,7 @@ const UserList = ({ onUserSelect, selectedUser }) => {
                     <div className="text-slate-400 text-xs truncate">{user.email}</div>
                   </div>
 
-                  <div className="ml-2">
-                    {isOnline ? (
-                      <Wifi className="w-4 h-4 text-green-400" />
-                    ) : (
-                      <WifiOff className="w-4 h-4 text-slate-600" />
-                    )}
-                  </div>
+                  <div className="ml-2">{isOnline ? <Wifi className="w-4 h-4 text-green-400" /> : <WifiOff className="w-4 h-4 text-slate-600" />}</div>
                 </motion.div>
               );
             })}

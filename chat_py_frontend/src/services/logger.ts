@@ -1,4 +1,4 @@
-//servicio de logging centralizado
+//SERVICIO DE LOGGIN CENTRALIZADO
 const LOG_LEVELS = {
   DEBUG: 0,
   INFO: 1,
@@ -23,10 +23,10 @@ const currentLogLevel = getLogLevel();
 //formatea el mensaje de log con contexto
 const formatMessage = (level: string, message: string, context: Record<string, unknown> = {}): string => {
   const timestamp = new Date().toISOString();
-  const contextStr = Object.keys(context).length > 0 
-    ? ` | Context: ${JSON.stringify(context)}` 
+  const contextStr = Object.keys(context).length > 0
+    ? ` | Context: ${JSON.stringify(context)}`
     : '';
-  
+
   return `[${timestamp}] [${level}] ${message}${contextStr}`;
 };
 
@@ -43,7 +43,7 @@ const logger = {
     }
   },
 
- //log de informacion
+  //log de informacion
   info: (message: string, context: LoggerContext = {}): void => {
     if (currentLogLevel <= LOG_LEVELS.INFO) {
       console.info(formatMessage('INFO', message, context));
@@ -69,7 +69,7 @@ const logger = {
         })
       };
       console.error(formatMessage('ERROR', message, errorContext));
-      
+
       //en produccion, aqui se podria enviar a un servicio de monitoreo
       // como Sentry, LogRocket, etc.
       if (import.meta.env.MODE === 'production' && error) {

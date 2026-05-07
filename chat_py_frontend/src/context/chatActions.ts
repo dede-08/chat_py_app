@@ -1,4 +1,3 @@
-//tipos de acciones para el contexto de chat
 export const CHAT_ACTIONS = {
   SET_USERS: 'SET_USERS',
   SET_SELECTED_USER: 'SET_SELECTED_USER',
@@ -10,5 +9,5 @@ export const CHAT_ACTIONS = {
   SET_UNREAD_COUNT: 'SET_UNREAD_COUNT',
   SET_CONNECTION_STATUS: 'SET_CONNECTION_STATUS',
   SET_ERROR: 'SET_ERROR',
-  CLEAR_ERROR: 'CLEAR_ERROR'
-};
+  CLEAR_ERROR: 'CLEAR_ERROR',
+} as const;
