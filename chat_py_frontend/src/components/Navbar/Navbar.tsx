@@ -102,7 +102,7 @@ const Navbar = () => {
                         </Link>
                         <button onClick={handleLogout} disabled={isLoggingOut} className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors text-left">
                           <LogOut className="w-4 h-4" />
-                          {isLoggingOut ? 'Saliendo...' : 'Cerrar Sesi髇'}
+                          {isLoggingOut ? 'Saliendo...' : 'Cerrar Sesi贸n'}
                         </button>
                       </motion.div>
                     )}
@@ -112,7 +112,7 @@ const Navbar = () => {
             ) : (
               <div className="flex items-center space-x-4">
                 <Link to="/login" className="text-slate-300 hover:text-white font-medium transition-colors">
-                  Iniciar Sesi髇
+                  Iniciar Sesi贸n
                 </Link>
                 <Link to="/register" className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-lg font-medium shadow-lg shadow-blue-500/20 transition-all">
                   Registrarse
@@ -145,13 +145,13 @@ const Navbar = () => {
                     Perfil
                   </Link>
                   <button onClick={handleLogout} disabled={isLoggingOut} className="w-full text-left px-3 py-2 rounded-md text-base font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10">
-                    {isLoggingOut ? 'Saliendo...' : 'Cerrar Sesi髇'}
+                    {isLoggingOut ? 'Saliendo...' : 'Cerrar Sesi贸n'}
                   </button>
                 </>
               ) : (
                 <>
                   <Link to="/login" className="block px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:text-white hover:bg-slate-800">
-                    Iniciar Sesi髇
+                    Iniciar Sesi贸n
                   </Link>
                   <Link to="/register" className="block px-3 py-2 mt-2 rounded-md text-base font-medium bg-blue-600 text-white text-center">
                     Registrarse

@@ -72,7 +72,7 @@ const UserProfile = () => {
         }
       } catch (err) {
         logger.error('Error al cargar datos del usuario', err instanceof Error ? err : null, { operation: 'loadUserData' });
-        setError('Error al cargar la informaciùn del perfil');
+        setError('Error al cargar la informaci√≥n del perfil');
       } finally {
         setLoading(false);
       }
@@ -113,15 +113,15 @@ const UserProfile = () => {
   const handleSave = async () => {
     const errors: string[] = [];
 
-    if (editInfo.email && !isValidEmail(editInfo.email)) errors.push('El email no es vùlido');
+    if (editInfo.email && !isValidEmail(editInfo.email)) errors.push('El email no es v√°lido');
     if (editInfo.username) {
       const usernameValidation = validateUsername(editInfo.username);
       if (!usernameValidation.isValid && usernameValidation.error) errors.push(usernameValidation.error);
     }
     if (editInfo.newPassword) {
-      if (editInfo.newPassword !== editInfo.confirmPassword) errors.push('Las contraseùas no coinciden');
-      if (editInfo.newPassword.length < 8) errors.push('La contraseùa debe tener al menos 8 caracteres');
-      if (!editInfo.currentPassword) errors.push('Debe ingresar su contraseùa actual para cambiarla');
+      if (editInfo.newPassword !== editInfo.confirmPassword) errors.push('Las contrase√±as no coinciden');
+      if (editInfo.newPassword.length < 8) errors.push('La contrase√±a debe tener al menos 8 caracteres');
+      if (!editInfo.currentPassword) errors.push('Debe ingresar su contrase√±a actual para cambiarla');
     }
     if (errors.length > 0) {
       setError(errors.join('. '));
@@ -189,7 +189,7 @@ const UserProfile = () => {
             <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="mb-4 p-4 bg-green-500/10 border border-green-500/20 rounded-xl text-green-400 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5 shrink-0" />
-                <span>ùPerfil actualizado exitosamente!</span>
+                <span>Perfil actualizado exitosamente!</span>
               </div>
               <button onClick={() => setShowSuccess(false)} className="text-green-400 hover:text-green-300">
                 <X className="w-4 h-4" />
@@ -218,7 +218,7 @@ const UserProfile = () => {
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-slate-100">Mi Perfil</h1>
-                <p className="text-slate-400 text-sm">Informaciùn de la cuenta</p>
+                <p className="text-slate-400 text-sm">Informaci√≥n de la cuenta</p>
               </div>
             </div>
             {!isEditing && (
@@ -239,7 +239,7 @@ const UserProfile = () => {
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs text-slate-500 mb-1 block">Correo electrùnico</label>
+                  <label className="text-xs text-slate-500 mb-1 block">Correo electr√≥nico</label>
                   <div className="flex items-center gap-3 text-slate-200">
                     <Mail className="w-5 h-5 text-blue-400" />
                     <span className="font-medium text-lg">{userInfo.email}</span>
@@ -247,7 +247,7 @@ const UserProfile = () => {
                 </div>
                 {userInfo.telephone && (
                   <div>
-                    <label className="text-xs text-slate-500 mb-1 block">Telùfono</label>
+                    <label className="text-xs text-slate-500 mb-1 block">Tel√©fono</label>
                     <div className="flex items-center gap-3 text-slate-200">
                       <Phone className="w-5 h-5 text-blue-400" />
                       <span className="font-medium text-lg">{userInfo.telephone}</span>
@@ -255,7 +255,7 @@ const UserProfile = () => {
                   </div>
                 )}
                 <div>
-                  <label className="text-xs text-slate-500 mb-1 block">Contraseùa</label>
+                  <label className="text-xs text-slate-500 mb-1 block">Contrase√±a</label>
                   <div className="flex items-center gap-3 text-slate-200">
                     <Lock className="w-5 h-5 text-blue-400" />
                     <span className="font-medium text-lg tracking-widest">{userInfo.password}</span>
@@ -273,28 +273,28 @@ const UserProfile = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-1 flex items-center gap-2">
-                    <Mail className="w-4 h-4" /> Correo electrùnico
+                    <Mail className="w-4 h-4" /> Correo electr√≥nico
                   </label>
                   <input type="email" name="email" className="premium-input" value={editInfo.email} onChange={handleChange} required />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-1 flex items-center gap-2">
-                    <Phone className="w-4 h-4" /> Telùfono
+                    <Phone className="w-4 h-4" /> Tel√©fono
                   </label>
                   <input type="tel" name="telephone" className="premium-input" placeholder="Ej: +34 600 000 000" value={editInfo.telephone} onChange={handleChange} />
                 </div>
 
                 <div className="pt-4 border-t border-white/10 mt-6">
                   <h3 className="text-sm font-medium text-slate-200 mb-4 flex items-center gap-2">
-                    <Lock className="w-4 h-4 text-blue-400" /> Cambiar contraseùa (Opcional)
+                    <Lock className="w-4 h-4 text-blue-400" /> Cambiar contrase√±a (Opcional)
                   </h3>
 
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-xs text-slate-400 mb-1">Contraseùa actual</label>
+                        <label className="block text-xs text-slate-400 mb-1">Contrase√±a actual</label>
                       <div className="relative">
-                        <input type={showPassword ? 'text' : 'password'} name="currentPassword" placeholder="Ingresa tu contraseùa actual" className="premium-input pr-10" value={editInfo.currentPassword} onChange={handleChange} />
+                        <input type={showPassword ? 'text' : 'password'} name="currentPassword" placeholder="Ingresa tu contrase√±a actual" className="premium-input pr-10" value={editInfo.currentPassword} onChange={handleChange} />
                         <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200">
                           {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
@@ -302,13 +302,13 @@ const UserProfile = () => {
                     </div>
 
                     <div>
-                      <label className="block text-xs text-slate-400 mb-1">Nueva contraseùa</label>
-                      <input type={showPassword ? 'text' : 'password'} name="newPassword" placeholder="Mùnimo 8 caracteres" className="premium-input" value={editInfo.newPassword} onChange={handleChange} />
+                      <label className="block text-xs text-slate-400 mb-1">Nueva contrase√±a</label>
+                      <input type={showPassword ? 'text' : 'password'} name="newPassword" placeholder="M√≠nimo 8 caracteres" className="premium-input" value={editInfo.newPassword} onChange={handleChange} />
                     </div>
 
                     <div>
-                      <label className="block text-xs text-slate-400 mb-1">Confirmar nueva contraseùa</label>
-                      <input type={showPassword ? 'text' : 'password'} name="confirmPassword" placeholder="Repite la nueva contraseùa" className="premium-input" value={editInfo.confirmPassword} onChange={handleChange} />
+                      <label className="block text-xs text-slate-400 mb-1">Confirmar nueva contrase√±a</label>
+                      <input type={showPassword ? 'text' : 'password'} name="confirmPassword" placeholder="Repite la nueva contraseÔøΩa" className="premium-input" value={editInfo.confirmPassword} onChange={handleChange} />
                     </div>
                   </div>
                 </div>
@@ -333,14 +333,14 @@ const UserProfile = () => {
 
           {!isEditing && (
             <div className="bg-slate-800/30 p-4 border-t border-white/5 flex items-center justify-center gap-2 text-xs text-slate-500">
-              <Info className="w-4 h-4" /> ùltima actualizaciùn: {new Date().toLocaleDateString('es-ES')}
+              <Info className="w-4 h-4" /> √öltima actualizaci√≥n: {new Date().toLocaleDateString('es-ES')}
             </div>
           )}
         </motion.div>
 
         <div className="text-center mt-6 text-slate-500 text-sm flex items-center justify-center gap-2">
           <ShieldCheck className="w-4 h-4" />
-          Tu informaciùn estù protegida y segura
+          Tu informaci√≥n est√° protegida y segura
         </div>
       </div>
     </div>

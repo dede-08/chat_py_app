@@ -25,7 +25,7 @@ const UserInfoPanel = ({ user }: UserInfoPanelProps) => {
         <div className="flex items-center gap-3 text-slate-300 bg-slate-800/40 p-3 rounded-xl">
           <Mail className="w-5 h-5 text-indigo-400 shrink-0" />
           <div className="flex flex-col overflow-hidden">
-            <span className="text-xs text-slate-500">Correo Electrónico</span>
+            <span className="text-xs text-slate-500">Correo ElectrÃ³nico</span>
             <span className="text-sm truncate">{user.email}</span>
           </div>
         </div>
@@ -34,7 +34,7 @@ const UserInfoPanel = ({ user }: UserInfoPanelProps) => {
           <div className="flex items-center gap-3 text-slate-300 bg-slate-800/40 p-3 rounded-xl">
             <User className="w-5 h-5 text-indigo-400 shrink-0" />
             <div className="flex flex-col overflow-hidden">
-              <span className="text-xs text-slate-500">Teléfono</span>
+              <span className="text-xs text-slate-500">TelÃ©fono</span>
               <span className="text-sm">{user.telephone}</span>
             </div>
           </div>
