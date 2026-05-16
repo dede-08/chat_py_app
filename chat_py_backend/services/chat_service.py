@@ -59,7 +59,11 @@ class ChatService:
         async for doc in cursor:
             doc["id"] = str(doc["_id"])
             if doc.get("last_message"):
-                doc["last_message"]["id"] = str(doc["last_message"]["_id"])
+                last_msg = doc["last_message"]
+                if "_id" in last_msg:
+                    last_msg["id"] = str(last_msg.pop("_id"))
+                elif "id" not in last_msg:
+                    last_msg["id"] = ""
             chat_rooms.append(ChatRoom(**doc))
         
         return chat_rooms

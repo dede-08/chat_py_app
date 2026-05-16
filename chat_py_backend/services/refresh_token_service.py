@@ -62,9 +62,9 @@ class RefreshTokenService:
             if not token_doc:
                 return False
             
-            # Verificar si el token ha expirado
+            #verificar si el token ha expirado
             if token_doc.get("expires_at") < datetime.utcnow():
-                # Marcar como revocado si está expirado
+                #marcar como revocado si está expirado
                 await refresh_tokens_collection.update_one(
                     {"_id": token_doc["_id"]},
                     {"$set": {"is_revoked": True}}
@@ -143,6 +143,6 @@ class RefreshTokenService:
             auth_logger.error(f"Error al limpiar tokens expirados: {e}")
             return 0
 
-# Instancia global del servicio
+#instancia global del servicio
 refresh_token_service = RefreshTokenService()
 
