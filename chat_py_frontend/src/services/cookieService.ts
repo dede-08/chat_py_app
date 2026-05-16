@@ -4,13 +4,13 @@ interface CookieOptions {
   path?: string;
   domain?: string;
   secure?: boolean;
-  httpOnly?: boolean;
   sameSite?: 'strict' | 'lax' | 'none';
 }
 
-//clase para manejar cookies de forma segura
+//clase para manejar cookies desde el cliente
+//NOTA: httpOnly NO se puede setear desde document.cookie; solo el backend
+//puede crear cookies httpOnly mediante Set-Cookie header.
 class CookieManager {
-  //establecer una cookie con opciones de seguridad
   static setCookie(name: string, value: string, options: CookieOptions = {}): void {
     let cookieString = `${name}=${encodeURIComponent(value)}`;
     
@@ -32,10 +32,6 @@ class CookieManager {
     
     if (options.secure) {
       cookieString += '; secure';
-    }
-    
-    if (options.httpOnly) {
-      cookieString += '; httponly';
     }
     
     if (options.sameSite) {
@@ -81,20 +77,19 @@ export class TokenService {
   private static readonly ACCESS_TOKEN_KEY = 'access_token';
   private static readonly REFRESH_TOKEN_KEY = 'refresh_token';
   
-  //guardar tokens de autenticación de forma segura
+  //guardar tokens en cookie del cliente (accesibles desde JS).
+  //SOLO para migración desde localStorage. Las cookies httpOnly reales
+  //son seteadas por el backend via Set-Cookie en login/refresh.
   static saveTokens(accessToken: string, refreshToken: string): void {
-    //access token con corta duración (1 hora por defecto)
     CookieManager.setCookie(this.ACCESS_TOKEN_KEY, accessToken, {
-      maxAge: 60 * 60, // 1 hora en segundos
+      maxAge: 60 * 60,
       path: '/',
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax'
-      //
     });
 
-    //refresh token con larga duración (7 días por defecto)
     CookieManager.setCookie(this.REFRESH_TOKEN_KEY, refreshToken, {
-      maxAge: 7 * 24 * 60 * 60, // 7 días en segundos
+      maxAge: 7 * 24 * 60 * 60,
       path: '/',
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax'

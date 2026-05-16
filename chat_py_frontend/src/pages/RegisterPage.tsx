@@ -50,7 +50,7 @@ const RegisterPage = () => {
         const result = await authService.getPasswordRequirements();
         setPasswordRequirements(result.data);
       } catch (error) {
-        logger.error('Error al cargar requisitos de contraseùa', error instanceof Error ? error : null, { operation: 'getPasswordRequirements' });
+        logger.error('Error al cargar requisitos de contrase√±a', error instanceof Error ? error : null, { operation: 'getPasswordRequirements' });
         setPasswordRequirements({
           min_length: 8,
           max_length: 128,
@@ -78,11 +78,11 @@ const RegisterPage = () => {
   const validateForm = () => {
     const errors: Record<string, string> = {};
     if (!formData.email) errors.email = 'El email es requerido';
-    else if (!isValidEmail(formData.email)) errors.email = 'El email no es vùlido. Por favor, ingrese un email vùlido.';
+    else if (!isValidEmail(formData.email)) errors.email = 'El email no es v√°lido. Por favor, ingrese un email v√°lido.';
     const usernameValidation = validateUsername(formData.username);
     if (!usernameValidation.isValid && usernameValidation.error) errors.username = usernameValidation.error;
-    if (!formData.password) errors.password = 'La contraseùa es requerida';
-    else if (!passwordValid) errors.password = 'La contraseùa no cumple con los requisitos de seguridad';
+    if (!formData.password) errors.password = 'La contrase√±a es requerida';
+    else if (!passwordValid) errors.password = 'La contrase√±a no cumple con los requisitos de seguridad';
     const telephoneValidation = validateTelephone(formData.telephone);
     if (!telephoneValidation.isValid && telephoneValidation.error) errors.telephone = telephoneValidation.error;
     setFormErrors(errors);
@@ -105,7 +105,7 @@ const RegisterPage = () => {
       setShowSuccessModal(true);
     } catch (error) {
       const axiosError = error as AxiosError<BackendErrorResponse>;
-      let errorMessage = axiosError.response?.data?.detail || 'Error de conexiùn. Intùntalo de nuevo.';
+      let errorMessage = axiosError.response?.data?.detail || 'Error de conexi√≥n. Int√©ntalo de nuevo.';
       if (axiosError.response?.status === 422 && axiosError.response?.data?.errors) {
         const messages = axiosError.response.data.errors
           .map((err) => {
@@ -113,7 +113,7 @@ const RegisterPage = () => {
             return `${field}: ${err.msg}`;
           })
           .join(' | ');
-        errorMessage = `Datos invùlidos - ${messages}`;
+        errorMessage = `Datos inv√°lidos - ${messages}`;
       }
       setFormErrors((prev) => ({ ...prev, general: errorMessage }));
     } finally {
@@ -134,8 +134,8 @@ const RegisterPage = () => {
           <div className="mx-auto bg-blue-500/10 p-4 rounded-full w-20 h-20 flex items-center justify-center mb-4">
             <MessageSquare className="w-10 h-10 text-blue-400" />
           </div>
-          <h2 className="text-2xl font-bold mb-2">Ya estùs conectado</h2>
-          <p className="text-slate-400 mb-6">Parece que ya tienes una sesiùn activa.</p>
+          <h2 className="text-2xl font-bold mb-2">Ya est√°s conectado</h2>
+          <p className="text-slate-400 mb-6">Parece que ya tienes una sesi√≥n activa.</p>
           <div className="space-y-3">
             <button onClick={() => navigate('/chat')} className="premium-btn">
               Ir al Chat
@@ -160,7 +160,7 @@ const RegisterPage = () => {
             <span className="material-symbols-outlined text-6xl">person_add</span>
           </div>
           <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400">Crear Cuenta</h1>
-          <p className="text-slate-400 mt-2">ùnete a nuestra plataforma de chat y descubre una nueva experiencia.</p>
+          <p className="text-slate-400 mt-2">√önete a nuestra plataforma de chat y descubre una nueva experiencia.</p>
         </div>
 
         {formErrors.general && (
@@ -176,7 +176,7 @@ const RegisterPage = () => {
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                 <Mail className="h-5 w-5 text-slate-500" />
               </div>
-              <input type="email" name="email" className={`premium-input pl-11 ${formErrors.email ? 'border-red-500/50 focus:ring-red-500' : ''}`} placeholder="Correo electrùnico" value={formData.email} onChange={handleChange} disabled={isSubmitting} />
+              <input type="email" name="email" className={`premium-input pl-11 ${formErrors.email ? 'border-red-500/50 focus:ring-red-500' : ''}`} placeholder="Correo electr√≥nico" value={formData.email} onChange={handleChange} disabled={isSubmitting} />
             </div>
             {formErrors.email && <p className="text-red-400 text-xs mt-1.5 ml-1">{formErrors.email}</p>}
           </div>
@@ -196,7 +196,7 @@ const RegisterPage = () => {
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                 <Lock className="h-5 w-5 text-slate-500" />
               </div>
-              <input type={showPassword ? 'text' : 'password'} name="password" className={`premium-input pl-11 pr-11 ${formErrors.password ? 'border-red-500/50 focus:ring-red-500' : ''}`} placeholder="Contraseùa" value={formData.password} onChange={handleChange} disabled={isSubmitting} />
+              <input type={showPassword ? 'text' : 'password'} name="password" className={`premium-input pl-11 pr-11 ${formErrors.password ? 'border-red-500/50 focus:ring-red-500' : ''}`} placeholder="Contrase√±a" value={formData.password} onChange={handleChange} disabled={isSubmitting} />
               <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-200">
                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
@@ -211,7 +211,7 @@ const RegisterPage = () => {
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                 <Phone className="h-5 w-5 text-slate-500" />
               </div>
-              <input type="text" name="telephone" className={`premium-input pl-11 ${formErrors.telephone ? 'border-red-500/50 focus:ring-red-500' : ''}`} placeholder="Telùfono (ej: +1234567890)" value={formData.telephone} onChange={handleChange} disabled={isSubmitting} />
+              <input type="text" name="telephone" className={`premium-input pl-11 ${formErrors.telephone ? 'border-red-500/50 focus:ring-red-500' : ''}`} placeholder="Tel√©fono (ej: +1234567890)" value={formData.telephone} onChange={handleChange} disabled={isSubmitting} />
             </div>
             {formErrors.telephone && <p className="text-red-400 text-xs mt-1.5 ml-1">{formErrors.telephone}</p>}
           </div>
@@ -229,9 +229,9 @@ const RegisterPage = () => {
         </form>
 
         <p className="text-center text-slate-400 text-sm mt-6">
-          ùYa tienes una cuenta?{' '}
+          ¬øYa tienes una cuenta?{' '}
           <Link to="/login" className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors">
-            Inicia sesiùn aquù
+            Inicia sesi√≥n aqu√≠
           </Link>
         </p>
       </motion.div>
@@ -242,7 +242,7 @@ const RegisterPage = () => {
           setShowSuccessModal(false);
           navigate('/login');
         }}
-        title="ùRegistro Exitoso!"
+        title="Registro Exitoso!"
         message={successMessage}
         onConfirm={() => {
           setShowSuccessModal(false);

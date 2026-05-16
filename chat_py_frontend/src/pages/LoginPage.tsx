@@ -35,8 +35,8 @@ const LoginPage = () => {
   const validateForm = () => {
     const errors: Record<string, string> = {};
     if (!formData.email) errors.email = 'El email es requerido';
-    else if (!isValidEmail(formData.email)) errors.email = 'El email no es válido.';
-    if (!formData.password) errors.password = 'La contraseña es requerida';
+    else if (!isValidEmail(formData.email)) errors.email = 'El email no es vÃ¡lido.';
+    if (!formData.password) errors.password = 'La contraseÃ±a es requerida';
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -71,8 +71,8 @@ const LoginPage = () => {
           <div className="mx-auto bg-blue-500/10 p-4 rounded-full w-20 h-20 flex items-center justify-center mb-4 border border-blue-500/20">
             <MessageSquare className="w-10 h-10 text-blue-400" />
           </div>
-          <h2 className="text-2xl font-bold mb-2">Ya estás conectado</h2>
-          <p className="text-slate-400 mb-6">Parece que ya tienes una sesión activa en este dispositivo.</p>
+          <h2 className="text-2xl font-bold mb-2">Ya estÃ¡s conectado</h2>
+          <p className="text-slate-400 mb-6">Parece que ya tienes una sesiÃ³n activa en este dispositivo.</p>
           <div className="space-y-3">
             <button onClick={() => navigate('/chat')} className="premium-btn">
               Ir a mis chats
@@ -97,7 +97,7 @@ const LoginPage = () => {
             <span className="material-symbols-outlined text-6xl">chat_bubble</span>
           </div>
           <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400">Bienvenido</h1>
-          <p className="text-slate-400 mt-2">Inicia sesión para continuar chateando.</p>
+          <p className="text-slate-400 mt-2">Inicia sesiÃ³n para continuar chateando.</p>
         </div>
 
         {generalError && (
@@ -113,7 +113,7 @@ const LoginPage = () => {
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                 <Mail className="h-5 w-5 text-slate-500" />
               </div>
-              <input type="email" name="email" className={`premium-input pl-11 ${formErrors.email ? 'border-red-500/50 focus:ring-red-500' : ''}`} placeholder="Correo electrónico" value={formData.email} onChange={handleChange} />
+              <input type="email" name="email" className={`premium-input pl-11 ${formErrors.email ? 'border-red-500/50 focus:ring-red-500' : ''}`} placeholder="Correo electrÃ³nico" value={formData.email} onChange={handleChange} />
             </div>
             {formErrors.email && <p className="text-red-400 text-xs mt-1.5 ml-1">{formErrors.email}</p>}
           </div>
@@ -123,7 +123,7 @@ const LoginPage = () => {
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                 <Lock className="h-5 w-5 text-slate-500" />
               </div>
-              <input type="password" name="password" className={`premium-input pl-11 ${formErrors.password ? 'border-red-500/50 focus:ring-red-500' : ''}`} placeholder="Contraseña" value={formData.password} onChange={handleChange} />
+              <input type="password" name="password" className={`premium-input pl-11 ${formErrors.password ? 'border-red-500/50 focus:ring-red-500' : ''}`} placeholder="ContraseÃ±a" value={formData.password} onChange={handleChange} />
             </div>
             {formErrors.password && <p className="text-red-400 text-xs mt-1.5 ml-1">{formErrors.password}</p>}
           </div>
@@ -133,7 +133,7 @@ const LoginPage = () => {
               <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
             ) : (
               <>
-                <span>Iniciar Sesión</span>
+                <span>Iniciar SesiÃ³n</span>
                 <LogIn className="w-5 h-5" />
               </>
             )}
@@ -141,9 +141,9 @@ const LoginPage = () => {
         </form>
 
         <p className="text-center text-slate-400 text-sm mt-6">
-          ¿No tienes una cuenta?{' '}
+          Â¿No tienes una cuenta?{' '}
           <button onClick={() => navigate('/register')} className="text-blue-400 hover:text-blue-300 font-medium transition-colors">
-            Regístrate aquí
+            Registrate aquÃ­
           </button>
         </p>
       </motion.div>

@@ -138,7 +138,7 @@ const ChatArea = () => {
                   </div>
                   <div className="flex items-center gap-1 mt-1 px-1">
                     <span className="text-xs text-slate-500">{formatTime(message.timestamp)}</span>
-                    {isSent && <span className={`text-xs ml-1 ${message.is_read ? 'text-blue-400' : 'text-slate-500'}`}>{message.is_read ? '??' : '?'}</span>}
+                    {isSent && <span className={`text-xs ml-1 ${message.is_read ? 'text-blue-400' : 'text-slate-500'}`}>{message.is_read ? 'seen' : 'sent'}</span>}
                   </div>
                 </motion.div>
               );

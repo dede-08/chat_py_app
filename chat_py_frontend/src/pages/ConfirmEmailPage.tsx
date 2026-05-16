@@ -17,11 +17,11 @@ const ConfirmEmailPage = () => {
       .confirmEmail(token)
       .then((response) => {
         setStatus('success');
-        setMessage(response.data.message || '¡Tu correo ha sido confirmado exitosamente!');
+        setMessage(response.data.message || 'Tu correo ha sido confirmado exitosamente!');
       })
       .catch((error: AxiosError<{ detail?: string }>) => {
         setStatus('error');
-        setMessage(error.response?.data?.detail || 'Ocurrió un error al confirmar tu correo.');
+        setMessage(error.response?.data?.detail || 'OcurriÃ³ un error al confirmar tu correo.');
       });
   }, [token]);
 
@@ -34,11 +34,11 @@ const ConfirmEmailPage = () => {
           </div>
         )}
         {status !== 'loading' && <div className={`icon ${status}`}>{status === 'success' ? '?' : '?'}</div>}
-        <h2 className="mt-3">{status === 'loading' ? 'Confirmando tu correo...' : status === 'success' ? '¡Confirmación Exitosa!' : 'Error de Confirmación'}</h2>
+        <h2 className="mt-3">{status === 'loading' ? 'Confirmando tu correo...' : status === 'success' ? 'ConfirmaciÃ³n Exitosa!' : 'Error de ConfirmaciÃ³n'}</h2>
         <p className="mt-2">{message}</p>
         {status !== 'loading' && (
           <Link to="/login" className="premium-btn mt-6 inline-block w-auto px-6">
-            Ir a Iniciar Sesión
+            Ir a Iniciar SesiÃ³n
           </Link>
         )}
       </div>
