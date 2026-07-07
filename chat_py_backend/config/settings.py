@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     refresh_token_expire_days: int = 7  # 7 días de expiración para refresh tokens
     
     # CORS
-# Valores por defecto solo para desarrollo local
+    # Valores por defecto solo para desarrollo local
     frontend_url: str = "http://localhost:5173"
     allowed_origins: List[str] = [
         "http://localhost:3000",
@@ -46,7 +46,10 @@ class Settings(BaseSettings):
     ws_heartbeat_interval: int = 30
     ws_connection_timeout: int = 60
 
-    # Configuración de correo
+    # Entorno
+    environment: str = "development"
+
+    # Configuracion de correo
     mail_username: str = "[EMAIL_ADDRESS]"
     mail_password: str = "[PASSWORD]"
     mail_from: EmailStr = "[EMAIL_ADDRESS]"
@@ -68,12 +71,16 @@ class Settings(BaseSettings):
         return v or []
     
     @property
+    def is_production(self) -> bool:
+        return self.environment == "production"
+
+    @property
     def cors_origins(self) -> List[str]:
-        """Obtener orígenes permitidos para CORS"""
+        """Obtener origenes permitidos para CORS"""
         origins = {self.frontend_url}
         if self.allowed_origins:
             origins.update(self.allowed_origins)
         return list(origins)
 
-#instancia global de configuración
+# instancia global de configuracion
 settings = Settings()

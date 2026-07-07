@@ -1,60 +1,58 @@
-from database.connection import database
+from database.connection import get_database
 from model.chat import Message, ChatRoom
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 from bson import ObjectId
 from utils.jwt_handler import decode_access_token
 from utils.logger import chat_logger
 
 class ChatService:
-    def __init__(self):
-        if database is None:
+    async def _get_db(self):
+        db = await get_database()
+        if db is None:
             raise RuntimeError("Base de datos no inicializada. Verifique la conexión.")
-        self.messages_collection = database.messages
-        self.chat_rooms_collection = database.chat_rooms
-        self.users_collection = database.users
+        return db
 
     async def save_message(self, sender_email: str, receiver_email: str, content: str) -> Message:
-        #guardar un mensaje en la base de datos
+        db = await self._get_db()
         message_data = {
             "sender_email": sender_email,
             "receiver_email": receiver_email,
             "content": content,
-            "timestamp": datetime.utcnow(),
+            "timestamp": datetime.now(timezone.utc),
             "is_read": False
         }
-        
-        result = await self.messages_collection.insert_one(message_data)
+
+        result = await db.messages.insert_one(message_data)
         message_data["id"] = str(result.inserted_id)
-        
-        #actualizar o crear sala de chat
+
         await self._update_chat_room(sender_email, receiver_email, message_data)
-        
+
         return Message(**message_data)
 
     async def get_chat_history(self, user1_email: str, user2_email: str, limit: int = 50) -> List[Message]:
-        #obtener historial de chat entre dos usuarios
+        db = await self._get_db()
         query = {
             "$or": [
                 {"sender_email": user1_email, "receiver_email": user2_email},
                 {"sender_email": user2_email, "receiver_email": user1_email}
             ]
         }
-        
-        cursor = self.messages_collection.find(query).sort("timestamp", -1).limit(limit)
+
+        cursor = db.messages.find(query).sort("timestamp", -1).limit(limit)
         messages = []
-        
+
         async for doc in cursor:
             doc["id"] = str(doc["_id"])
             messages.append(Message(**doc))
-        
-        return list(reversed(messages))  #ordenar por timestamp ascendente
+
+        return list(reversed(messages))
 
     async def get_user_chat_rooms(self, user_email: str) -> List[ChatRoom]:
-        #obtener todas las salas de chat de un usuario
+        db = await self._get_db()
         query = {"participants": user_email}
-        cursor = self.chat_rooms_collection.find(query).sort("updated_at", -1)
-        
+        cursor = db.chat_rooms.find(query).sort("updated_at", -1)
+
         chat_rooms = []
         async for doc in cursor:
             doc["id"] = str(doc["_id"])
@@ -65,105 +63,79 @@ class ChatService:
                 elif "id" not in last_msg:
                     last_msg["id"] = ""
             chat_rooms.append(ChatRoom(**doc))
-        
+
         return chat_rooms
 
     async def mark_messages_as_read(self, sender_email: str, receiver_email: str):
-        #marcar mensajes como leídos
+        db = await self._get_db()
         query = {
             "sender_email": sender_email,
             "receiver_email": receiver_email,
             "is_read": False
         }
-        
-        await self.messages_collection.update_many(
+
+        await db.messages.update_many(
             query,
             {"$set": {"is_read": True}}
         )
 
     async def get_unread_count(self, user_email: str) -> int:
-        #obtener numero de mensajes no leidos para un usuario
+        db = await self._get_db()
         query = {
             "receiver_email": user_email,
             "is_read": False
         }
-        
-        return await self.messages_collection.count_documents(query)
+
+        return await db.messages.count_documents(query)
 
     async def _update_chat_room(self, user1_email: str, user2_email: str, last_message: dict):
-        #actualizar o crear sala de chat
+        db = await self._get_db()
         participants = sorted([user1_email, user2_email])
         room_id = f"{participants[0]}_{participants[1]}"
-        
+
         chat_room_data = {
             "room_id": room_id,
             "participants": participants,
             "last_message": last_message,
-            "updated_at": datetime.utcnow()
+            "updated_at": datetime.now(timezone.utc)
         }
-        
-        #buscar si ya existe la sala
-        existing_room = await self.chat_rooms_collection.find_one({"room_id": room_id})
-        
+
+        existing_room = await db.chat_rooms.find_one({"room_id": room_id})
+
         if existing_room:
-            #actualizar sala existente
-            await self.chat_rooms_collection.update_one(
+            await db.chat_rooms.update_one(
                 {"room_id": room_id},
                 {
                     "$set": {
                         "last_message": last_message,
-                        "updated_at": datetime.utcnow()
+                        "updated_at": datetime.now(timezone.utc)
                     }
                 }
             )
         else:
-            #crear nueva sala
-            chat_room_data["created_at"] = datetime.utcnow()
-            await self.chat_rooms_collection.insert_one(chat_room_data)
+            chat_room_data["created_at"] = datetime.now(timezone.utc)
+            await db.chat_rooms.insert_one(chat_room_data)
 
     async def get_all_users(self, current_user_email: str, limit: int = 100, skip: int = 0) -> list:
-        """
-        Obtener lista de todos los usuarios excepto el actual
-        
-        Args:
-            current_user_email: Email del usuario actual
-            limit: Número máximo de usuarios a retornar (default: 100)
-            skip: Número de usuarios a saltar para paginación (default: 0)
-        
-        Returns:
-            Lista de usuarios (sin password)
-        """
-        if limit > 500:  # Límite máximo de seguridad
+        db = await self._get_db()
+        if limit > 500:
             limit = 500
             chat_logger.warning(f"Límite de usuarios ajustado a 500 (solicitado: {limit})")
-        
-        cursor = self.users_collection.find(
+
+        cursor = db.users.find(
             {"email": {"$ne": current_user_email}},
             {"password": 0}
         ).skip(skip).limit(limit)
-        
+
         users = []
         async for doc in cursor:
             doc["id"] = str(doc.get("_id", ""))
-            doc.pop("_id", None)  # Elimina el campo _id para evitar problemas de serialización
+            doc.pop("_id", None)
             users.append(doc)
         return users
 
     @staticmethod
     async def get_user_email_from_token(token: str):
-        """
-        Obtener email del usuario desde token JWT (método estático).
-        
-        DEPRECADO: Este método se mantiene por compatibilidad, pero se recomienda
-        usar directamente decode_access_token() de utils.jwt_handler.
-        
-        Args:
-            token: Token JWT a decodificar
-            
-        Returns:
-            Email del usuario si el token es válido, None en caso contrario
-        """
-        # Usar la función centralizada que valida el tipo de token y expiración
         payload = decode_access_token(token)
         if payload:
             return payload.get("email")

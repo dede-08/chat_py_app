@@ -10,9 +10,9 @@ class DatabaseMigration:
         self.logger = db_logger
     
     async def create_indexes(self):
-        """Crear índices para optimizar consultas"""
+        """Crear indices para optimizar consultas"""
         index_definitions = [
-            # Índices para usuarios
+            # Indices para usuarios
             {
                 'collection': self.db.users,
                 'keys': [("email", 1)],
@@ -24,7 +24,7 @@ class DatabaseMigration:
                 'options': {"unique": True, "name": "idx_users_username"}
             },
             
-            # Índices para mensajes
+            # Indices para mensajes
             {
                 'collection': self.db.messages,
                 'keys': [("sender_email", 1), ("receiver_email", 1), ("timestamp", -1)],
@@ -41,7 +41,7 @@ class DatabaseMigration:
                 'options': {"name": "idx_messages_timestamp"}
             },
             
-            # Índices para chat rooms
+            # Indices para chat rooms
             {
                 'collection': self.db.chat_rooms,
                 'keys': [("participants", 1)],
@@ -58,7 +58,7 @@ class DatabaseMigration:
                 'options': {"name": "idx_chatrooms_updated"}
             },
             
-            # Índices para refresh tokens (excepto expires_at que se maneja en TTL)
+            # Indices para refresh tokens (excepto expires_at que se maneja en TTL)
             {
                 'collection': self.db.refresh_tokens,
                 'keys': [("user_email", 1), ("is_revoked", 1)],
@@ -99,49 +99,52 @@ class DatabaseMigration:
         self.logger.info(f"Índices completados: {created_count} creados, {skipped_count} ya existían")
     
     async def setup_ttl_indexes(self):
-        """Configurar índices TTL para limpieza automática"""
+        """Configurar indices TTL para limpieza automatica"""
         try:
-            # TTL para mensajes antiguos (opcional - 1 año)
+            # TTL para mensajes antiguos (opcional - 1 year)
             await self.db.messages.create_index([
                 ("timestamp", 1)
             ], expireAfterSeconds=31536000, name="idx_messages_ttl")  # 365 días
             
-            # TTL para logs de conexión (si se implementa)
+            # TTL para logs de conexion (si se implementa)
             try:
                 await self.db.connection_logs.create_index([
                     ("timestamp", 1)
                 ], expireAfterSeconds=604800, name="idx_connection_logs_ttl")  # 7 días
             except Exception:
-                pass  # La colección puede no existir
+                self.logger.debug("Coleccion connection_logs no existe, se omite indice TTL")
             
             # TTL para refresh tokens expirados (limpieza automática)
             await self.db.refresh_tokens.create_index([
                 ("expires_at", 1)
             ], expireAfterSeconds=0, name="idx_refresh_tokens_ttl")
             
-            self.logger.info("Índices TTL configurados exitosamente")
+            self.logger.info("Indices TTL configurados exitosamente")
             
         except Exception as e:
             error_str = str(e).lower()
             if "already exists" in error_str or "indexoptionsconflict" in error_str:
-                self.logger.info("Índices TTL ya existen")
+                self.logger.info("Indices TTL ya existen")
             else:
-                self.logger.warning(f"No se pudieron configurar índices TTL: {str(e)}")
+                self.logger.warning(f"No se pudieron configurar indices TTL: {str(e)}")
     
     async def run_migrations(self):
-        """Ejecutar todas las migraciones"""
+        """Ejecutar todas las migraciones de base de datos"""
         self.logger.info("Iniciando migraciones de base de datos...")
-        
-        migration_tasks = [
+
+        results = await asyncio.gather(
             self.create_indexes(),
-            self.setup_ttl_indexes()
-        ]
-        
-        await asyncio.gather(*migration_tasks, return_exceptions=True)
-        
+            self.setup_ttl_indexes(),
+            return_exceptions=True,
+        )
+
+        for i, result in enumerate(results):
+            if isinstance(result, Exception):
+                self.logger.error(f"Error en migracion {i}: {result}")
+
         self.logger.info("Migraciones completadas")
 
 async def run_database_migrations(db: AsyncIOMotorDatabase):
-    """Función principal para ejecutar migraciones"""
+    """Funcion principal para ejecutar migraciones"""
     migration = DatabaseMigration(db)
     await migration.run_migrations()

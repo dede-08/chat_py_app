@@ -6,7 +6,7 @@ from fastapi.encoders import jsonable_encoder
 from contextlib import asynccontextmanager
 from routes import auth, chat_ws, chat
 from config.settings import settings
-from database.connection import database, client
+from database.connection import get_database, get_client, close_database
 from database.migrations import run_database_migrations
 from middleware.security import (
     SecurityHeaders,
@@ -25,17 +25,16 @@ async def lifespan(app: FastAPI):
     """Manejador de ciclo de vida de la aplicación"""
     #startup
     try:
-        if client is None or database is None:
+        db = await get_database()
+        if db is None:
             app_logger.error("No se pudo conectar a la base de datos durante el inicio")
             yield
             return
         
-        #verificar conexion
-        await client.admin.command('ping')
         app_logger.info("Conexión a MongoDB verificada exitosamente")
         
         #ejecutar migraciones
-        await run_database_migrations(database)
+        await run_database_migrations(db)
         
         #iniciar tarea de limpieza del rate limiter
         asyncio.create_task(auth_rate_limiter.cleanup_old_entries())
@@ -63,12 +62,7 @@ async def lifespan(app: FastAPI):
     yield
     
     #shutdown
-    try:
-        if client:
-            client.close()
-            app_logger.info("Conexión a MongoDB cerrada correctamente")
-    except Exception as e:
-        app_logger.error(f"Error al cerrar conexión: {e}")
+    await close_database()
 
 app = FastAPI(
     title="ChatPy API",
@@ -99,7 +93,7 @@ app.add_middleware(
     expose_headers=["set-cookie"],
 )
 
-#middleware de seguridad - DESPUÉS de CORS
+#middleware de seguridad - DESPUES de CORS
 @app.middleware("http")
 async def security_headers_middleware(request: Request, call_next):
     return await SecurityHeaders.add_security_headers(request, call_next)
@@ -109,7 +103,7 @@ async def security_headers_middleware(request: Request, call_next):
 async def logging_middleware(request: Request, call_next):
     return await RequestLogger.log_requests(request, call_next)
 
-#middleware de rate limiting para rutas de autenticación
+#middleware de rate limiting para rutas de autenticacion
 @app.middleware("http")
 async def auth_rate_limit_middleware(request: Request, call_next):
     if request.url.path.startswith("/auth"):
@@ -128,14 +122,13 @@ async def api_rate_limit_middleware(request: Request, call_next):
 async def health_check():
     """endpoint para verificar el estado de la API"""
     try:
-        if client is None or database is None:
+        db = await get_database()
+        if db is None:
             return JSONResponse(
                 status_code=503,
                 content={"status": "unhealthy", "database": "disconnected"}
             )
         
-        # Verificar conexión a la base de datos
-        await client.admin.command('ping')
         return {
             "status": "healthy",
             "database": "connected",

@@ -11,7 +11,7 @@ from schemas.user_schema import (
     UserProfileResponse,
     UserProfileUpdate,
 )
-from database.connection import users_collection
+from database import connection as db_conn
 from passlib.context import CryptContext
 from utils.jwt_handler import (
     create_access_token, 
@@ -26,6 +26,7 @@ from utils.email_handler import send_email
 from config.settings import settings
 from utils.logger import auth_logger
 from services.refresh_token_service import refresh_token_service
+import re
 import uuid
 
 router = APIRouter(prefix="/auth")
@@ -70,12 +71,12 @@ async def validate_password(request: PasswordValidationRequest):
 @router.post("/register")
 async def register(user: UserRegister, request: Request):
     try:
-        existing_user = await users_collection.find_one({"email": user.email})
+        existing_user = await db_conn.users_collection.find_one({"email": user.email})
         if existing_user:
             auth_logger.warning(f"Intento de registro con email existente: {user.email}")
             raise HTTPException(status_code=400, detail="El email ya ha sido registrado")
 
-        existing_username = await users_collection.find_one({"username": user.username})
+        existing_username = await db_conn.users_collection.find_one({"username": user.username})
         if existing_username:
             auth_logger.warning(f"Intento de registro con username existente: {user.username}")
             raise HTTPException(status_code=400, detail="El nombre de usuario ya está en uso")
@@ -88,13 +89,13 @@ async def register(user: UserRegister, request: Request):
     hashed_password = pwd_context.hash(user.password)
     confirmation_token = str(uuid.uuid4())
     
-    user_dict = user.dict()
+    user_dict = user.model_dump()
     user_dict["password"] = hashed_password
     user_dict["is_email_confirmed"] = False
     user_dict["email_confirmation_token"] = confirmation_token
 
     try:
-        await users_collection.insert_one(user_dict)
+        await db_conn.users_collection.insert_one(user_dict)
         auth_logger.info(f"Usuario registrado exitosamente: {user.email}")
     except Exception as e:
         auth_logger.error(f"Error al insertar usuario: {e}")
@@ -116,24 +117,24 @@ async def register(user: UserRegister, request: Request):
         auth_logger.info(f"Correo de confirmación enviado a: {user.email}")
     except Exception as e:
         auth_logger.error(f"Error al enviar correo de confirmación: {e}")
-        #no fallar el registro si falla el envío de correo, pero loguear el error
+        #no fallar el registro si falla el envio de correo, pero loguear el error
 
     return {"message": "Usuario registrado correctamente. Por favor, revisa tu correo para confirmar tu cuenta."}
 
 @router.get("/confirm-email/{token}")
 async def confirm_email(token: str):
     try:
-        user = await users_collection.find_one({"email_confirmation_token": token})
+        user = await db_conn.users_collection.find_one({"email_confirmation_token": token})
         if not user:
-            auth_logger.warning(f"Intento de confirmación con token inválido: {token[:10]}...")
+            auth_logger.warning(f"Intento de confirmacion con token invalido: {token[:10]}...")
             raise HTTPException(status_code=400, detail="Token de confirmación inválido o expirado.")
 
-        await users_collection.update_one(
+        await db_conn.users_collection.update_one(
             {"_id": user["_id"]},
             {"$set": {"is_email_confirmed": True, "email_confirmation_token": None}}
         )
         auth_logger.info(f"Email confirmado exitosamente: {user.get('email', 'unknown')}")
-        return {"message": "Correo electrónico confirmado correctamente."}
+        return {"message": "Email confirmado correctamente."}
     except HTTPException:
         raise
     except Exception as e:
@@ -143,18 +144,18 @@ async def confirm_email(token: str):
 @router.post("/login")
 async def login(user: UserLogin, response: Response):
     try:
-        db_user = await users_collection.find_one({"email": user.email})
+        db_user = await db_conn.users_collection.find_one({"email": user.email})
         if not db_user:
             auth_logger.warning(f"Intento de login con email no registrado: {user.email}")
-            raise HTTPException(status_code=400, detail="Credenciales inválidas")
+            raise HTTPException(status_code=400, detail="Credenciales invalidas")
 
         if not db_user.get("is_email_confirmed"):
             auth_logger.warning(f"Intento de login con email no confirmado: {user.email}")
-            raise HTTPException(status_code=403, detail="Correo electrónico no confirmado. Por favor, revisa tu bandeja de entrada.")
+            raise HTTPException(status_code=403, detail="Email no confirmado. Por favor, revisa tu bandeja de entrada.")
 
         if not pwd_context.verify(user.password, db_user["password"]):
             auth_logger.warning(f"Intento de login con contraseña incorrecta: {user.email}")
-            raise HTTPException(status_code=400, detail="Credenciales inválidas")
+            raise HTTPException(status_code=400, detail="Credenciales invalidas")
 
         # Crear access token y refresh token
         access_token = create_access_token({"email": db_user["email"]})
@@ -169,22 +170,22 @@ async def login(user: UserLogin, response: Response):
         response.set_cookie(
             key="access_token",
             value=access_token,
-            max_age=settings.jwt_expire_minutes * 60, #segundos
+            max_age=settings.jwt_expire_minutes * 60,
             path="/",
             domain=None,
-            secure=False, #en produccion usar True con HTTPS
+            secure=settings.is_production,
             httponly=True,
-            samesite=None,
+            samesite="lax" if not settings.is_production else "none",
         )
         response.set_cookie(
             key="refresh_token",
             value=refresh_token,
-            max_age=settings.refresh_token_expire_days * 24 * 60 * 60,  # segundos
+            max_age=settings.refresh_token_expire_days * 24 * 60 * 60,
             path="/",
             domain=None,
-            secure=False,
+            secure=settings.is_production,
             httponly=True,
-            samesite=None,
+            samesite="lax" if not settings.is_production else "none",
         )
         
         return {
@@ -201,7 +202,7 @@ async def login(user: UserLogin, response: Response):
 @router.get("/profile", response_model=UserProfileResponse)
 async def get_profile(current_user_email: str = Depends(get_current_user_email_cookie)):
     """Obtener perfil del usuario autenticado."""
-    db_user = await users_collection.find_one({"email": current_user_email})
+    db_user = await db_conn.users_collection.find_one({"email": current_user_email})
     if not db_user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     return UserProfileResponse(
@@ -217,20 +218,20 @@ async def update_profile(
     current_user_email: str = Depends(get_current_user_email_cookie),
 ):
     """Actualizar perfil del usuario autenticado."""
-    db_user = await users_collection.find_one({"email": current_user_email})
+    db_user = await db_conn.users_collection.find_one({"email": current_user_email})
     if not db_user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
     update_fields = {}
 
     if data.username is not None and data.username != db_user.get("username"):
-        existing = await users_collection.find_one({"username": data.username})
+        existing = await db_conn.users_collection.find_one({"username": data.username})
         if existing:
             raise HTTPException(status_code=409, detail="El nombre de usuario ya está en uso")
         update_fields["username"] = data.username
 
     if data.email is not None and data.email != db_user.get("email"):
-        existing = await users_collection.find_one({"email": data.email})
+        existing = await db_conn.users_collection.find_one({"email": data.email})
         if existing:
             raise HTTPException(status_code=409, detail="El email ya está registrado")
         update_fields["email"] = data.email
@@ -243,14 +244,13 @@ async def update_profile(
         update_fields["password"] = pwd_context.hash(data.newPassword)
 
     if data.telephone is not None:
-        import re
         phone_pattern = re.compile(r"^\+?[\d\s\-\(\)]{7,15}$")
         if not phone_pattern.match(data.telephone):
             raise HTTPException(status_code=400, detail="Formato de teléfono inválido")
         update_fields["telephone"] = data.telephone
 
     if update_fields:
-        await users_collection.update_one(
+        await db_conn.users_collection.update_one(
             {"email": current_user_email},
             {"$set": update_fields},
         )
@@ -311,7 +311,7 @@ async def refresh_token_endpoint(request: Request, response: Response, body: Opt
             raise HTTPException(status_code=401, detail="Refresh token inválido")
         
         #verificar que el usuario existe y está confirmado
-        db_user = await users_collection.find_one({"email": user_email})
+        db_user = await db_conn.users_collection.find_one({"email": user_email})
         if not db_user:
             auth_logger.warning(f"Intento de refresh con usuario inexistente: {user_email}")
             raise HTTPException(status_code=401, detail="Usuario no encontrado")
@@ -348,9 +348,9 @@ async def refresh_token_endpoint(request: Request, response: Response, body: Opt
             max_age=settings.jwt_expire_minutes * 60,
             path="/",
             domain=None,
-            secure=False,
+            secure=settings.is_production,
             httponly=True,
-            samesite="lax",
+            samesite="lax" if not settings.is_production else "none",
         )
         response.set_cookie(
             key="refresh_token",
@@ -358,9 +358,9 @@ async def refresh_token_endpoint(request: Request, response: Response, body: Opt
             max_age=settings.refresh_token_expire_days * 24 * 60 * 60,
             path="/",
             domain=None,
-            secure=False,
+            secure=settings.is_production,
             httponly=True,
-            samesite="lax",
+            samesite="lax" if not settings.is_production else "none",
         )
         
         return {

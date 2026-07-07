@@ -47,7 +47,7 @@ class RateLimiter:
                     while requests and requests[0] < window_start:
                         requests.popleft()
                     
-                    #si no hay solicitudes recientes, marcar para eliminación
+                    #si no hay solicitudes recientes, marcar para eliminacion
                     if not requests:
                         clients_to_remove.append(client_id)
                 
@@ -63,16 +63,16 @@ class RateLimiter:
                 await asyncio.sleep(60)
 
 #instancias globales de rate limiters
-auth_rate_limiter = RateLimiter(max_requests=100, window_seconds=60)  #100 intentos por minuto (temporal)
+auth_rate_limiter = RateLimiter(max_requests=10, window_seconds=60)  #10 intentos por minuto
 api_rate_limiter = RateLimiter(max_requests=1000, window_seconds=60) #1000 requests por minuto (temporal)  
 ws_rate_limiter = RateLimiter(max_requests=1000, window_seconds=60) #1000 mensajes WS por minuto
 
 def clear_rate_limits():
-    """Limpiar todos los rate limiters (para desarrollo)"""
+    """Limpiar todos los rate limiters (para desarrollo local)"""
     auth_rate_limiter.requests.clear()
     api_rate_limiter.requests.clear()
     ws_rate_limiter.requests.clear()
-    app_logger.info("Rate limiters limpiados para desarrollo")
+    app_logger.info("Rate limiters limpiados para desarrollo local")
 
 async def rate_limit_middleware(request: Request, call_next, limiter: RateLimiter = None):
     #middleware para rate limiting
@@ -89,7 +89,7 @@ async def rate_limit_middleware(request: Request, call_next, limiter: RateLimite
         app_logger.warning(f"Rate limit excedido para IP: {client_ip}")
         return JSONResponse(
             status_code=429,
-            content={"detail": "Demasiadas solicitudes. Intenta más tarde."}
+            content={"detail": "Demasiadas solicitudes. Intenta mas tarde."}
         )
     
     response = await call_next(request)
@@ -101,7 +101,7 @@ class SecurityHeaders:
     @staticmethod
     def _build_csp_policy() -> str:
         """
-        Construir la política de Content Security Policy (CSP).
+        Construir la politica de Content Security Policy (CSP).
         
         Permite recursos necesarios para el frontend:
         - Scripts desde 'self' y CDNs confiables (Bootstrap)
@@ -188,7 +188,7 @@ class SecurityHeaders:
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         
-        #content security policy - construido dinámicamente
+        #content security policy - construido dinamicamente
         csp_policy = SecurityHeaders._build_csp_policy()
         response.headers["Content-Security-Policy"] = csp_policy
         

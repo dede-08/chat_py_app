@@ -1,5 +1,5 @@
-from database.connection import refresh_tokens_collection
-from datetime import datetime, timedelta
+from database import connection as db_conn
+from datetime import datetime, timedelta, timezone
 from config.settings import settings
 from utils.logger import auth_logger
 from typing import Optional
@@ -21,19 +21,19 @@ class RefreshTokenService:
             ID del refresh token guardado
         """
         token_id = secrets.token_urlsafe(32)
-        expires_at = datetime.utcnow() + timedelta(days=settings.refresh_token_expire_days)
+        expires_at = datetime.now(timezone.utc) + timedelta(days=settings.refresh_token_expire_days)
         
         token_data = {
             "token_id": token_id,
             "user_email": user_email,
             "refresh_token": refresh_token,
-            "created_at": datetime.utcnow(),
+            "created_at": datetime.now(timezone.utc),
             "expires_at": expires_at,
             "is_revoked": False
         }
         
         try:
-            await refresh_tokens_collection.insert_one(token_data)
+            await db_conn.refresh_tokens_collection.insert_one(token_data)
             auth_logger.debug(f"Refresh token guardado para usuario: {user_email}")
             return token_id
         except Exception as e:
@@ -53,7 +53,7 @@ class RefreshTokenService:
             True si el token es válido, False en caso contrario
         """
         try:
-            token_doc = await refresh_tokens_collection.find_one({
+            token_doc = await db_conn.refresh_tokens_collection.find_one({
                 "refresh_token": refresh_token,
                 "user_email": user_email,
                 "is_revoked": False
@@ -63,9 +63,9 @@ class RefreshTokenService:
                 return False
             
             #verificar si el token ha expirado
-            if token_doc.get("expires_at") < datetime.utcnow():
-                #marcar como revocado si está expirado
-                await refresh_tokens_collection.update_one(
+            if token_doc.get("expires_at") < datetime.now(timezone.utc):
+                #marcar como revocado si esta expirado
+                await db_conn.refresh_tokens_collection.update_one(
                     {"_id": token_doc["_id"]},
                     {"$set": {"is_revoked": True}}
                 )
@@ -89,12 +89,12 @@ class RefreshTokenService:
             True si se revocó exitosamente, False en caso contrario
         """
         try:
-            result = await refresh_tokens_collection.update_one(
+            result = await db_conn.refresh_tokens_collection.update_one(
                 {
                     "refresh_token": refresh_token,
                     "user_email": user_email
                 },
-                {"$set": {"is_revoked": True, "revoked_at": datetime.utcnow()}}
+                {"$set": {"is_revoked": True, "revoked_at": datetime.now(timezone.utc)}}
             )
             return result.modified_count > 0
         except Exception as e:
@@ -113,12 +113,12 @@ class RefreshTokenService:
             Número de tokens revocados
         """
         try:
-            result = await refresh_tokens_collection.update_many(
+            result = await db_conn.refresh_tokens_collection.update_many(
                 {
                     "user_email": user_email,
                     "is_revoked": False
                 },
-                {"$set": {"is_revoked": True, "revoked_at": datetime.utcnow()}}
+                {"$set": {"is_revoked": True, "revoked_at": datetime.now(timezone.utc)}}
             )
             auth_logger.info(f"Revocados {result.modified_count} refresh tokens para usuario: {user_email}")
             return result.modified_count
@@ -133,8 +133,8 @@ class RefreshTokenService:
         Debe ejecutarse periódicamente como tarea de mantenimiento
         """
         try:
-            result = await refresh_tokens_collection.delete_many({
-                "expires_at": {"$lt": datetime.utcnow()}
+            result = await db_conn.refresh_tokens_collection.delete_many({
+                "expires_at": {"$lt": datetime.now(timezone.utc)}
             })
             if result.deleted_count > 0:
                 auth_logger.info(f"Limpiados {result.deleted_count} refresh tokens expirados")
