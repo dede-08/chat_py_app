@@ -1,5 +1,6 @@
 import logger from './logger';
 import http from './httpClient';
+import authService from './authService';
 import { buildAuthorizedWsUrl } from './wsClient';
 import { handleAxiosError } from '../utils/errorHandler';
 import type { 
@@ -46,16 +47,13 @@ class ChatService {
             return;
         }
 
-        this.isConnecting = true;
-        logger.info('Intentando conectar WebSocket...', { operation: 'websocket_connect' });
-
-        //asegurar sesion valida (token en JS o cookie)
-        const token = await (await import('./wsClient')).ensureValidAccessToken(30);
-        if (!token) {
+        if (!authService.isAuthenticated()) {
             logger.debug('WebSocket: sin sesión activa, no se conecta', { operation: 'websocket_connect' });
-            this.isConnecting = false;
             return;
         }
+
+        this.isConnecting = true;
+        logger.info('Intentando conectar WebSocket...', { operation: 'websocket_connect' });
 
         const wsUrl = buildAuthorizedWsUrl('/ws/chat');
         if (!wsUrl) {

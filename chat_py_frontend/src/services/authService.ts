@@ -145,14 +145,6 @@ export const updateUserProfile = async (data: UpdateProfileData): Promise<ApiRes
   }
 };
 
-export const getToken = (): string | null => {
-  return authService.getAccessToken();
-};
-
-export const getRefreshToken = (): string | null => {
-  return authService.getRefreshToken();
-};
-
 export const getUserEmail = (): string | null => {
   return authService.getUserEmail();
 };
@@ -177,8 +169,6 @@ const authServiceExports = {
     validatePassword,
     getPasswordRequirements,
     confirmEmail,
-    getToken,
-    getRefreshToken,
     getUserEmail,
     getUsername,
     getUserProfile,

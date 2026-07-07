@@ -17,7 +17,6 @@ const ChatPage = () => {
         <div className="flex-1 flex overflow-hidden bg-slate-700 rounded-2xl shadow-xl border border-slate-800">
           <ChatArea />
         </div>
-
         {selectedUser && <UserInfoPanel user={selectedUser} />}
       </div>
     </div>

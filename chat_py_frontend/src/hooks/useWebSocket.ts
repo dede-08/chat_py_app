@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+import authService from '../services/authService';
 import { buildAuthorizedWsUrl } from '../services/wsClient';
 import logger from '../services/logger';
 
@@ -38,73 +39,65 @@ const useWebSocket = (urlOrPath: string, options: WebSocketOptions = {}) => {
     let reconnectCount = 0;
     let shouldReconnect = true;
 
-    const connect = async () => {
+    const connect = () => {
       if (!shouldReconnect) return;
 
-      try {
-        const { ensureValidAccessToken } = await import('../services/wsClient');
-        const token = await ensureValidAccessToken(30);
-        if (!token) {
-          setError('No authenticated user for WebSocket');
-          return;
-        }
-        const wsUrl = buildAuthorizedWsUrl(urlOrPath);
-        if (!wsUrl) {
-          setError('Missing token for WebSocket');
-          return;
-        }
-        ws = new WebSocket(wsUrl, protocols);
-        setSocket(ws);
-
-        ws.onopen = (event) => {
-          logger.info('WebSocket connected', { operation: 'useWebSocket_connect' });
-          setIsConnected(true);
-          reconnectCount = 0;
-          setError(null);
-          onOpenRef.current?.(event);
-        };
-
-        ws.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data) as Record<string, unknown>;
-            const type = String(data.type ?? '');
-            const handler = messageHandlersRef.current.get(type);
-            if (handler) handler(data);
-            onMessageRef.current?.(data, event);
-          } catch (parseError) {
-            logger.error('Error parsing WebSocket message', parseError instanceof Error ? parseError : null, {
-              operation: 'useWebSocket_message',
-            });
-          }
-        };
-
-        ws.onclose = (event) => {
-          logger.info('WebSocket disconnected', {
-            operation: 'useWebSocket_close',
-            code: event.code,
-            reason: event.reason,
-          });
-          setIsConnected(false);
-          setSocket(null);
-          onCloseRef.current?.(event);
-
-          if (shouldReconnect && reconnectCount < maxReconnectAttempts) {
-            reconnectCount += 1;
-            reconnectTimeout = setTimeout(connect, reconnectInterval);
-          }
-        };
-
-        ws.onerror = (event) => {
-          logger.error('WebSocket error', null, { operation: 'useWebSocket_error' });
-          setError('WebSocket connection error');
-          onErrorRef.current?.(event);
-        };
-      } catch (err) {
-        logger.error('Error creating WebSocket', err instanceof Error ? err : null, {
-          operation: 'useWebSocket_create',
-        });
-        setError('Failed to create WebSocket connection');
+      if (!authService.isAuthenticated()) {
+        setError('No authenticated user for WebSocket');
+        return;
       }
+
+      const wsUrl = buildAuthorizedWsUrl(urlOrPath);
+      if (!wsUrl) {
+        setError('No se pudo construir la URL del WebSocket');
+        return;
+      }
+      ws = new WebSocket(wsUrl, protocols);
+      setSocket(ws);
+
+      ws.onopen = (event) => {
+        logger.info('WebSocket connected', { operation: 'useWebSocket_connect' });
+        setIsConnected(true);
+        reconnectCount = 0;
+        setError(null);
+        onOpenRef.current?.(event);
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data) as Record<string, unknown>;
+          const type = String(data.type ?? '');
+          const handler = messageHandlersRef.current.get(type);
+          if (handler) handler(data);
+          onMessageRef.current?.(data, event);
+        } catch (parseError) {
+          logger.error('Error parsing WebSocket message', parseError instanceof Error ? parseError : null, {
+            operation: 'useWebSocket_message',
+          });
+        }
+      };
+
+      ws.onclose = (event) => {
+        logger.info('WebSocket disconnected', {
+          operation: 'useWebSocket_close',
+          code: event.code,
+          reason: event.reason,
+        });
+        setIsConnected(false);
+        setSocket(null);
+        onCloseRef.current?.(event);
+
+        if (shouldReconnect && reconnectCount < maxReconnectAttempts) {
+          reconnectCount += 1;
+          reconnectTimeout = setTimeout(connect, reconnectInterval);
+        }
+      };
+
+      ws.onerror = (event) => {
+        logger.error('WebSocket error', null, { operation: 'useWebSocket_error' });
+        setError('WebSocket connection error');
+        onErrorRef.current?.(event);
+      };
     };
 
     connect();
