@@ -1,6 +1,7 @@
-import { User, Mail } from 'lucide-react';
+import { Mail, User } from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { User as ChatUser } from '../../types';
+import Avatar from '../Avatar/Avatar';
 
 interface UserInfoPanelProps {
   user: ChatUser;
@@ -13,8 +14,8 @@ const UserInfoPanel = ({ user }: UserInfoPanelProps) => {
       animate={{ opacity: 1, x: 0 }}
       className="w-72 flex-shrink-0 flex flex-col items-center p-6 glass-panel rounded-2xl"
     >
-      <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-4xl shadow-xl shadow-indigo-500/30 mb-4 relative">
-        {user.username ? user.username.charAt(0).toUpperCase() : 'U'}
+      <div className="mb-4">
+        <Avatar src={user.avatar_url} username={user.username} size="xl" className="shadow-xl shadow-indigo-500/30" />
       </div>
 
       <h3 className="text-xl font-bold text-slate-100 mb-1 truncate w-full text-center">{user.username}</h3>

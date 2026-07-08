@@ -5,6 +5,7 @@ import authService from '../../services/authService';
 import { validateChatMessage } from '../../utils/validators';
 import { sanitizeChatMessage } from '../../utils/sanitizer';
 import { useChat } from '../../context';
+import Avatar from '../Avatar/Avatar';
 
 const ChatArea = () => {
   const {
@@ -99,8 +100,8 @@ const ChatArea = () => {
   return (
     <div className="flex flex-col h-full w-full bg-slate-800">
       <div className="p-4 border-b border-slate-800 bg-slate-700 flex items-center z-10 shadow-sm">
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold mr-3 shadow-md">
-          {selectedUser.username ? selectedUser.username.charAt(0).toUpperCase() : 'U'}
+        <div className="mr-3">
+          <Avatar src={selectedUser.avatar_url} username={selectedUser.username} size="md" />
         </div>
         <div>
           <h3 className="text-slate-100 font-semibold">{selectedUser.username || selectedUser.email}</h3>

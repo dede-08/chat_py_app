@@ -53,7 +53,7 @@ export const loginUser = async (data: LoginData): Promise<ApiResponse<LoginRespo
     //guardar datos de usuario en localStorage
     //las cookies httpOnly las establece el backend y el navegador las envia en cada request
     const username = response.data.username || response.data.email || 'Usuario';
-    authService.saveUserData(response.data.email, username);
+    authService.saveUserData(response.data.email, username, null);
     
     logger.info('Login exitoso', { email: response.data.email });
     return createSuccessResponse(response.data);
@@ -128,7 +128,8 @@ export const updateUserProfile = async (data: UpdateProfileData): Promise<ApiRes
     if (response.data?.email != null) {
       authService.saveUserData(
         response.data.email,
-        response.data.username ?? authService.getUsername() ?? ''
+        response.data.username ?? authService.getUsername() ?? '',
+        response.data.avatar_url ?? authService.getAvatarUrl() ?? null
       );
     }
 
@@ -153,6 +154,10 @@ export const getUsername = (): string | null => {
   return authService.getUsername();
 };
 
+export const getAvatarUrl = (): string | null => {
+  return authService.getAvatarUrl();
+};
+
 export const isAuthenticated = (): boolean => {
   return authService.isAuthenticated();
 };
@@ -171,6 +176,7 @@ const authServiceExports = {
     confirmEmail,
     getUserEmail,
     getUsername,
+    getAvatarUrl,
     getUserProfile,
     updateUserProfile
 };

@@ -16,6 +16,7 @@ export interface UserProfile {
   email: string;
   username: string;
   telephone?: string;
+  avatar_url?: string | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -57,6 +58,7 @@ export interface User {
   email: string;
   username?: string;
   telephone?: string;
+  avatar_url?: string | null;
   is_online?: boolean;
 }
 

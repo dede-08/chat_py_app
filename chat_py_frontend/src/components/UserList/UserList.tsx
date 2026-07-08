@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { RefreshCw, Wifi, WifiOff, Users } from 'lucide-react';
 import logger from '../../services/logger';
 import { useChat } from '../../context';
+import Avatar from '../Avatar/Avatar';
 
 const UserList = () => {
   const { users, selectedUser, setSelectedUser, loadUsers, isUserOnline } = useChat();
@@ -69,9 +70,7 @@ const UserList = () => {
                   `}
                 >
                   <div className="relative">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold text-lg shadow-lg">
-                      {user.username ? user.username.charAt(0).toUpperCase() : 'U'}
-                    </div>
+                    <Avatar src={user.avatar_url} username={user.username} size="lg" />
                     <div className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-slate-900 ${isOnline ? 'bg-green-500' : 'bg-slate-500'}`} />
                   </div>
 

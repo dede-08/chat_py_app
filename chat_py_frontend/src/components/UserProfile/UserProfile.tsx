@@ -1,17 +1,21 @@
-import { useEffect, useState, type ChangeEvent } from 'react';
+import { useEffect, useState, useRef, type ChangeEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Mail, Phone, Lock, Edit2, X, Check, Eye, EyeOff, ShieldCheck, AlertTriangle, CheckCircle2, Info, Loader2 } from 'lucide-react';
+import { User, Mail, Phone, Lock, Edit2, X, Check, Eye, EyeOff, ShieldCheck, AlertTriangle, CheckCircle2, Info, Loader2, Camera } from 'lucide-react';
 import authService from '../../services/authService';
+import { authService as cookieAuth } from '../../services/cookieService';
 import logger from '../../services/logger';
 import { isErrorResponse } from '../../utils/errorHandler';
 import { isValidEmail, validateUsername } from '../../utils/validators';
 import { sanitizeInput } from '../../utils/sanitizer';
+import Avatar from '../Avatar/Avatar';
+import { uploadAvatar, deleteAvatar } from '../../uploadService';
 
 interface UserInfoState {
   username: string;
   email: string;
   telephone: string;
   password: string;
+  avatar_url?: string | null;
 }
 
 interface EditInfoState {
@@ -29,12 +33,16 @@ const UserProfile = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [userInfo, setUserInfo] = useState<UserInfoState>({
     username: '',
     email: '',
     telephone: '',
     password: '*********',
+    avatar_url: null,
   });
 
   const [editInfo, setEditInfo] = useState<EditInfoState>({
@@ -53,12 +61,13 @@ const UserProfile = () => {
         setError(null);
         const result = await authService.getUserProfile();
         if (result.success && result.data) {
-          const { username, email, telephone } = result.data;
+          const { username, email, telephone, avatar_url } = result.data;
           setUserInfo({
             username: username || '',
             email: email || '',
             telephone: telephone || '',
             password: '********',
+            avatar_url: avatar_url || null,
           });
         } else {
           const username = authService.getUsername();
@@ -68,6 +77,7 @@ const UserProfile = () => {
             email: email || 'email@example.com',
             telephone: '',
             password: '********',
+            avatar_url: null,
           });
         }
       } catch (err) {
@@ -150,13 +160,14 @@ const UserProfile = () => {
       if (isErrorResponse(result)) {
         setError(result.error);
       } else if (result.success && result.data) {
-        const { username, email, telephone } = result.data;
-        setUserInfo({
+        const { username, email, telephone, avatar_url } = result.data;
+        setUserInfo((prev) => ({
+          ...prev,
           username: username || editInfo.username,
           email: email || editInfo.email,
           telephone: telephone || '',
-          password: '********',
-        });
+          avatar_url: avatar_url ?? prev.avatar_url,
+        }));
         setIsEditing(false);
         setShowSuccess(true);
         setShowPassword(false);
@@ -167,6 +178,65 @@ const UserProfile = () => {
       setError('Error al actualizar el perfil. Intenta de nuevo.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleFileSelect = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setError('Solo se permiten archivos JPEG, PNG o WebP');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError('La imagen no puede superar los 5MB');
+      return;
+    }
+
+    setPreviewUrl(URL.createObjectURL(file));
+    setUploading(true);
+    setError(null);
+
+    try {
+      const result = await uploadAvatar(file);
+      if (isErrorResponse(result)) {
+        setError(result.error);
+        setPreviewUrl(null);
+      } else {
+        setUserInfo((prev) => ({ ...prev, avatar_url: result.data.avatar_url }));
+        cookieAuth.saveUserData(authService.getUserEmail() || '', authService.getUsername() || '', result.data.avatar_url);
+        setPreviewUrl(null);
+        setShowSuccess(true);
+        setTimeout(() => setShowSuccess(false), 3000);
+      }
+    } catch {
+      setError('Error al subir la imagen');
+      setPreviewUrl(null);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleDeleteAvatar = async () => {
+    setUploading(true);
+    setError(null);
+
+    try {
+      const result = await deleteAvatar();
+      if (isErrorResponse(result)) {
+        setError(result.error);
+      } else {
+        setUserInfo((prev) => ({ ...prev, avatar_url: null }));
+        cookieAuth.saveUserData(authService.getUserEmail() || '', authService.getUsername() || '', null);
+        setShowSuccess(true);
+        setTimeout(() => setShowSuccess(false), 3000);
+      }
+    } catch {
+      setError('Error al eliminar la imagen');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -213,19 +283,42 @@ const UserProfile = () => {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-panel rounded-2xl overflow-hidden">
           <div className="p-6 border-b border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-500 flex items-center justify-center shadow-lg">
-                <User className="w-7 h-7 text-white" />
+              <div className="relative group">
+                <Avatar src={previewUrl || userInfo.avatar_url} username={userInfo.username} size="md" className="w-14 h-14 text-2xl" />
+                {!isEditing && (
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                  >
+                    {uploading ? <Loader2 className="w-5 h-5 text-white animate-spin" /> : <Camera className="w-5 h-5 text-white" />}
+                  </button>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-slate-100">Mi Perfil</h1>
                 <p className="text-slate-400 text-sm">Información de la cuenta</p>
               </div>
             </div>
-            {!isEditing && (
-              <button onClick={handleEdit} className="premium-btn-secondary py-2 px-4 w-auto self-start sm:self-auto flex items-center gap-2">
-                <Edit2 className="w-4 h-4" /> Editar
-              </button>
-            )}
+            <div className="flex items-center gap-2">
+              {!isEditing && userInfo.avatar_url && (
+                <button onClick={handleDeleteAvatar} disabled={uploading} className="premium-btn-secondary py-2 px-3 w-auto self-start sm:self-auto flex items-center gap-2 text-red-400 hover:text-red-300">
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+              {!isEditing && (
+                <button onClick={handleEdit} className="premium-btn-secondary py-2 px-4 w-auto self-start sm:self-auto flex items-center gap-2">
+                  <Edit2 className="w-4 h-4" /> Editar
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="p-6">

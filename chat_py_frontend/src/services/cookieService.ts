@@ -5,12 +5,20 @@
 export class UserDataService {
   private static readonly EMAIL_KEY = 'userEmail';
   private static readonly USERNAME_KEY = 'username';
+  private static readonly AVATAR_KEY = 'avatarUrl';
 
   //guardar datos de usuario
-  static saveUserData(email: string, username?: string): void {
+  static saveUserData(email: string, username?: string, avatarUrl?: string | null): void {
     localStorage.setItem(this.EMAIL_KEY, email);
     if (username) {
       localStorage.setItem(this.USERNAME_KEY, username);
+    }
+    if (avatarUrl !== undefined) {
+      if (avatarUrl) {
+        localStorage.setItem(this.AVATAR_KEY, avatarUrl);
+      } else {
+        localStorage.removeItem(this.AVATAR_KEY);
+      }
     }
   }
 
@@ -24,10 +32,16 @@ export class UserDataService {
     return localStorage.getItem(this.USERNAME_KEY);
   }
 
+  //obtener avatar del usuario
+  static getAvatarUrl(): string | null {
+    return localStorage.getItem(this.AVATAR_KEY);
+  }
+
   //limpiar datos de usuario
   static clearUserData(): void {
     localStorage.removeItem(this.EMAIL_KEY);
     localStorage.removeItem(this.USERNAME_KEY);
+    localStorage.removeItem(this.AVATAR_KEY);
   }
 
   //verificar si hay datos de usuario
@@ -45,6 +59,7 @@ export const authService = {
   saveUserData: UserDataService.saveUserData.bind(UserDataService),
   getUserEmail: UserDataService.getUserEmail.bind(UserDataService),
   getUsername: UserDataService.getUsername.bind(UserDataService),
+  getAvatarUrl: UserDataService.getAvatarUrl.bind(UserDataService),
   clearUserData: UserDataService.clearUserData.bind(UserDataService),
   hasUserData: UserDataService.hasUserData.bind(UserDataService),
 

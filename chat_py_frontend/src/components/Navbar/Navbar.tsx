@@ -4,10 +4,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { LogOut, User as UserIcon, Menu, X, ChevronDown } from 'lucide-react';
 import authService from '../../services/authService';
 import logger from '../../services/logger';
+import Avatar from '../Avatar/Avatar';
 
 const Navbar = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -19,7 +21,10 @@ const Navbar = () => {
     const checkAuth = () => {
       const authenticated = authService.isAuthenticated();
       setIsAuthenticated(authenticated);
-      if (authenticated) setUsername(authService.getUsername() || 'Usuario');
+      if (authenticated) {
+        setUsername(authService.getUsername() || 'Usuario');
+        setAvatarUrl(authService.getAvatarUrl());
+      }
     };
 
     checkAuth();
@@ -48,11 +53,13 @@ const Navbar = () => {
       await authService.logoutUser();
       setIsAuthenticated(false);
       setUsername('');
+      setAvatarUrl(null);
       navigate('/login');
     } catch (error) {
       logger.error('Error durante el logout', error instanceof Error ? error : null, { operation: 'handleLogout' });
       setIsAuthenticated(false);
       setUsername('');
+      setAvatarUrl(null);
       navigate('/login');
     } finally {
       setIsLoggingOut(false);
@@ -81,10 +88,10 @@ const Navbar = () => {
                 <div className="relative" ref={dropdownRef}>
                   <button
                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                    className="flex items-center gap-2 bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 px-4 py-2 rounded-full transition-all text-sm font-medium text-slate-200"
+                    className="flex items-center gap-2 bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 px-2 py-1.5 rounded-full transition-all text-sm font-medium text-slate-200"
                   >
-                    <UserIcon className="w-4 h-4 text-blue-400" />
-                    <span>{username}</span>
+                    <Avatar src={avatarUrl} username={username} size="sm" />
+                    <span className="max-w-[100px] truncate">{username}</span>
                     <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
                   </button>
 
