@@ -59,6 +59,7 @@ class UserProfileResponse(BaseModel):
     email: str
     username: str
     telephone: str
+    avatar_url: Optional[str] = None
 
 
 class UserProfileUpdate(BaseModel):

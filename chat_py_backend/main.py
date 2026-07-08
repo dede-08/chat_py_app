@@ -1,10 +1,11 @@
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.encoders import jsonable_encoder
 from contextlib import asynccontextmanager
-from routes import auth, chat_ws, chat
+from routes import auth, chat_ws, chat, upload
 from config.settings import settings
 from database.connection import get_database, get_client, close_database
 from database.migrations import run_database_migrations
@@ -19,6 +20,7 @@ from utils.logger import app_logger
 from services.refresh_token_service import refresh_token_service
 import traceback
 import asyncio
+import os
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -193,7 +195,12 @@ async def http_exception_handler(request: Request, exc: HTTPException):
         }
     )
 
+#servir archivos estaticos (uploads)
+os.makedirs(settings.upload_dir, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=settings.upload_dir), name="uploads")
+
 #incluir routers
 app.include_router(auth.router)
 app.include_router(chat_ws.router)
 app.include_router(chat.router)
+app.include_router(upload.router)

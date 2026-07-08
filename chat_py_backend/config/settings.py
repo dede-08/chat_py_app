@@ -46,6 +46,11 @@ class Settings(BaseSettings):
     ws_heartbeat_interval: int = 30
     ws_connection_timeout: int = 60
 
+    # Uploads
+    upload_dir: str = "uploads/avatars"
+    max_upload_size: int = 5 * 1024 * 1024
+    allowed_image_types: List[str] = ["image/jpeg", "image/png", "image/webp"]
+
     # Entorno
     environment: str = "development"
 

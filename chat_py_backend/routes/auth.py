@@ -209,6 +209,7 @@ async def get_profile(current_user_email: str = Depends(get_current_user_email_c
         email=db_user["email"],
         username=db_user["username"],
         telephone=db_user.get("telephone", ""),
+        avatar_url=db_user.get("avatar_url"),
     )
 
 
@@ -260,6 +261,7 @@ async def update_profile(
         email=db_user.get("email"),
         username=db_user.get("username"),
         telephone=db_user.get("telephone", ""),
+        avatar_url=db_user.get("avatar_url"),
     )
 
 

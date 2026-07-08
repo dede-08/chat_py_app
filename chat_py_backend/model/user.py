@@ -8,3 +8,4 @@ class User(BaseModel):
     telephone: str
     is_email_confirmed: bool = False
     email_confirmation_token: Optional[str] = None
+    avatar_url: Optional[str] = None
