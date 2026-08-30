@@ -143,13 +143,13 @@ async def health_check():
             content={"status": "unhealthy", "error": str(e)}
         )
 
-#endpoint de desarrollo para limpiar rate limits
-@app.get("/dev/clear-ratelimits")
-async def clear_rate_limits():
-    """Limpiar rate limiters (solo para desarrollo)"""
-    from middleware.security import clear_rate_limits
-    clear_rate_limits()
-    return {"message": "Rate limits limpiados"}
+if not settings.is_production:
+    @app.get("/dev/clear-ratelimits")
+    async def clear_rate_limits():
+        """Limpiar rate limiters (solo para desarrollo)"""
+        from middleware.security import clear_rate_limits as _clear_rate_limits
+        _clear_rate_limits()
+        return {"message": "Rate limits limpiados"}
 
 #handler global de excepciones
 @app.exception_handler(Exception)

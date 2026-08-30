@@ -26,11 +26,26 @@ from utils.email_handler import send_email
 from config.settings import settings
 from utils.logger import auth_logger
 from services.refresh_token_service import refresh_token_service
+from middleware.security import login_lockout
 import re
 import uuid
 
 router = APIRouter(prefix="/auth")
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+async def _send_confirmation_email(email: str, token: str) -> None:
+    confirmation_url = f"{settings.frontend_url}/confirm-email/{token}"
+    email_body = f"""
+        <h1>Confirma tu correo electrónico</h1>
+        <p>Por favor, haz clic en el siguiente enlace para confirmar tu correo electrónico:</p>
+        <a href="{confirmation_url}">{confirmation_url}</a>
+    """
+    await send_email(
+        subject="Confirma tu correo electrónico",
+        recipients=[email],
+        body=email_body,
+    )
 
 @router.get("/protected")
 async def protected_route(credentials: HTTPAuthorizationCredentials = Depends(JWTBearer())):
@@ -103,17 +118,7 @@ async def register(user: UserRegister, request: Request):
 
     #enviar correo de confirmacion
     try:
-        confirmation_url = f"{settings.frontend_url}/confirm-email/{confirmation_token}"
-        email_body = f"""
-            <h1>Bienvenido a ChatPy!</h1>
-            <p>Gracias por registrarte. Por favor, haz clic en el siguiente enlace para confirmar tu correo electrónico:</p>
-            <a href="{confirmation_url}">{confirmation_url}</a>
-        """
-        await send_email(
-            subject="Confirma tu correo electrónico",
-            recipients=[user.email],
-            body=email_body
-        )
+        await _send_confirmation_email(user.email, confirmation_token)
         auth_logger.info(f"Correo de confirmación enviado a: {user.email}")
     except Exception as e:
         auth_logger.error(f"Error al enviar correo de confirmación: {e}")
@@ -144,9 +149,18 @@ async def confirm_email(token: str):
 @router.post("/login")
 async def login(user: UserLogin, response: Response):
     try:
+        if login_lockout.is_locked(user.email):
+            remaining = login_lockout.seconds_remaining(user.email)
+            auth_logger.warning(f"Intento de login en cuenta bloqueada: {user.email}")
+            raise HTTPException(
+                status_code=429,
+                detail=f"Cuenta bloqueada temporalmente. Intenta de nuevo en {remaining} segundos.",
+            )
+
         db_user = await db_conn.users_collection.find_one({"email": user.email})
         if not db_user:
             auth_logger.warning(f"Intento de login con email no registrado: {user.email}")
+            login_lockout.record_failure(user.email)
             raise HTTPException(status_code=400, detail="Credenciales invalidas")
 
         if not db_user.get("is_email_confirmed"):
@@ -155,7 +169,10 @@ async def login(user: UserLogin, response: Response):
 
         if not pwd_context.verify(user.password, db_user["password"]):
             auth_logger.warning(f"Intento de login con contraseña incorrecta: {user.email}")
+            login_lockout.record_failure(user.email)
             raise HTTPException(status_code=400, detail="Credenciales invalidas")
+
+        login_lockout.record_success(user.email)
 
         # Crear access token y refresh token
         access_token = create_access_token({"email": db_user["email"]})
@@ -216,6 +233,7 @@ async def get_profile(current_user_email: str = Depends(get_current_user_email_c
 @router.put("/profile", response_model=UserProfileResponse)
 async def update_profile(
     data: UserProfileUpdate,
+    response: Response,
     current_user_email: str = Depends(get_current_user_email_cookie),
 ):
     """Actualizar perfil del usuario autenticado."""
@@ -224,6 +242,7 @@ async def update_profile(
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
     update_fields = {}
+    email_confirmation_required = False
 
     if data.username is not None and data.username != db_user.get("username"):
         existing = await db_conn.users_collection.find_one({"username": data.username})
@@ -235,7 +254,11 @@ async def update_profile(
         existing = await db_conn.users_collection.find_one({"email": data.email})
         if existing:
             raise HTTPException(status_code=409, detail="El email ya está registrado")
+        confirmation_token = str(uuid.uuid4())
         update_fields["email"] = data.email
+        update_fields["is_email_confirmed"] = False
+        update_fields["email_confirmation_token"] = confirmation_token
+        email_confirmation_required = True
 
     if data.newPassword:
         if not data.currentPassword:
@@ -257,11 +280,24 @@ async def update_profile(
         )
         db_user = {**db_user, **update_fields}
 
+    if email_confirmation_required:
+        new_email = update_fields["email"]
+        confirmation_token = update_fields["email_confirmation_token"]
+        await refresh_token_service.revoke_all_user_tokens(current_user_email)
+        try:
+            await _send_confirmation_email(new_email, confirmation_token)
+            auth_logger.info(f"Correo de confirmación enviado tras cambio de email: {new_email}")
+        except Exception as e:
+            auth_logger.error(f"Error al enviar correo de confirmación tras cambio de email: {e}")
+        response.delete_cookie(key="access_token", path="/")
+        response.delete_cookie(key="refresh_token", path="/")
+
     return UserProfileResponse(
         email=db_user.get("email"),
         username=db_user.get("username"),
         telephone=db_user.get("telephone", ""),
         avatar_url=db_user.get("avatar_url"),
+        email_confirmation_required=email_confirmation_required,
     )
 
 

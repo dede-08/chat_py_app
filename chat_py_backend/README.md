@@ -1,46 +1,80 @@
 # ChatPy Backend
 
-Backend para la aplicación de chat en tiempo real desarrollada con FastAPI y MongoDB.
+Backend para la aplicación de chat en tiempo real con FastAPI, MongoDB y WebSockets.
+
+## Requisitos
+
+- Python 3.11+
+- MongoDB en ejecución
+
+## Configuración
+
+```bash
+python -m venv venv
+venv\Scripts\activate          # Windows
+pip install -r requirements.txt
+copy .env.example .env
+```
+
+Edita `.env` y configura como mínimo:
+- `JWT_SECRET` — cadena aleatoria de al menos 32 caracteres
+- Credenciales SMTP (`MAIL_*`) para confirmación de email
+
+## Arranque
+
+```bash
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+
+Health check: `GET http://localhost:8000/health`
+
+## Tests
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest -v
+```
 
 ## Características
 
--  Autenticación JWT
-- Validación robusta de contraseñas
+- Autenticación JWT con cookies httpOnly y refresh token rotation
+- Confirmación de email
 - Chat en tiempo real con WebSockets
-- Base de datos MongoDB con Motor
-- Validación de datos con Pydantic
-- CORS configurado
-- Estructura modular y escalable
+- Rate limiting y headers de seguridad
+- Validación con Pydantic
+- Índices y TTL en MongoDB
 
 ## API Endpoints
 
 ### Autenticación
-- `POST /auth/register` - Registrar nuevo usuario
-- `POST /auth/login` - Iniciar sesión
-- `POST /auth/logout` - Cerrar sesión
-- `GET /auth/protected` - Ruta protegida de ejemplo
-- `GET /auth/password-requirements` - Obtener requisitos de contraseña
-- `POST /auth/validate-password` - Validar contraseña
+- `POST /auth/register` — Registrar usuario
+- `POST /auth/login` — Iniciar sesión
+- `POST /auth/logout` — Cerrar sesión
+- `POST /auth/refresh` — Renovar tokens
+- `GET /auth/profile` — Obtener perfil
+- `PUT /auth/profile` — Actualizar perfil
+- `GET /auth/confirm-email/{token}` — Confirmar email
+- `GET /auth/password-requirements` — Requisitos de contraseña
+- `POST /auth/validate-password` — Validar contraseña
+- `POST /auth/upload-avatar` — Subir avatar
+- `DELETE /auth/upload-avatar` — Eliminar avatar
 
 ### Chat
-- `GET /chat/history/{other_user_email}` - Obtener historial de chat
-- `GET /chat/rooms` - Obtener salas de chat del usuario
-- `GET /chat/users` - Obtener lista de usuarios
-- `GET /chat/unread-count` - Obtener número de mensajes no leídos
-- `POST /chat/mark-read/{sender_email}` - Marcar mensajes como leídos
+- `GET /chat/history/{other_user_email}` — Historial
+- `GET /chat/rooms` — Salas de chat
+- `GET /chat/users` — Lista de usuarios
+- `GET /chat/unread-count` — Mensajes no leídos
+- `POST /chat/mark-read/{sender_email}` — Marcar como leídos
 
 ### WebSocket
-- `WS /ws/chat` - Conexión WebSocket para chat en tiempo real
+- `WS /ws/chat` — Chat en tiempo real
 
-## Validación de Contraseñas
+### Otros
+- `GET /health` — Estado del servicio
+- `GET /dev/clear-ratelimits` — Solo en `ENVIRONMENT=development`
 
-El sistema incluye validación robusta de contraseñas con los siguientes requisitos:
+## Validación de contraseñas
 
-- **Longitud mínima**: 8 caracteres
-- **Longitud máxima**: 128 caracteres
-- **Mayúsculas**: Al menos una letra mayúscula
-- **Minúsculas**: Al menos una letra minúscula
-- **Números**: Al menos un número
-- **Caracteres especiales**: Al menos un carácter especial
-- **Sin espacios**: No se permiten espacios
-- **Caracteres permitidos**: Solo letras, números y caracteres especiales específicos
+- Mínimo 8, máximo 128 caracteres
+- Al menos una mayúscula, una minúscula, un número y un carácter especial
+- Sin espacios

@@ -3,13 +3,13 @@ from jose import JWTError, jwt
 from typing import Dict, List, Optional
 import json
 import re
-import html
 from datetime import datetime, timezone
 from services.chat_service import ChatService
 from config.settings import settings
 from utils.logger import websocket_logger
 from utils.jwt_handler import decode_access_token
 from database import connection as db_conn
+from middleware.security import ws_rate_limiter
 import traceback
 
 router = APIRouter()
@@ -137,6 +137,13 @@ async def chat_endpoint(websocket: WebSocket, token: str = Query(None)):
             try:
                 message_data = json.loads(data)
                 message_type = message_data.get("type", "message")
+
+                if message_type != "ping" and not ws_rate_limiter.is_allowed(user_email):
+                    await websocket.send_text(json.dumps({
+                        "type": "error",
+                        "message": "Demasiados mensajes. Espera un momento.",
+                    }))
+                    continue
                 
                 if message_type == "message":
                     await handle_private_message(user_email, message_data)
@@ -191,9 +198,8 @@ async def handle_private_message(sender_email: str, message_data: dict):
             await connected_users[sender_email].send_text(json.dumps(error_msg))
         return
     
-    # Sanitizar contenido: remover caracteres de control y escapar HTML
+    # Sanitizar contenido: remover caracteres de control (React escapa HTML al renderizar)
     content = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', content).strip()
-    content = html.escape(content)
     
     if not content:
         websocket_logger.warning(f"Mensaje vacío después de sanitización de {sender_email}")

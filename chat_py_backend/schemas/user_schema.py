@@ -60,6 +60,7 @@ class UserProfileResponse(BaseModel):
     username: str
     telephone: str
     avatar_url: Optional[str] = None
+    email_confirmation_required: bool = False
 
 
 class UserProfileUpdate(BaseModel):

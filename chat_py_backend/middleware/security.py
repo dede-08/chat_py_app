@@ -64,14 +64,59 @@ class RateLimiter:
 
 #instancias globales de rate limiters
 auth_rate_limiter = RateLimiter(max_requests=10, window_seconds=60)  #10 intentos por minuto
-api_rate_limiter = RateLimiter(max_requests=1000, window_seconds=60) #1000 requests por minuto (temporal)  
-ws_rate_limiter = RateLimiter(max_requests=1000, window_seconds=60) #1000 mensajes WS por minuto
+api_rate_limiter = RateLimiter(max_requests=100, window_seconds=60)
+ws_rate_limiter = RateLimiter(max_requests=60, window_seconds=60)  #60 mensajes WS por minuto
+
+class LoginLockout:
+    """Bloqueo temporal tras intentos fallidos de login."""
+
+    def __init__(self, max_attempts: int = 5, lockout_seconds: int = 300):
+        self.max_attempts = max_attempts
+        self.lockout_seconds = lockout_seconds
+        self._attempts: Dict[str, int] = defaultdict(int)
+        self._locked_until: Dict[str, float] = {}
+
+    def is_locked(self, identifier: str) -> bool:
+        until = self._locked_until.get(identifier)
+        if until is None:
+            return False
+        if time.time() >= until:
+            del self._locked_until[identifier]
+            self._attempts.pop(identifier, None)
+            return False
+        return True
+
+    def seconds_remaining(self, identifier: str) -> int:
+        until = self._locked_until.get(identifier, 0)
+        return max(0, int(until - time.time()))
+
+    def record_failure(self, identifier: str) -> None:
+        if self.is_locked(identifier):
+            return
+        self._attempts[identifier] += 1
+        if self._attempts[identifier] >= self.max_attempts:
+            self._locked_until[identifier] = time.time() + self.lockout_seconds
+            self._attempts.pop(identifier, None)
+
+    def record_success(self, identifier: str) -> None:
+        self._attempts.pop(identifier, None)
+        self._locked_until.pop(identifier, None)
+
+    def reset(self) -> None:
+        self._attempts.clear()
+        self._locked_until.clear()
+
+login_lockout = LoginLockout(
+    max_attempts=settings.max_login_attempts,
+    lockout_seconds=settings.lockout_duration,
+)
 
 def clear_rate_limits():
     """Limpiar todos los rate limiters (para desarrollo local)"""
     auth_rate_limiter.requests.clear()
     api_rate_limiter.requests.clear()
     ws_rate_limiter.requests.clear()
+    login_lockout.reset()
     app_logger.info("Rate limiters limpiados para desarrollo local")
 
 async def rate_limit_middleware(request: Request, call_next, limiter: RateLimiter = None):
