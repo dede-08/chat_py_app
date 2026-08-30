@@ -125,6 +125,12 @@ export const updateUserProfile = async (data: UpdateProfileData): Promise<ApiRes
   try {
     const response = await http.put<UserProfile>(`${API_URL}/profile`, data);
 
+    if (response.data?.email_confirmation_required) {
+      authService.clearAll();
+      logger.info('Cambio de email: sesión cerrada, confirmación requerida', { email: response.data.email });
+      return createSuccessResponse(response.data);
+    }
+
     if (response.data?.email != null) {
       authService.saveUserData(
         response.data.email,

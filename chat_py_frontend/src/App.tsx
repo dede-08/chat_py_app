@@ -9,6 +9,7 @@ import './App.css';
 import ChatPage from './pages/ChatPage';
 
 import authService from './services/authService';
+import { isErrorResponse } from './utils/errorHandler';
 import { ChatProvider } from './context';
 
 interface ProtectedRouteProps {
@@ -16,21 +17,35 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const isAuthenticated = authService.isAuthenticated();
-  return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
+  const [status, setStatus] = useState<'loading' | 'authenticated' | 'unauthenticated'>('loading');
+
+  useEffect(() => {
+    const verifySession = async () => {
+      if (!authService.isAuthenticated()) {
+        setStatus('unauthenticated');
+        return;
+      }
+      const result = await authService.getUserProfile();
+      if (isErrorResponse(result)) {
+        await authService.logoutUser();
+        setStatus('unauthenticated');
+        return;
+      }
+      setStatus('authenticated');
+    };
+    verifySession();
+  }, []);
+
+  if (status === 'loading') {
+    return <div className="loading">Verificando sesión...</div>;
+  }
+  if (status === 'unauthenticated') {
+    return <Navigate to="/login" replace />;
+  }
+  return <>{children}</>;
 };
 
 function App() {
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    setIsLoading(false);
-  }, []);
-
-  if (isLoading) {
-    return <div className="loading">Cargando...</div>;
-  }
-
   return (
     <Router>
       <Navbar />

@@ -1,7 +1,7 @@
-import http from './services/httpClient';
-import { handleAxiosError, createSuccessResponse } from './utils/errorHandler';
+import http from './httpClient';
+import { handleAxiosError, createSuccessResponse } from '../utils/errorHandler';
 import { AxiosError } from 'axios';
-import type { ApiResponse } from './types/api';
+import type { ApiResponse } from '../types/api';
 
 const AUTH_URL = `${import.meta.env.VITE_API_URL}/auth`;
 

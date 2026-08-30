@@ -1,5 +1,5 @@
 import { useState, useEffect, type ChangeEvent, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Mail, Lock, LogIn, MessageSquare } from 'lucide-react';
 import { loginUser, isAuthenticated } from '../services/authService';
@@ -19,11 +19,18 @@ const LoginPage = () => {
   const [alreadyAuthenticated, setAlreadyAuthenticated] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [generalError, setGeneralError] = useState<string | null>(null);
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     if (isAuthenticated()) setAlreadyAuthenticated(true);
-  }, []);
+    const state = location.state as { message?: string } | null;
+    if (state?.message) {
+      setInfoMessage(state.message);
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.pathname, location.state, navigate]);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -104,6 +111,13 @@ const LoginPage = () => {
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm flex gap-2">
             <span className="material-symbols-outlined shrink-0 mt-0.5">warning</span>
             <p>{generalError}</p>
+          </motion.div>
+        )}
+
+        {infoMessage && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="mb-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg text-blue-400 text-sm flex gap-2">
+            <span className="material-symbols-outlined shrink-0 mt-0.5">info</span>
+            <p>{infoMessage}</p>
           </motion.div>
         )}
 

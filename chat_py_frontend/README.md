@@ -1,12 +1,54 @@
-# React + Vite
+# ChatPy Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Cliente web de ChatPy: React 19, TypeScript, Vite y Tailwind CSS.
 
-Currently, two official plugins are available:
+## Requisitos
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Node.js 18+
+- Backend corriendo en `http://localhost:8000`
 
-## Expanding the ESLint configuration
+## Configuración
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+```bash
+npm install
+copy .env.example .env
+```
+
+Para desarrollo local, deja `VITE_API_URL` y `VITE_WS_URL` vacíos. Vite proxy redirige las peticiones al backend.
+
+## Scripts
+
+| Script | Descripción |
+|--------|-------------|
+| `npm run dev` | Servidor de desarrollo (puerto 5173) |
+| `npm run build` | Compilar para producción |
+| `npm run preview` | Previsualizar build |
+| `npm run type-check` | Verificar tipos TypeScript |
+| `npm run lint` | ESLint (JS/TS/TSX) |
+
+## Estructura
+
+```
+src/
+├── components/    # UI reutilizable
+├── context/       # Estado global del chat
+├── pages/         # Rutas (login, chat, perfil…)
+├── services/      # API, WebSocket, auth
+├── types/         # Tipos TypeScript
+└── utils/         # Validadores, sanitización, errores
+```
+
+## Proxy de desarrollo
+
+Configurado en `vite.config.ts` para reenviar al backend:
+- `/auth`, `/chat`, `/health`, `/uploads` → HTTP
+- `/ws` → WebSocket
+
+## Producción
+
+En `.env` define las URLs completas del backend:
+
+```
+VITE_API_URL=https://api.tudominio.com
+VITE_WS_URL=wss://api.tudominio.com
+```

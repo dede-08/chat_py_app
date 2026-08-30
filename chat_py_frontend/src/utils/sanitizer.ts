@@ -27,18 +27,21 @@ export const sanitizeString = (input: string): string => {
 };
 
 
-//sanitiza un mensaje de chat
+//sanitiza un mensaje de chat (sin escapar HTML: React lo hace al renderizar)
 export const sanitizeChatMessage = (message: string): string => {
   if (!message || typeof message !== 'string') return '';
 
-  //primero sanitizar normalmente
-  let sanitized = sanitizeString(message);
+  //eslint-disable-next-line no-control-regex
+  let sanitized = message.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '');
 
-  //convertir saltos de línea a <br> para mostrar correctamente
-  // (esto se hace en el componente al renderizar, no aquí)
-  //por ahora solo preservamos los saltos de línea como \n
+  sanitized = sanitized
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
+    .replace(/on\w+\s*=\s*[^\s>]*/gi, '')
+    .replace(/javascript:/gi, '')
+    .replace(/data:text\/html/gi, '');
 
-  return sanitized;
+  return sanitized.trim();
 };
 
 //sanitiza un email (solo remueve caracteres peligrosos, no valida formato)
