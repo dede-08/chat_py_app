@@ -1,0 +1,50 @@
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./chat_py_backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      JWT_SECRET: ${JWT_SECRET:-change-me-to-a-secure-random-string-at-least-32-chars}
+      MONGO_URL: mongodb://mongo:27017
+      DB_NAME: chatpydb
+      ENVIRONMENT: development
+      FRONTEND_URL: http://localhost:5173
+      ALLOWED_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-noreply@example.com}
+    volumes:
+      - backend_uploads:/app/uploads
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  frontend:
+    build: ./chat_py_frontend
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: ""
+      VITE_WS_URL: ""
+      VITE_PROXY_TARGET: http://backend:8000
+    depends_on:
+      - backend
+
+volumes:
+  mongo_data:
+  backend_uploads:
