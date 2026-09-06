@@ -61,6 +61,7 @@ class UserProfileResponse(BaseModel):
     telephone: str
     avatar_url: Optional[str] = None
     email_confirmation_required: bool = False
+    email_confirmation_required: bool = False
 
 
 class UserProfileUpdate(BaseModel):

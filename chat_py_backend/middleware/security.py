@@ -272,3 +272,28 @@ class RequestLogger:
                 f"Path: {request.url.path}"
             )
             raise
+
+def _is_origin_allowed(origin: str) -> bool:
+    """Verificar si un Origin header pertenece a los origenes permitidos."""
+    if not origin or not origin.startswith(("http://", "https://")):
+        return False
+    allowed = {o for o in settings.cors_origins if o.startswith(("http://", "https://"))}
+    return origin in allowed
+
+async def csrf_origin_middleware(request: Request, call_next):
+    """
+    Prevención CSRF: bloquear requests que mutan estado (POST/PUT/PATCH/DELETE)
+    cuyo header Origin no esté en la lista de origenes permitidos.
+    Requests sin Origin (curl, server-to-server) se permiten.
+    """
+    if request.method in ("POST", "PUT", "PATCH", "DELETE"):
+        origin = request.headers.get("Origin")
+        if origin and not _is_origin_allowed(origin):
+            app_logger.warning(
+                f"CSRF bloqueado: Origin '{origin}' en {request.method} {request.url.path}"
+            )
+            return JSONResponse(
+                status_code=403,
+                content={"detail": "Origen no permitido"},
+            )
+    return await call_next(request)

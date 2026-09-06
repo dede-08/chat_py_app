@@ -124,7 +124,7 @@ class ChatService:
 
         cursor = db.users.find(
             {"email": {"$ne": current_user_email}},
-            {"password": 0}
+            {"_id": 1, "email": 1, "username": 1, "telephone": 1, "avatar_url": 1}
         ).skip(skip).limit(limit)
 
         users = []

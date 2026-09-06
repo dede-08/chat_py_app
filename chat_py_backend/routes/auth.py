@@ -27,6 +27,7 @@ from config.settings import settings
 from utils.logger import auth_logger
 from services.refresh_token_service import refresh_token_service
 from middleware.security import login_lockout
+from pymongo.errors import DuplicateKeyError
 import re
 import uuid
 
@@ -112,6 +113,12 @@ async def register(user: UserRegister, request: Request):
     try:
         await db_conn.users_collection.insert_one(user_dict)
         auth_logger.info(f"Usuario registrado exitosamente: {user.email}")
+    except DuplicateKeyError as e:
+        auth_logger.warning(f"Registro con clave duplicada: {e}")
+        key_pattern = e.details.get("keyPattern", {})
+        if "email" in key_pattern:
+            raise HTTPException(status_code=400, detail="El email ya ha sido registrado")
+        raise HTTPException(status_code=400, detail="El nombre de usuario ya está en uso")
     except Exception as e:
         auth_logger.error(f"Error al insertar usuario: {e}")
         raise HTTPException(status_code=500, detail="Error al registrar usuario")
@@ -274,10 +281,17 @@ async def update_profile(
         update_fields["telephone"] = data.telephone
 
     if update_fields:
-        await db_conn.users_collection.update_one(
-            {"email": current_user_email},
-            {"$set": update_fields},
-        )
+        try:
+            await db_conn.users_collection.update_one(
+                {"email": current_user_email},
+                {"$set": update_fields},
+            )
+        except DuplicateKeyError as e:
+            auth_logger.warning(f"Actualización de perfil con clave duplicada: {e}")
+            key_pattern = e.details.get("keyPattern", {})
+            if "email" in key_pattern:
+                raise HTTPException(status_code=409, detail="El email ya está registrado")
+            raise HTTPException(status_code=409, detail="El nombre de usuario ya está en uso")
         db_user = {**db_user, **update_fields}
 
     if email_confirmation_required:

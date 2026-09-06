@@ -4,9 +4,15 @@ from config.settings import settings
 from utils.logger import auth_logger
 from typing import Optional
 import secrets
+import hashlib
 
 class RefreshTokenService:
     """Servicio para manejar refresh tokens en la base de datos"""
+
+    @staticmethod
+    def _hash_token(refresh_token: str) -> str:
+        """Hashear el token antes de almacenarlo/buscarlo. Nunca guardar el JWT en claro."""
+        return hashlib.sha256(refresh_token.encode("utf-8")).hexdigest()
     
     @staticmethod
     async def save_refresh_token(user_email: str, refresh_token: str) -> str:
@@ -26,7 +32,7 @@ class RefreshTokenService:
         token_data = {
             "token_id": token_id,
             "user_email": user_email,
-            "refresh_token": refresh_token,
+            "refresh_token": self._hash_token(refresh_token),
             "created_at": datetime.now(timezone.utc),
             "expires_at": expires_at,
             "is_revoked": False
@@ -54,7 +60,7 @@ class RefreshTokenService:
         """
         try:
             token_doc = await db_conn.refresh_tokens_collection.find_one({
-                "refresh_token": refresh_token,
+                "refresh_token": self._hash_token(refresh_token),
                 "user_email": user_email,
                 "is_revoked": False
             })
@@ -91,7 +97,7 @@ class RefreshTokenService:
         try:
             result = await db_conn.refresh_tokens_collection.update_one(
                 {
-                    "refresh_token": refresh_token,
+                    "refresh_token": self._hash_token(refresh_token),
                     "user_email": user_email
                 },
                 {"$set": {"is_revoked": True, "revoked_at": datetime.now(timezone.utc)}}

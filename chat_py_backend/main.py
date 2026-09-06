@@ -13,6 +13,7 @@ from middleware.security import (
     SecurityHeaders,
     RequestLogger,
     rate_limit_middleware,
+    csrf_origin_middleware,
     auth_rate_limiter,
     api_rate_limiter
 )
@@ -99,6 +100,11 @@ app.add_middleware(
 @app.middleware("http")
 async def security_headers_middleware(request: Request, call_next):
     return await SecurityHeaders.add_security_headers(request, call_next)
+
+#middleware anti-CSRF - valida Origin en requests que mutan estado
+@app.middleware("http")
+async def csrf_middleware(request: Request, call_next):
+    return await csrf_origin_middleware(request, call_next)
 
 #middleware de logging
 @app.middleware("http")

@@ -186,6 +186,22 @@ async def handle_private_message(sender_email: str, message_data: dict):
         websocket_logger.warning(f"Mensaje incompleto de {sender_email}")
         return
     
+    if receiver_email == sender_email:
+        websocket_logger.warning(f"Intento de auto-mensaje de {sender_email}")
+        return
+
+    # Validar que el receptor exista en la base de datos
+    receiver = await db_conn.users_collection.find_one({"email": receiver_email})
+    if not receiver:
+        websocket_logger.warning(f"Receptor inexistente {receiver_email} (emisor: {sender_email})")
+        if sender_email in connected_users:
+            error_msg = {
+                "type": "error",
+                "message": "Usuario no encontrado"
+            }
+            await connected_users[sender_email].send_text(json.dumps(error_msg))
+        return
+    
     # Validar tamaño del mensaje (maximo 5000 caracteres)
     MAX_MESSAGE_LENGTH = 5000
     if len(content) > MAX_MESSAGE_LENGTH:
