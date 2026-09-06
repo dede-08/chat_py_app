@@ -1,10 +1,11 @@
-from database import connection as db_conn
-from datetime import datetime, timedelta, timezone
-from config.settings import settings
-from utils.logger import auth_logger
-from typing import Optional
-import secrets
 import hashlib
+import secrets
+from datetime import UTC, datetime, timedelta
+
+from config.settings import settings
+from database import connection as db_conn
+from utils.logger import auth_logger
+
 
 class RefreshTokenService:
     """Servicio para manejar refresh tokens en la base de datos"""
@@ -13,31 +14,31 @@ class RefreshTokenService:
     def _hash_token(refresh_token: str) -> str:
         """Hashear el token antes de almacenarlo/buscarlo. Nunca guardar el JWT en claro."""
         return hashlib.sha256(refresh_token.encode("utf-8")).hexdigest()
-    
-    @staticmethod
-    async def save_refresh_token(user_email: str, refresh_token: str) -> str:
+
+    @classmethod
+    async def save_refresh_token(cls, user_email: str, refresh_token: str) -> str:
         """
         Guardar refresh token en la base de datos
-        
+
         Args:
             user_email: Email del usuario
             refresh_token: Token JWT de refresh
-            
+
         Returns:
             ID del refresh token guardado
         """
         token_id = secrets.token_urlsafe(32)
-        expires_at = datetime.now(timezone.utc) + timedelta(days=settings.refresh_token_expire_days)
-        
+        expires_at = datetime.now(UTC) + timedelta(days=settings.refresh_token_expire_days)
+
         token_data = {
             "token_id": token_id,
             "user_email": user_email,
-            "refresh_token": self._hash_token(refresh_token),
-            "created_at": datetime.now(timezone.utc),
+            "refresh_token": cls._hash_token(refresh_token),
+            "created_at": datetime.now(UTC),
             "expires_at": expires_at,
-            "is_revoked": False
+            "is_revoked": False,
         }
-        
+
         try:
             await db_conn.refresh_tokens_collection.insert_one(token_data)
             auth_logger.debug(f"Refresh token guardado para usuario: {user_email}")
@@ -45,93 +46,90 @@ class RefreshTokenService:
         except Exception as e:
             auth_logger.error(f"Error al guardar refresh token: {e}")
             raise
-    
-    @staticmethod
-    async def validate_refresh_token(refresh_token: str, user_email: str) -> bool:
+
+    @classmethod
+    async def validate_refresh_token(cls, refresh_token: str, user_email: str) -> bool:
         """
         Validar que un refresh token existe y no está revocado
-        
+
         Args:
             refresh_token: Token JWT de refresh
             user_email: Email del usuario
-            
+
         Returns:
             True si el token es válido, False en caso contrario
         """
         try:
-            token_doc = await db_conn.refresh_tokens_collection.find_one({
-                "refresh_token": self._hash_token(refresh_token),
-                "user_email": user_email,
-                "is_revoked": False
-            })
-            
+            token_doc = await db_conn.refresh_tokens_collection.find_one(
+                {
+                    "refresh_token": cls._hash_token(refresh_token),
+                    "user_email": user_email,
+                    "is_revoked": False,
+                }
+            )
+
             if not token_doc:
                 return False
-            
-            #verificar si el token ha expirado
-            if token_doc.get("expires_at") < datetime.now(timezone.utc):
-                #marcar como revocado si esta expirado
+
+            # verificar si el token ha expirado
+            if token_doc.get("expires_at") < datetime.now(UTC):
+                # marcar como revocado si esta expirado
                 await db_conn.refresh_tokens_collection.update_one(
-                    {"_id": token_doc["_id"]},
-                    {"$set": {"is_revoked": True}}
+                    {"_id": token_doc["_id"]}, {"$set": {"is_revoked": True}}
                 )
                 return False
-            
+
             return True
         except Exception as e:
             auth_logger.error(f"Error al validar refresh token: {e}")
             return False
-    
-    @staticmethod
-    async def revoke_refresh_token(refresh_token: str, user_email: str) -> bool:
+
+    @classmethod
+    async def revoke_refresh_token(cls, refresh_token: str, user_email: str) -> bool:
         """
         Revocar un refresh token específico
-        
+
         Args:
             refresh_token: Token JWT de refresh
             user_email: Email del usuario
-            
+
         Returns:
             True si se revocó exitosamente, False en caso contrario
         """
         try:
             result = await db_conn.refresh_tokens_collection.update_one(
-                {
-                    "refresh_token": self._hash_token(refresh_token),
-                    "user_email": user_email
-                },
-                {"$set": {"is_revoked": True, "revoked_at": datetime.now(timezone.utc)}}
+                {"refresh_token": cls._hash_token(refresh_token), "user_email": user_email},
+                {"$set": {"is_revoked": True, "revoked_at": datetime.now(UTC)}},
             )
             return result.modified_count > 0
         except Exception as e:
             auth_logger.error(f"Error al revocar refresh token: {e}")
             return False
-    
+
     @staticmethod
     async def revoke_all_user_tokens(user_email: str) -> int:
         """
         Revocar todos los refresh tokens de un usuario (útil para logout)
-        
+
         Args:
             user_email: Email del usuario
-            
+
         Returns:
             Número de tokens revocados
         """
         try:
             result = await db_conn.refresh_tokens_collection.update_many(
-                {
-                    "user_email": user_email,
-                    "is_revoked": False
-                },
-                {"$set": {"is_revoked": True, "revoked_at": datetime.now(timezone.utc)}}
+                {"user_email": user_email, "is_revoked": False},
+                {"$set": {"is_revoked": True, "revoked_at": datetime.now(UTC)}},
             )
-            auth_logger.info(f"Revocados {result.modified_count} refresh tokens para usuario: {user_email}")
+            auth_logger.info(
+                f"Revocados {result.modified_count} refresh tokens para usuario: {user_email}"
+            )
             return result.modified_count
         except Exception as e:
             auth_logger.error(f"Error al revocar todos los tokens del usuario: {e}")
             return 0
-    
+
     @staticmethod
     async def cleanup_expired_tokens():
         """
@@ -139,9 +137,9 @@ class RefreshTokenService:
         Debe ejecutarse periódicamente como tarea de mantenimiento
         """
         try:
-            result = await db_conn.refresh_tokens_collection.delete_many({
-                "expires_at": {"$lt": datetime.now(timezone.utc)}
-            })
+            result = await db_conn.refresh_tokens_collection.delete_many(
+                {"expires_at": {"$lt": datetime.now(UTC)}}
+            )
             if result.deleted_count > 0:
                 auth_logger.info(f"Limpiados {result.deleted_count} refresh tokens expirados")
             return result.deleted_count
@@ -149,6 +147,6 @@ class RefreshTokenService:
             auth_logger.error(f"Error al limpiar tokens expirados: {e}")
             return 0
 
-#instancia global del servicio
-refresh_token_service = RefreshTokenService()
 
+# instancia global del servicio
+refresh_token_service = RefreshTokenService()

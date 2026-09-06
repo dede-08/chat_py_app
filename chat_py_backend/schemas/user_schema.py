@@ -1,6 +1,7 @@
-from pydantic import BaseModel, EmailStr, validator
-from typing import Optional
+from pydantic import BaseModel, EmailStr, field_validator
+
 from utils.password_validator import password_validator
+
 
 class UserRegister(BaseModel):
     username: str
@@ -8,39 +9,45 @@ class UserRegister(BaseModel):
     password: str
     telephone: str
 
-    @validator('password')
+    @field_validator("password")
     def validate_password(cls, v):
         is_valid, errors = password_validator.validate_password(v)
         if not is_valid:
             raise ValueError(f"Contraseña inválida: {'; '.join(errors)}")
         return v
 
-    @validator('username')
+    @field_validator("username")
     def validate_username(cls, v):
         if len(v) < 3:
             raise ValueError("El nombre de usuario debe tener al menos 3 caracteres")
         if len(v) > 50:
             raise ValueError("El nombre de usuario no puede tener más de 50 caracteres")
-        if not v.replace('_', '').replace('-', '').isalnum():
-            raise ValueError("El nombre de usuario solo puede contener letras, números, guiones y guiones bajos")
+        if not v.replace("_", "").replace("-", "").isalnum():
+            raise ValueError(
+                "El nombre de usuario solo puede contener letras, números, guiones y guiones bajos"
+            )
         return v
 
-    @validator('telephone')
+    @field_validator("telephone")
     def validate_telephone(cls, v):
-        #validacion basica de telefono
+        # validacion basica de telefono
         import re
-        phone_pattern = re.compile(r'^\+?[\d\s\-\(\)]{7,15}$')
+
+        phone_pattern = re.compile(r"^\+?[\d\s\-\(\)]{7,15}$")
         if not phone_pattern.match(v):
             raise ValueError("Formato de teléfono inválido")
         return v
+
 
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
 
+
 class UserOut(BaseModel):
     username: str
     email: EmailStr
+
 
 class PasswordRequirements(BaseModel):
     min_length: int
@@ -51,27 +58,27 @@ class PasswordRequirements(BaseModel):
     require_special_chars: bool
     special_chars: str
 
+
 class RefreshTokenRequest(BaseModel):
-    refresh_token: Optional[str] = None
+    refresh_token: str | None = None
 
 
 class UserProfileResponse(BaseModel):
     email: str
     username: str
     telephone: str
-    avatar_url: Optional[str] = None
-    email_confirmation_required: bool = False
+    avatar_url: str | None = None
     email_confirmation_required: bool = False
 
 
 class UserProfileUpdate(BaseModel):
-    username: Optional[str] = None
-    email: Optional[EmailStr] = None
-    telephone: Optional[str] = None
-    currentPassword: Optional[str] = None  # noqa: N815 (camelCase para coincidir con frontend)
-    newPassword: Optional[str] = None  # noqa: N815
+    username: str | None = None
+    email: EmailStr | None = None
+    telephone: str | None = None
+    currentPassword: str | None = None
+    newPassword: str | None = None
 
-    @validator("username")
+    @field_validator("username")
     def validate_username_optional(cls, v):
         if v is None or v == "":
             return v
@@ -80,10 +87,12 @@ class UserProfileUpdate(BaseModel):
         if len(v) > 50:
             raise ValueError("El nombre de usuario no puede tener más de 50 caracteres")
         if not v.replace("_", "").replace("-", "").isalnum():
-            raise ValueError("El nombre de usuario solo puede contener letras, números, guiones y guiones bajos")
+            raise ValueError(
+                "El nombre de usuario solo puede contener letras, números, guiones y guiones bajos"
+            )
         return v
 
-    @validator("newPassword")
+    @field_validator("newPassword")
     def validate_new_password(cls, v):
         if v is None or v == "":
             return v

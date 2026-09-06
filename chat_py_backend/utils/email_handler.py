@@ -1,6 +1,6 @@
-from fastapi_mail import FastMail, MessageSchema, ConnectionConfig
+from fastapi_mail import ConnectionConfig, FastMail, MessageSchema
+
 from config.settings import settings
-from typing import List
 from utils.logger import app_logger
 
 conf = ConnectionConfig(
@@ -12,18 +12,19 @@ conf = ConnectionConfig(
     MAIL_STARTTLS=settings.mail_starttls,
     MAIL_SSL_TLS=settings.mail_ssl_tls,
     USE_CREDENTIALS=True,
-    VALIDATE_CERTS=True
+    VALIDATE_CERTS=True,
 )
 
-async def send_email(subject: str, recipients: List[str], body: str) -> bool:
+
+async def send_email(subject: str, recipients: list[str], body: str) -> bool:
     """
     enviar correo electronico.
-    
+
     Args:
         subject: asunto del correo
         recipients: lista de destinatarios
         body: cuerpo del correo (HTML)
-    
+
     Returns:
         bool: True si se envio correctamente, False en caso contrario
     """
@@ -31,13 +32,8 @@ async def send_email(subject: str, recipients: List[str], body: str) -> bool:
         if not recipients:
             app_logger.warning("Intento de enviar correo sin destinatarios")
             return False
-        
-        message = MessageSchema(
-            subject=subject,
-            recipients=recipients,
-            body=body,
-            subtype="html"
-        )
+
+        message = MessageSchema(subject=subject, recipients=recipients, body=body, subtype="html")
 
         fm = FastMail(conf)
         await fm.send_message(message)

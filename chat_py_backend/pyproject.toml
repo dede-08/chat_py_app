@@ -1,0 +1,12 @@
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+exclude = ["venv", ".pytest_cache", ".ruff_cache", "__pycache__", "logs", "uploads"]
+src = ["."]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC", "SIM", "PIE", "RUF", "TRY"]
+ignore = ["B008", "BLE001", "E501", "TRY300", "TRY301", "TRY003"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["ASYNC230"]

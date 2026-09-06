@@ -34,20 +34,25 @@ def mock_collections():
     async def fake_get_database():
         return mock_db
 
-    with patch("database.connection.get_database", fake_get_database), patch(
-        "database.migrations.run_database_migrations", AsyncMock()
-    ), patch(
-        "services.refresh_token_service.refresh_token_service.save_refresh_token",
-        AsyncMock(),
-    ), patch(
-        "services.refresh_token_service.refresh_token_service.revoke_refresh_token",
-        AsyncMock(),
-    ), patch(
-        "services.refresh_token_service.refresh_token_service.validate_refresh_token",
-        AsyncMock(return_value=True),
-    ), patch(
-        "services.refresh_token_service.refresh_token_service.revoke_all_user_tokens",
-        AsyncMock(return_value=0),
+    with (
+        patch("database.connection.get_database", fake_get_database),
+        patch("database.migrations.run_database_migrations", AsyncMock()),
+        patch(
+            "services.refresh_token_service.refresh_token_service.save_refresh_token",
+            AsyncMock(),
+        ),
+        patch(
+            "services.refresh_token_service.refresh_token_service.revoke_refresh_token",
+            AsyncMock(),
+        ),
+        patch(
+            "services.refresh_token_service.refresh_token_service.validate_refresh_token",
+            AsyncMock(return_value=True),
+        ),
+        patch(
+            "services.refresh_token_service.refresh_token_service.revoke_all_user_tokens",
+            AsyncMock(return_value=0),
+        ),
     ):
         yield {
             "users": mock_users,
@@ -63,6 +68,7 @@ def mock_collections():
 @pytest.fixture
 async def client(mock_collections):
     from httpx import ASGITransport, AsyncClient
+
     from main import app
 
     transport = ASGITransport(app=app)

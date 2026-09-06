@@ -1,15 +1,16 @@
-from fastapi import Request, HTTPException
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import jwt, JWTError
+from fastapi import HTTPException, Request
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from jose import JWTError, jwt
+
 from config.settings import settings
-from typing import Optional
+
 
 class JWTBearer(HTTPBearer):
     def __init__(self, auto_error: bool = True):
-        super(JWTBearer, self).__init__(auto_error=auto_error)
+        super().__init__(auto_error=auto_error)
 
     async def __call__(self, request: Request) -> HTTPAuthorizationCredentials:
-        credentials: Optional[HTTPAuthorizationCredentials] = await super(JWTBearer, self).__call__(request)
+        credentials: HTTPAuthorizationCredentials | None = await super().__call__(request)
         if credentials:
             if not self.verify_jwt(credentials.credentials):
                 raise HTTPException(status_code=403, detail="Token inválido o expirado")
@@ -19,10 +20,10 @@ class JWTBearer(HTTPBearer):
 
     def verify_jwt(self, token: str) -> bool:
         try:
-            decoded_payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
-            #verificar que sea un access token (no un refresh token)
-            if decoded_payload.get("type") != "access":
-                return False
-            return True
+            decoded_payload = jwt.decode(
+                token, settings.jwt_secret, algorithms=[settings.jwt_algorithm]
+            )
+            # verificar que sea un access token (no un refresh token)
+            return decoded_payload.get("type") == "access"
         except JWTError:
             return False

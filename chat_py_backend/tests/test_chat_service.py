@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -59,16 +59,18 @@ async def test_get_chat_history():
     msg_id = ObjectId()
     mock_db = MagicMock()
     mock_db.messages = MagicMock()
-    mock_db.messages.find.return_value = AsyncCursor([
-        {
-            "_id": msg_id,
-            "sender_email": "alice@test.com",
-            "receiver_email": "bob@test.com",
-            "content": "Hola",
-            "timestamp": datetime.now(timezone.utc),
-            "is_read": False,
-        }
-    ])
+    mock_db.messages.find.return_value = AsyncCursor(
+        [
+            {
+                "_id": msg_id,
+                "sender_email": "alice@test.com",
+                "receiver_email": "bob@test.com",
+                "content": "Hola",
+                "timestamp": datetime.now(UTC),
+                "is_read": False,
+            }
+        ]
+    )
 
     with patch.object(service, "_get_db", AsyncMock(return_value=mock_db)):
         messages = await service.get_chat_history("alice@test.com", "bob@test.com")

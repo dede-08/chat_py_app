@@ -1,10 +1,12 @@
-from pydantic import BaseModel
 from datetime import datetime
-from typing import List, Optional
+
+from pydantic import BaseModel
+
 
 class MessageCreate(BaseModel):
     receiver_email: str
     content: str
+
 
 class MessageResponse(BaseModel):
     id: str
@@ -14,14 +16,16 @@ class MessageResponse(BaseModel):
     timestamp: datetime
     is_read: bool
 
+
 class ChatRoomResponse(BaseModel):
     id: str
-    participants: List[str]
-    last_message: Optional[MessageResponse] = None
+    participants: list[str]
+    last_message: MessageResponse | None = None
     created_at: datetime
     updated_at: datetime
+
 
 class UserStatus(BaseModel):
     email: str
     is_online: bool
-    last_seen: Optional[datetime] = None
+    last_seen: datetime | None = None

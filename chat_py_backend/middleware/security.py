@@ -1,71 +1,74 @@
-from fastapi import Request, HTTPException
-from fastapi.responses import JSONResponse
+import asyncio
 import time
 from collections import defaultdict, deque
-from typing import Dict, Deque
-import asyncio
-from utils.logger import app_logger
+
+from fastapi import Request
+from fastapi.responses import JSONResponse
+
 from config.settings import settings
+from utils.logger import app_logger
+
 
 class RateLimiter:
-
-    #rate limiter basado en sliding window
+    # rate limiter basado en sliding window
     def __init__(self, max_requests: int = 100, window_seconds: int = 60):
         self.max_requests = max_requests
         self.window_seconds = window_seconds
-        self.requests: Dict[str, Deque[float]] = defaultdict(deque)
+        self.requests: dict[str, deque[float]] = defaultdict(deque)
         self._cleanup_task = None
-        
+
     def is_allowed(self, client_id: str) -> bool:
-        #verificar si una solicitud esta permitida
+        # verificar si una solicitud esta permitida
         now = time.time()
         window_start = now - self.window_seconds
-        
-        #limpiar solicitudes fuera de la ventana
+
+        # limpiar solicitudes fuera de la ventana
         client_requests = self.requests[client_id]
         while client_requests and client_requests[0] < window_start:
             client_requests.popleft()
-        
-        #verificar limite
+
+        # verificar limite
         if len(client_requests) >= self.max_requests:
             return False
-        
-        #agregar solicitud actual
+
+        # agregar solicitud actual
         client_requests.append(now)
         return True
-    
+
     async def cleanup_old_entries(self):
         """Limpieza periódica de entradas antiguas"""
         while True:
             try:
                 now = time.time()
                 window_start = now - self.window_seconds
-                
-                #limpiar entradas de clientes inactivos
+
+                # limpiar entradas de clientes inactivos
                 clients_to_remove = []
                 for client_id, requests in self.requests.items():
                     while requests and requests[0] < window_start:
                         requests.popleft()
-                    
-                    #si no hay solicitudes recientes, marcar para eliminacion
+
+                    # si no hay solicitudes recientes, marcar para eliminacion
                     if not requests:
                         clients_to_remove.append(client_id)
-                
-                #eliminar clientes inactivos
+
+                # eliminar clientes inactivos
                 for client_id in clients_to_remove:
                     del self.requests[client_id]
-                
-                #esperar 5 minutos antes de la siguiente limpieza
+
+                # esperar 5 minutos antes de la siguiente limpieza
                 await asyncio.sleep(300)
-                
+
             except Exception as e:
-                app_logger.error(f"Error en limpieza de rate limiter: {str(e)}")
+                app_logger.error(f"Error en limpieza de rate limiter: {e!s}")
                 await asyncio.sleep(60)
 
-#instancias globales de rate limiters
-auth_rate_limiter = RateLimiter(max_requests=10, window_seconds=60)  #10 intentos por minuto
+
+# instancias globales de rate limiters
+auth_rate_limiter = RateLimiter(max_requests=10, window_seconds=60)  # 10 intentos por minuto
 api_rate_limiter = RateLimiter(max_requests=100, window_seconds=60)
-ws_rate_limiter = RateLimiter(max_requests=60, window_seconds=60)  #60 mensajes WS por minuto
+ws_rate_limiter = RateLimiter(max_requests=60, window_seconds=60)  # 60 mensajes WS por minuto
+
 
 class LoginLockout:
     """Bloqueo temporal tras intentos fallidos de login."""
@@ -73,8 +76,8 @@ class LoginLockout:
     def __init__(self, max_attempts: int = 5, lockout_seconds: int = 300):
         self.max_attempts = max_attempts
         self.lockout_seconds = lockout_seconds
-        self._attempts: Dict[str, int] = defaultdict(int)
-        self._locked_until: Dict[str, float] = {}
+        self._attempts: dict[str, int] = defaultdict(int)
+        self._locked_until: dict[str, float] = {}
 
     def is_locked(self, identifier: str) -> bool:
         until = self._locked_until.get(identifier)
@@ -106,10 +109,12 @@ class LoginLockout:
         self._attempts.clear()
         self._locked_until.clear()
 
+
 login_lockout = LoginLockout(
     max_attempts=settings.max_login_attempts,
     lockout_seconds=settings.lockout_duration,
 )
+
 
 def clear_rate_limits():
     """Limpiar todos los rate limiters (para desarrollo local)"""
@@ -119,37 +124,37 @@ def clear_rate_limits():
     login_lockout.reset()
     app_logger.info("Rate limiters limpiados para desarrollo local")
 
+
 async def rate_limit_middleware(request: Request, call_next, limiter: RateLimiter = None):
-    #middleware para rate limiting
+    # middleware para rate limiting
     if limiter is None:
         limiter = api_rate_limiter
-    
-    #obtener IP del cliente
+
+    # obtener IP del cliente
     client_ip = request.client.host
     if "x-forwarded-for" in request.headers:
         client_ip = request.headers["x-forwarded-for"].split(",")[0].strip()
-    
-    #verificar rate limit
+
+    # verificar rate limit
     if not limiter.is_allowed(client_ip):
         app_logger.warning(f"Rate limit excedido para IP: {client_ip}")
         response = JSONResponse(
-            status_code=429,
-            content={"detail": "Demasiadas solicitudes. Intenta mas tarde."}
+            status_code=429, content={"detail": "Demasiadas solicitudes. Intenta mas tarde."}
         )
         response.headers["Retry-After"] = str(limiter.window_seconds)
         return response
-    
+
     response = await call_next(request)
     return response
 
-class SecurityHeaders:
 
-    #middleware para agregar headers de seguridad
+class SecurityHeaders:
+    # middleware para agregar headers de seguridad
     @staticmethod
     def _build_csp_policy() -> str:
         """
         Construir la politica de Content Security Policy (CSP).
-        
+
         Permite recursos necesarios para el frontend:
         - Scripts desde 'self' y CDNs confiables (Bootstrap)
         - Estilos desde 'self' y Google Fonts
@@ -157,27 +162,24 @@ class SecurityHeaders:
         - Conexiones WebSocket al mismo origen
         - Imágenes desde 'self' y data URIs
         - Conexiones fetch/XMLHttpRequest al mismo origen y API backend
-        
+
         Returns:
             String con la política CSP completa
         """
-        #obtener el origen del frontend para permitir conexiones
+        # obtener el origen del frontend para permitir conexiones
         frontend_origin = settings.frontend_url
-        
-        #construir lista de origenes permitidos para conexiones
+
+        # construir lista de origenes permitidos para conexiones
         connect_sources = ["'self'", frontend_origin]
-        
-        #en desarrollo, permitir conexiones WebSocket en localhost
+
+        # en desarrollo, permitir conexiones WebSocket en localhost
         if "localhost" in frontend_origin or "127.0.0.1" in frontend_origin:
-            connect_sources.extend([
-                "ws://localhost:*",
-                "wss://localhost:*",
-                "ws://127.0.0.1:*",
-                "wss://127.0.0.1:*"
-            ])
+            connect_sources.extend(
+                ["ws://localhost:*", "wss://localhost:*", "ws://127.0.0.1:*", "wss://127.0.0.1:*"]
+            )
         else:
-            #en produccion, permitir WebSockets al mismo origen
-            #extraer el protocolo y host del frontend_url
+            # en produccion, permitir WebSockets al mismo origen
+            # extraer el protocolo y host del frontend_url
             if frontend_origin.startswith("https://"):
                 ws_origin = frontend_origin.replace("https://", "wss://")
             elif frontend_origin.startswith("http://"):
@@ -185,7 +187,7 @@ class SecurityHeaders:
             else:
                 ws_origin = frontend_origin
             connect_sources.append(ws_origin)
-        
+
         # Construir CSP policy
         csp_directives = [
             # Scripts: permitir mismo origen y CDNs confiables
@@ -212,14 +214,14 @@ class SecurityHeaders:
             # Upgrade insecure requests en producción (comentado para desarrollo)
             # "upgrade-insecure-requests",
         ]
-        
+
         return "; ".join(csp_directives)
-    
+
     @staticmethod
     async def add_security_headers(request: Request, call_next):
         """
         Middleware para agregar headers de seguridad HTTP.
-        
+
         Incluye:
         - X-Content-Type-Options: previene MIME type sniffing
         - X-Frame-Options: previene clickjacking
@@ -228,41 +230,41 @@ class SecurityHeaders:
         - Content-Security-Policy: política de seguridad de contenido
         """
         response = await call_next(request)
-        
-        #headers de seguridad
+
+        # headers de seguridad
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        
-        #HSTS solo en produccion (sinencias de http dispararia el header en local)
+
+        # HSTS solo en produccion (sinencias de http dispararia el header en local)
         if settings.is_production:
             response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-        
-        #no cachear respuestas con datos sensibles (auth, chat)
+
+        # no cachear respuestas con datos sensibles (auth, chat)
         if request.url.path.startswith(("/auth", "/chat", "/ws")):
             response.headers["Cache-Control"] = "no-store"
-        
-        #content security policy - construido dinamicamente
+
+        # content security policy - construido dinamicamente
         csp_policy = SecurityHeaders._build_csp_policy()
         response.headers["Content-Security-Policy"] = csp_policy
-        
+
         return response
 
+
 class RequestLogger:
-    
-    #middleware para logging de solicitudes
+    # middleware para logging de solicitudes
     @staticmethod
     async def log_requests(request: Request, call_next):
         start_time = time.time()
-        
-        #log de solicitud entrante (solo path, sin query params para no exponer datos)
+
+        # log de solicitud entrante (solo path, sin query params para no exponer datos)
         app_logger.info(f"Request: {request.method} {request.url.path}")
-        
+
         try:
             response = await call_next(request)
-            
-            #log de respuesta
+
+            # log de respuesta
             process_time = time.time() - start_time
             app_logger.info(
                 f"Response: {response.status_code} - "
@@ -270,18 +272,19 @@ class RequestLogger:
                 f"Method: {request.method} - "
                 f"Path: {request.url.path}"
             )
-            
+
             return response
-            
+
         except Exception as e:
             process_time = time.time() - start_time
             app_logger.error(
-                f"Request failed: {str(e)} - "
+                f"Request failed: {e!s} - "
                 f"Time: {process_time:.2f}s - "
                 f"Method: {request.method} - "
                 f"Path: {request.url.path}"
             )
             raise
+
 
 def _is_origin_allowed(origin: str) -> bool:
     """Verificar si un Origin header pertenece a los origenes permitidos."""
@@ -289,6 +292,7 @@ def _is_origin_allowed(origin: str) -> bool:
         return False
     allowed = {o for o in settings.cors_origins if o.startswith(("http://", "https://"))}
     return origin in allowed
+
 
 async def csrf_origin_middleware(request: Request, call_next):
     """

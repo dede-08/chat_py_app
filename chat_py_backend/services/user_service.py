@@ -1,7 +1,8 @@
-from database import connection as db_conn
-from utils.logger import auth_logger
+from typing import Any
+
 from pymongo.errors import DuplicateKeyError
-from typing import Optional, Dict, Any
+
+from database import connection as db_conn
 
 
 class UserService:
@@ -15,33 +16,27 @@ class UserService:
     def _users(self):
         return db_conn.users_collection
 
-    async def find_by_email(self, email: str) -> Optional[Dict[str, Any]]:
+    async def find_by_email(self, email: str) -> dict[str, Any] | None:
         return await self._users.find_one({"email": email})
 
-    async def find_by_username(self, username: str) -> Optional[Dict[str, Any]]:
+    async def find_by_username(self, username: str) -> dict[str, Any] | None:
         return await self._users.find_one({"username": username})
 
-    async def find_by_email_confirmation_token(self, token: str) -> Optional[Dict[str, Any]]:
+    async def find_by_email_confirmation_token(self, token: str) -> dict[str, Any] | None:
         return await self._users.find_one({"email_confirmation_token": token})
 
-    async def create(self, user_dict: Dict[str, Any]) -> None:
+    async def create(self, user_dict: dict[str, Any]) -> None:
         """Insertar un usuario. Lanza DuplicateKeyError si email/username ya existen."""
-        try:
-            await self._users.insert_one(user_dict)
-        except DuplicateKeyError:
-            raise
+        await self._users.insert_one(user_dict)
 
-    async def update(self, email: str, update_fields: Dict[str, Any]) -> None:
+    async def update(self, email: str, update_fields: dict[str, Any]) -> None:
         """Actualizar campos de un usuario. Lanza DuplicateKeyError si pisa una clave única."""
-        try:
-            await self._users.update_one(
-                {"email": email},
-                {"$set": update_fields},
-            )
-        except DuplicateKeyError:
-            raise
+        await self._users.update_one(
+            {"email": email},
+            {"$set": update_fields},
+        )
 
-    async def confirm_email(self, token: str) -> Optional[Dict[str, Any]]:
+    async def confirm_email(self, token: str) -> dict[str, Any] | None:
         """Marcar el email como confirmado, retornando el documento actualizado si el token existe."""
         user = await self._users.find_one({"email_confirmation_token": token})
         if not user:

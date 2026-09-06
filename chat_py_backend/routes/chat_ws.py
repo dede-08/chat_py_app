@@ -1,73 +1,81 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query, HTTPException
-from jose import JWTError, jwt
-from typing import Dict, List, Optional
 import json
 import re
-from datetime import datetime, timezone
-from services.chat_service import chat_service
-from config.settings import settings
-from utils.logger import websocket_logger
-from utils.jwt_handler import decode_access_token
-from services.user_service import user_service
-from middleware.security import ws_rate_limiter
 import traceback
+from datetime import UTC, datetime
+
+from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
+from jose import JWTError
+
+from middleware.security import ws_rate_limiter
+from services.chat_service import chat_service
+from services.user_service import user_service
+from utils.jwt_handler import decode_access_token
+from utils.logger import websocket_logger
 
 router = APIRouter()
 
+
 def _ensure_utc(dt: datetime) -> datetime:
     if dt.tzinfo is None:
-        return dt.replace(tzinfo=timezone.utc)
+        return dt.replace(tzinfo=UTC)
     return dt
 
-# Diccionario para mantener conexiones por usuario
-connected_users: Dict[str, WebSocket] = {}
 
-async def validate_websocket_token(token: str) -> Optional[str]:
+# Diccionario para mantener conexiones por usuario.
+# ADVERTENCIA: es en memoria por-proceso. Con multiples workers de uvicorn cada worker tiene su
+# propia copia y los mensajes entre workers no se entregan. Requiere broker externo (Redis) para
+# escalar horizontalmente. Ver README.md -> Arquitectura y notas.
+connected_users: dict[str, WebSocket] = {}
+
+
+async def validate_websocket_token(token: str) -> str | None:
     """
     Validar token de WebSocket y retornar el email del usuario si es válido.
-    
+
     Realiza las siguientes validaciones:
     1. Verifica que el token sea un access token válido (no expirado)
     2. Verifica que el usuario existe en la base de datos
     3. Verifica que el email del usuario esté confirmado
-    
+
     Args:
         token: Token JWT a validar
-        
+
     Returns:
         Email del usuario si el token es válido, None en caso contrario
     """
     if not token:
         websocket_logger.warning("Token no proporcionado para validación WebSocket")
         return None
-    
+
     try:
         # Usar la funcion centralizada que valida el tipo de token y expiracion
         payload = decode_access_token(token)
-        
+
         if not payload:
             websocket_logger.warning("Token inválido o expirado en conexión WebSocket")
             return None
-        
+
         email = payload.get("email")
         if not email:
             websocket_logger.warning("Email no encontrado en el payload del token")
             return None
-        
+
         # Verificar que el usuario existe en la base de datos
         db_user = await user_service.find_by_email(email)
         if not db_user:
             websocket_logger.warning(f"Usuario no encontrado en BD para email: {email}")
             return None
-        
+
         # Verificar que el email este confirmado
         if not db_user.get("is_email_confirmed", False):
-            websocket_logger.warning(f"Intento de conexión WebSocket con email no confirmado: {email}")
+            websocket_logger.warning(
+                f"Intento de conexión WebSocket con email no confirmado: {email}"
+            )
             return None
-        
+
         websocket_logger.debug(f"Token validado exitosamente para usuario: {email}")
         return email
-        
+
     except JWTError as e:
         websocket_logger.warning(f"Error JWT al validar token WebSocket: {e}")
         return None
@@ -76,11 +84,12 @@ async def validate_websocket_token(token: str) -> Optional[str]:
         websocket_logger.debug(traceback.format_exc())
         return None
 
+
 @router.websocket("/ws/chat")
 async def chat_endpoint(websocket: WebSocket, token: str = Query(None)):
     """
     Endpoint WebSocket para chat en tiempo real.
-    
+
     Acepta token JWT por query parameter o por cookie (access_token).
     Valida el token antes de aceptar la conexión.
     """
@@ -91,20 +100,22 @@ async def chat_endpoint(websocket: WebSocket, token: str = Query(None)):
         websocket_logger.warning("Intento de conexión WebSocket sin token")
         await websocket.close(
             code=1008,  # Policy violation
-            reason="Token no proporcionado"
+            reason="Token no proporcionado",
         )
         return
 
     # Validar token y obtener email del usuario
     user_email = await validate_websocket_token(token)
     if not user_email:
-        websocket_logger.warning("Intento de conexión WebSocket con token inválido o usuario no autorizado")
+        websocket_logger.warning(
+            "Intento de conexión WebSocket con token inválido o usuario no autorizado"
+        )
         await websocket.close(
             code=1008,  # Policy violation
-            reason="Token inválido, expirado o usuario no autorizado"
+            reason="Token inválido, expirado o usuario no autorizado",
         )
         return
-    
+
     # Verificar si el usuario ya tiene una conexion activa
     if user_email in connected_users:
         old_websocket = connected_users[user_email]
@@ -115,7 +126,7 @@ async def chat_endpoint(websocket: WebSocket, token: str = Query(None)):
             websocket_logger.warning(f"Error al cerrar conexión anterior: {e}")
         finally:
             del connected_users[user_email]
-    
+
     # Aceptar la conexion WebSocket
     try:
         await websocket.accept()
@@ -125,10 +136,10 @@ async def chat_endpoint(websocket: WebSocket, token: str = Query(None)):
         websocket_logger.error(f"Error al aceptar conexión WebSocket para {user_email}: {e}")
         await websocket.close(code=1011, reason="Error interno del servidor")
         return
-    
+
     # Notificar a otros usuarios que este usuario esta online
     await broadcast_user_status(user_email, True)
-    
+
     try:
         while True:
             data = await websocket.receive_text()
@@ -138,12 +149,16 @@ async def chat_endpoint(websocket: WebSocket, token: str = Query(None)):
                 message_type = message_data.get("type", "message")
 
                 if message_type != "ping" and not ws_rate_limiter.is_allowed(user_email):
-                    await websocket.send_text(json.dumps({
-                        "type": "error",
-                        "message": "Demasiados mensajes. Espera un momento.",
-                    }))
+                    await websocket.send_text(
+                        json.dumps(
+                            {
+                                "type": "error",
+                                "message": "Demasiados mensajes. Espera un momento.",
+                            }
+                        )
+                    )
                     continue
-                
+
                 if message_type == "message":
                     await handle_private_message(user_email, message_data)
                 elif message_type == "typing":
@@ -157,34 +172,32 @@ async def chat_endpoint(websocket: WebSocket, token: str = Query(None)):
                     websocket_logger.warning(f"Tipo de mensaje desconocido: {message_type}")
             except json.JSONDecodeError as e:
                 websocket_logger.error(f"Error al parsear JSON: {e}")
-                await websocket.send_text(json.dumps({
-                    "type": "error",
-                    "message": "Formato de mensaje inválido"
-                }))
-                
+                await websocket.send_text(
+                    json.dumps({"type": "error", "message": "Formato de mensaje inválido"})
+                )
+
     except WebSocketDisconnect:
         websocket_logger.info(f"Usuario {user_email} desconectado")
-        if user_email in connected_users:
-            del connected_users[user_email]
+        connected_users.pop(user_email, None)
         # Notificar que el usuario esta offline
         await broadcast_user_status(user_email, False)
     except Exception as e:
         websocket_logger.error(f"Error en WebSocket para {user_email}: {e}")
         websocket_logger.debug(traceback.format_exc())
-        if user_email in connected_users:
-            del connected_users[user_email]
+        connected_users.pop(user_email, None)
         await broadcast_user_status(user_email, False)
+
 
 async def handle_private_message(sender_email: str, message_data: dict):
     """Manejar mensaje privado entre usuarios"""
     receiver_email = message_data.get("receiver_email")
     content = message_data.get("content")
-    
+
     # Validaciones básicas
     if not receiver_email or not content:
         websocket_logger.warning(f"Mensaje incompleto de {sender_email}")
         return
-    
+
     if receiver_email == sender_email:
         websocket_logger.warning(f"Intento de auto-mensaje de {sender_email}")
         return
@@ -194,36 +207,35 @@ async def handle_private_message(sender_email: str, message_data: dict):
     if not receiver:
         websocket_logger.warning(f"Receptor inexistente {receiver_email} (emisor: {sender_email})")
         if sender_email in connected_users:
-            error_msg = {
-                "type": "error",
-                "message": "Usuario no encontrado"
-            }
+            error_msg = {"type": "error", "message": "Usuario no encontrado"}
             await connected_users[sender_email].send_text(json.dumps(error_msg))
         return
-    
+
     # Validar tamaño del mensaje (maximo 5000 caracteres)
     MAX_MESSAGE_LENGTH = 5000
     if len(content) > MAX_MESSAGE_LENGTH:
-        websocket_logger.warning(f"Mensaje demasiado largo de {sender_email}: {len(content)} caracteres")
+        websocket_logger.warning(
+            f"Mensaje demasiado largo de {sender_email}: {len(content)} caracteres"
+        )
         if sender_email in connected_users:
             error_msg = {
                 "type": "error",
-                "message": f"El mensaje excede el límite de {MAX_MESSAGE_LENGTH} caracteres"
+                "message": f"El mensaje excede el límite de {MAX_MESSAGE_LENGTH} caracteres",
             }
             await connected_users[sender_email].send_text(json.dumps(error_msg))
         return
-    
+
     # Sanitizar contenido: remover caracteres de control (React escapa HTML al renderizar)
-    content = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', content).strip()
-    
+    content = re.sub(r"[\x00-\x1f\x7f-\x9f]", "", content).strip()
+
     if not content:
         websocket_logger.warning(f"Mensaje vacío después de sanitización de {sender_email}")
         return
-    
-    #guardar mensaje en la base de datos
+
+    # guardar mensaje en la base de datos
     saved_message = await chat_service.save_message(sender_email, receiver_email, content)
-    
-    #preparar mensaje para enviar
+
+    # preparar mensaje para enviar
     message_to_send = {
         "type": "message",
         "id": saved_message.id,
@@ -231,67 +243,65 @@ async def handle_private_message(sender_email: str, message_data: dict):
         "receiver_email": receiver_email,
         "content": content,
         "timestamp": _ensure_utc(saved_message.timestamp).isoformat(),
-        "is_read": False
+        "is_read": False,
     }
-    
-    #enviar al destinatario si esta en linea
+
+    # enviar al destinatario si esta en linea
     if receiver_email in connected_users:
         await connected_users[receiver_email].send_text(json.dumps(message_to_send))
-    
-    #enviar confirmacion al remitente
+
+    # enviar confirmacion al remitente
     if sender_email in connected_users:
         confirmation = {
             "type": "message_sent",
             "message_id": saved_message.id,
-            "timestamp": _ensure_utc(saved_message.timestamp).isoformat()
+            "timestamp": _ensure_utc(saved_message.timestamp).isoformat(),
         }
         await connected_users[sender_email].send_text(json.dumps(confirmation))
 
+
 async def handle_typing_indicator(sender_email: str, message_data: dict):
-    #manejar indicador de escritura
+    # manejar indicador de escritura
     receiver_email = message_data.get("receiver_email")
     is_typing = message_data.get("is_typing", False)
-    
+
     if receiver_email and receiver_email in connected_users:
-        typing_data = {
-            "type": "typing",
-            "sender_email": sender_email,
-            "is_typing": is_typing
-        }
+        typing_data = {"type": "typing", "sender_email": sender_email, "is_typing": is_typing}
         await connected_users[receiver_email].send_text(json.dumps(typing_data))
 
+
 async def handle_read_receipt(user_email: str, message_data: dict):
-    #manejar confirmacion de lectura
+    # manejar confirmacion de lectura
     sender_email = message_data.get("sender_email")
-    
+
     if sender_email:
-        #marcar mensajes como leidos en la base de datos
+        # marcar mensajes como leidos en la base de datos
         await chat_service.mark_messages_as_read(sender_email, user_email)
-        
-        #notificar al remitente
+
+        # notificar al remitente
         if sender_email in connected_users:
             read_data = {
                 "type": "read_receipt",
                 "reader_email": user_email,
-                "timestamp": datetime.now(timezone.utc).isoformat()
+                "timestamp": datetime.now(UTC).isoformat(),
             }
             await connected_users[sender_email].send_text(json.dumps(read_data))
 
+
 async def broadcast_user_status(user_email: str, is_online: bool):
-    #notificar a todos los usuarios conectados sobre el estado de un usuario
+    # notificar a todos los usuarios conectados sobre el estado de un usuario
     status_data = {
         "type": "user_status",
         "user_email": user_email,
         "is_online": is_online,
-        "timestamp": datetime.now(timezone.utc).isoformat()
+        "timestamp": datetime.now(UTC).isoformat(),
     }
-    
+
     for email, websocket in list(connected_users.items()):
-        if email != user_email:  #no enviar a mismo usuario
+        if email != user_email:  # no enviar a mismo usuario
             try:
                 await websocket.send_text(json.dumps(status_data))
             except Exception as e:
                 websocket_logger.error(f"Error al transmitir el estado a {email}: {e}")
                 # Si hay error, remover la conexion
-                if email in connected_users:
-                    del connected_users[email]
+                connected_users.pop(email, None)

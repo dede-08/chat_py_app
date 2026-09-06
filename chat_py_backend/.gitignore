@@ -21,6 +21,10 @@ ENV/
 logs/
 *.log
 
+# Caches de herramientas
+.pytest_cache/
+.ruff_cache/
+
 # IDEs
 .vscode/
 .idea/

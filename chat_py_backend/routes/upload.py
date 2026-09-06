@@ -1,13 +1,42 @@
 import os
 import uuid
-import imghdr
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
+
+from anyio import to_thread
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+
+from config.settings import settings
 from database import connection as db_conn
 from utils.cookie_auth import get_current_user_email_cookie
-from config.settings import settings
 from utils.logger import auth_logger
 
 router = APIRouter()
+
+
+def _detect_image_ext(contents: bytes) -> str | None:
+    """Devuelve la extensión real del archivo según su firma (magic bytes), o None si no es una imagen válida."""
+    if contents.startswith(b"\xff\xd8\xff"):
+        return "jpg"
+    if contents.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "png"
+    if contents.startswith(b"RIFF") and contents[8:12] == b"WEBP":
+        return "webp"
+    return None
+
+
+def _write_file(filepath: str, contents: bytes) -> None:
+    """Escribir el avatar en disco (síncrono, ejecutado en threadpool)."""
+    os.makedirs(settings.upload_dir, exist_ok=True)
+    with open(filepath, "wb") as f:
+        f.write(contents)
+
+
+def _delete_avatar_file(avatar_url: str | None) -> None:
+    """Eliminar el archivo de avatar anterior si existe (síncrono, ejecutado en threadpool)."""
+    if not avatar_url:
+        return
+    old_path = os.path.join(settings.upload_dir, os.path.basename(avatar_url))
+    if os.path.exists(old_path):
+        os.remove(old_path)
 
 
 @router.post("/auth/upload-avatar")
@@ -16,37 +45,34 @@ async def upload_avatar(
     current_user_email: str = Depends(get_current_user_email_cookie),
 ):
     if file.content_type not in settings.allowed_image_types:
-        raise HTTPException(status_code=400, detail="Tipo de imagen no permitido. Use JPEG, PNG o WebP")
+        raise HTTPException(
+            status_code=400, detail="Tipo de imagen no permitido. Use JPEG, PNG o WebP"
+        )
 
     contents = await file.read()
     if len(contents) > settings.max_upload_size:
-        raise HTTPException(status_code=400, detail=f"La imagen supera el límite de {settings.max_upload_size // (1024*1024)}MB")
+        raise HTTPException(
+            status_code=400,
+            detail=f"La imagen supera el límite de {settings.max_upload_size // (1024 * 1024)}MB",
+        )
 
-    detected = imghdr.what(None, contents)
-    if detected is None:
+    ext = _detect_image_ext(contents)
+    if ext is None:
         raise HTTPException(status_code=400, detail="El archivo no es una imagen válida")
 
-    os.makedirs(settings.upload_dir, exist_ok=True)
-
-    ext = {"jpeg": "jpg", "png": "png", "gif": "gif", "webp": "webp"}.get(detected, "jpg")
     filename = f"{uuid.uuid4().hex}.{ext}"
     filepath = os.path.join(settings.upload_dir, filename)
 
-    with open(filepath, "wb") as f:
-        f.write(contents)
+    await to_thread.run_sync(_write_file, filepath, contents)
 
     avatar_url = f"/uploads/avatars/{filename}"
 
     user = await db_conn.users_collection.find_one({"email": current_user_email})
     if not user:
-        os.remove(filepath)
+        await to_thread.run_sync(os.remove, filepath)
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
-    old_avatar = user.get("avatar_url")
-    if old_avatar:
-        old_path = os.path.join(settings.upload_dir, os.path.basename(old_avatar))
-        if os.path.exists(old_path):
-            os.remove(old_path)
+    await to_thread.run_sync(_delete_avatar_file, user.get("avatar_url"))
 
     await db_conn.users_collection.update_one(
         {"email": current_user_email},
@@ -65,11 +91,7 @@ async def delete_avatar(
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
-    old_avatar = user.get("avatar_url")
-    if old_avatar:
-        old_path = os.path.join(settings.upload_dir, os.path.basename(old_avatar))
-        if os.path.exists(old_path):
-            os.remove(old_path)
+    await to_thread.run_sync(_delete_avatar_file, user.get("avatar_url"))
 
     await db_conn.users_collection.update_one(
         {"email": current_user_email},

@@ -1,10 +1,10 @@
+from datetime import UTC, datetime
+
 from database.connection import get_database
-from model.chat import Message, ChatRoom
-from datetime import datetime, timezone
-from typing import List, Optional
-from bson import ObjectId
+from model.chat import ChatRoom, Message
 from utils.jwt_handler import decode_access_token
 from utils.logger import chat_logger
+
 
 class ChatService:
     async def _get_db(self):
@@ -19,8 +19,8 @@ class ChatService:
             "sender_email": sender_email,
             "receiver_email": receiver_email,
             "content": content,
-            "timestamp": datetime.now(timezone.utc),
-            "is_read": False
+            "timestamp": datetime.now(UTC),
+            "is_read": False,
         }
 
         result = await db.messages.insert_one(message_data)
@@ -30,12 +30,14 @@ class ChatService:
 
         return Message(**message_data)
 
-    async def get_chat_history(self, user1_email: str, user2_email: str, limit: int = 50) -> List[Message]:
+    async def get_chat_history(
+        self, user1_email: str, user2_email: str, limit: int = 50
+    ) -> list[Message]:
         db = await self._get_db()
         query = {
             "$or": [
                 {"sender_email": user1_email, "receiver_email": user2_email},
-                {"sender_email": user2_email, "receiver_email": user1_email}
+                {"sender_email": user2_email, "receiver_email": user1_email},
             ]
         }
 
@@ -48,7 +50,7 @@ class ChatService:
 
         return list(reversed(messages))
 
-    async def get_user_chat_rooms(self, user_email: str) -> List[ChatRoom]:
+    async def get_user_chat_rooms(self, user_email: str) -> list[ChatRoom]:
         db = await self._get_db()
         query = {"participants": user_email}
         cursor = db.chat_rooms.find(query).sort("updated_at", -1)
@@ -68,23 +70,13 @@ class ChatService:
 
     async def mark_messages_as_read(self, sender_email: str, receiver_email: str):
         db = await self._get_db()
-        query = {
-            "sender_email": sender_email,
-            "receiver_email": receiver_email,
-            "is_read": False
-        }
+        query = {"sender_email": sender_email, "receiver_email": receiver_email, "is_read": False}
 
-        await db.messages.update_many(
-            query,
-            {"$set": {"is_read": True}}
-        )
+        await db.messages.update_many(query, {"$set": {"is_read": True}})
 
     async def get_unread_count(self, user_email: str) -> int:
         db = await self._get_db()
-        query = {
-            "receiver_email": user_email,
-            "is_read": False
-        }
+        query = {"receiver_email": user_email, "is_read": False}
 
         return await db.messages.count_documents(query)
 
@@ -97,7 +89,7 @@ class ChatService:
             "room_id": room_id,
             "participants": participants,
             "last_message": last_message,
-            "updated_at": datetime.now(timezone.utc)
+            "updated_at": datetime.now(UTC),
         }
 
         existing_room = await db.chat_rooms.find_one({"room_id": room_id})
@@ -105,15 +97,10 @@ class ChatService:
         if existing_room:
             await db.chat_rooms.update_one(
                 {"room_id": room_id},
-                {
-                    "$set": {
-                        "last_message": last_message,
-                        "updated_at": datetime.now(timezone.utc)
-                    }
-                }
+                {"$set": {"last_message": last_message, "updated_at": datetime.now(UTC)}},
             )
         else:
-            chat_room_data["created_at"] = datetime.now(timezone.utc)
+            chat_room_data["created_at"] = datetime.now(UTC)
             await db.chat_rooms.insert_one(chat_room_data)
 
     async def get_all_users(self, current_user_email: str, limit: int = 100, skip: int = 0) -> list:
@@ -122,10 +109,14 @@ class ChatService:
             limit = 500
             chat_logger.warning(f"Límite de usuarios ajustado a 500 (solicitado: {limit})")
 
-        cursor = db.users.find(
-            {"email": {"$ne": current_user_email}},
-            {"_id": 1, "email": 1, "username": 1, "telephone": 1, "avatar_url": 1}
-        ).skip(skip).limit(limit)
+        cursor = (
+            db.users.find(
+                {"email": {"$ne": current_user_email}},
+                {"_id": 1, "email": 1, "username": 1, "telephone": 1, "avatar_url": 1},
+            )
+            .skip(skip)
+            .limit(limit)
+        )
 
         users = []
         async for doc in cursor:
@@ -141,5 +132,6 @@ class ChatService:
             return payload.get("email")
         return None
 
-#instancia global compartida del servicio de chat
+
+# instancia global compartida del servicio de chat
 chat_service = ChatService()

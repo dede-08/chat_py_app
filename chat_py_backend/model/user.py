@@ -1,5 +1,5 @@
-from pydantic import BaseModel, EmailStr, Field
-from typing import Optional
+from pydantic import BaseModel, EmailStr
+
 
 class User(BaseModel):
     username: str
@@ -7,5 +7,5 @@ class User(BaseModel):
     password: str
     telephone: str
     is_email_confirmed: bool = False
-    email_confirmation_token: Optional[str] = None
-    avatar_url: Optional[str] = None
+    email_confirmation_token: str | None = None
+    avatar_url: str | None = None

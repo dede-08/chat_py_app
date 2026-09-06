@@ -78,3 +78,23 @@ python -m pytest -v
 - Mínimo 8, máximo 128 caracteres
 - Al menos una mayúscula, una minúscula, un número y un carácter especial
 - Sin espacios
+
+## Arquitectura y notas
+
+### WebSocket — ejecución single-worker
+
+El diccionario `connected_users` en `routes/chat_ws.py` almacena las conexiones en memoria del proceso.
+Si se ejecuta el servidor con más de un worker (por ejemplo `uvicorn main:app --workers 4`), cada worker
+tiene su propia copia, por lo que un mensaje escrito por un usuario conectado a un worker distinto nunca
+se entregará. Para desplegar con múltiples workers se necesita un broker externo (Redis, NATS) que
+publique los eventos de mensaje a todos los procesos.
+
+### Tareas de background
+
+El lifespan crea tareas (`asyncio.create_task`) que limpien tokens expirados y rate-limiters viejos.
+Si se despliega con `--workers 4` esas tareas corren en cada worker; con un broker externo basta que
+un solo proceso las ejecute.
+
+### Refresh tokens
+
+Los refresh tokens se almacenan y buscan siempre como hash SHA-256 del JWT, nunca en claro.
