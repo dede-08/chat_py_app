@@ -17,9 +17,9 @@ export interface UserProfile {
   username: string;
   telephone?: string;
   avatar_url?: string | null;
+  email_confirmation_required?: boolean;
   created_at?: string;
   updated_at?: string;
-  email_confirmation_required?: boolean;
 }
 
 export interface PasswordRequirements {
