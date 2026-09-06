@@ -11,7 +11,7 @@ from schemas.user_schema import (
     UserProfileResponse,
     UserProfileUpdate,
 )
-from database import connection as db_conn
+from services.user_service import user_service
 from passlib.context import CryptContext
 from utils.jwt_handler import (
     create_access_token, 
@@ -87,12 +87,12 @@ async def validate_password(request: PasswordValidationRequest):
 @router.post("/register")
 async def register(user: UserRegister, request: Request):
     try:
-        existing_user = await db_conn.users_collection.find_one({"email": user.email})
+        existing_user = await user_service.find_by_email(user.email)
         if existing_user:
             auth_logger.warning(f"Intento de registro con email existente: {user.email}")
             raise HTTPException(status_code=400, detail="El email ya ha sido registrado")
 
-        existing_username = await db_conn.users_collection.find_one({"username": user.username})
+        existing_username = await user_service.find_by_username(user.username)
         if existing_username:
             auth_logger.warning(f"Intento de registro con username existente: {user.username}")
             raise HTTPException(status_code=400, detail="El nombre de usuario ya está en uso")
@@ -111,12 +111,12 @@ async def register(user: UserRegister, request: Request):
     user_dict["email_confirmation_token"] = confirmation_token
 
     try:
-        await db_conn.users_collection.insert_one(user_dict)
+        await user_service.create(user_dict)
         auth_logger.info(f"Usuario registrado exitosamente: {user.email}")
     except DuplicateKeyError as e:
         auth_logger.warning(f"Registro con clave duplicada: {e}")
-        key_pattern = e.details.get("keyPattern", {})
-        if "email" in key_pattern:
+        field = user_service.duplicate_key_field(e)
+        if field == "email":
             raise HTTPException(status_code=400, detail="El email ya ha sido registrado")
         raise HTTPException(status_code=400, detail="El nombre de usuario ya está en uso")
     except Exception as e:
@@ -136,15 +136,11 @@ async def register(user: UserRegister, request: Request):
 @router.get("/confirm-email/{token}")
 async def confirm_email(token: str):
     try:
-        user = await db_conn.users_collection.find_one({"email_confirmation_token": token})
+        user = await user_service.confirm_email(token)
         if not user:
             auth_logger.warning(f"Intento de confirmacion con token invalido: {token[:10]}...")
             raise HTTPException(status_code=400, detail="Token de confirmación inválido o expirado.")
 
-        await db_conn.users_collection.update_one(
-            {"_id": user["_id"]},
-            {"$set": {"is_email_confirmed": True, "email_confirmation_token": None}}
-        )
         auth_logger.info(f"Email confirmado exitosamente: {user.get('email', 'unknown')}")
         return {"message": "Email confirmado correctamente."}
     except HTTPException:
@@ -164,7 +160,7 @@ async def login(user: UserLogin, response: Response):
                 detail=f"Cuenta bloqueada temporalmente. Intenta de nuevo en {remaining} segundos.",
             )
 
-        db_user = await db_conn.users_collection.find_one({"email": user.email})
+        db_user = await user_service.find_by_email(user.email)
         if not db_user:
             auth_logger.warning(f"Intento de login con email no registrado: {user.email}")
             login_lockout.record_failure(user.email)
@@ -226,7 +222,7 @@ async def login(user: UserLogin, response: Response):
 @router.get("/profile", response_model=UserProfileResponse)
 async def get_profile(current_user_email: str = Depends(get_current_user_email_cookie)):
     """Obtener perfil del usuario autenticado."""
-    db_user = await db_conn.users_collection.find_one({"email": current_user_email})
+    db_user = await user_service.find_by_email(current_user_email)
     if not db_user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     return UserProfileResponse(
@@ -244,7 +240,7 @@ async def update_profile(
     current_user_email: str = Depends(get_current_user_email_cookie),
 ):
     """Actualizar perfil del usuario autenticado."""
-    db_user = await db_conn.users_collection.find_one({"email": current_user_email})
+    db_user = await user_service.find_by_email(current_user_email)
     if not db_user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
@@ -252,13 +248,13 @@ async def update_profile(
     email_confirmation_required = False
 
     if data.username is not None and data.username != db_user.get("username"):
-        existing = await db_conn.users_collection.find_one({"username": data.username})
+        existing = await user_service.find_by_username(data.username)
         if existing:
             raise HTTPException(status_code=409, detail="El nombre de usuario ya está en uso")
         update_fields["username"] = data.username
 
     if data.email is not None and data.email != db_user.get("email"):
-        existing = await db_conn.users_collection.find_one({"email": data.email})
+        existing = await user_service.find_by_email(data.email)
         if existing:
             raise HTTPException(status_code=409, detail="El email ya está registrado")
         confirmation_token = str(uuid.uuid4())
@@ -282,14 +278,11 @@ async def update_profile(
 
     if update_fields:
         try:
-            await db_conn.users_collection.update_one(
-                {"email": current_user_email},
-                {"$set": update_fields},
-            )
+            await user_service.update(current_user_email, update_fields)
         except DuplicateKeyError as e:
             auth_logger.warning(f"Actualización de perfil con clave duplicada: {e}")
-            key_pattern = e.details.get("keyPattern", {})
-            if "email" in key_pattern:
+            field = user_service.duplicate_key_field(e)
+            if field == "email":
                 raise HTTPException(status_code=409, detail="El email ya está registrado")
             raise HTTPException(status_code=409, detail="El nombre de usuario ya está en uso")
         db_user = {**db_user, **update_fields}
@@ -363,7 +356,7 @@ async def refresh_token_endpoint(request: Request, response: Response, body: Opt
             raise HTTPException(status_code=401, detail="Refresh token inválido")
         
         #verificar que el usuario existe y está confirmado
-        db_user = await db_conn.users_collection.find_one({"email": user_email})
+        db_user = await user_service.find_by_email(user_email)
         if not db_user:
             auth_logger.warning(f"Intento de refresh con usuario inexistente: {user_email}")
             raise HTTPException(status_code=401, detail="Usuario no encontrado")

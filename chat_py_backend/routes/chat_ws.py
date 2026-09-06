@@ -4,11 +4,11 @@ from typing import Dict, List, Optional
 import json
 import re
 from datetime import datetime, timezone
-from services.chat_service import ChatService
+from services.chat_service import chat_service
 from config.settings import settings
 from utils.logger import websocket_logger
 from utils.jwt_handler import decode_access_token
-from database import connection as db_conn
+from services.user_service import user_service
 from middleware.security import ws_rate_limiter
 import traceback
 
@@ -21,7 +21,6 @@ def _ensure_utc(dt: datetime) -> datetime:
 
 # Diccionario para mantener conexiones por usuario
 connected_users: Dict[str, WebSocket] = {}
-chat_service = ChatService()
 
 async def validate_websocket_token(token: str) -> Optional[str]:
     """
@@ -56,7 +55,7 @@ async def validate_websocket_token(token: str) -> Optional[str]:
             return None
         
         # Verificar que el usuario existe en la base de datos
-        db_user = await db_conn.users_collection.find_one({"email": email})
+        db_user = await user_service.find_by_email(email)
         if not db_user:
             websocket_logger.warning(f"Usuario no encontrado en BD para email: {email}")
             return None
@@ -191,7 +190,7 @@ async def handle_private_message(sender_email: str, message_data: dict):
         return
 
     # Validar que el receptor exista en la base de datos
-    receiver = await db_conn.users_collection.find_one({"email": receiver_email})
+    receiver = await user_service.find_by_email(receiver_email)
     if not receiver:
         websocket_logger.warning(f"Receptor inexistente {receiver_email} (emisor: {sender_email})")
         if sender_email in connected_users:

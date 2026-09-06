@@ -140,3 +140,6 @@ class ChatService:
         if payload:
             return payload.get("email")
         return None
+
+#instancia global compartida del servicio de chat
+chat_service = ChatService()

@@ -1,12 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from typing import List
-from services.chat_service import ChatService
+from services.chat_service import chat_service
 from schemas.chat_schema import MessageResponse, ChatRoomResponse, UserStatus
 from utils.cookie_auth import get_current_user_email_cookie
 from utils.logger import chat_logger
 
 router = APIRouter()
-chat_service = ChatService()
 
 async def get_current_user_email(request: Request):
     """

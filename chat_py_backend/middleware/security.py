@@ -132,10 +132,12 @@ async def rate_limit_middleware(request: Request, call_next, limiter: RateLimite
     #verificar rate limit
     if not limiter.is_allowed(client_ip):
         app_logger.warning(f"Rate limit excedido para IP: {client_ip}")
-        return JSONResponse(
+        response = JSONResponse(
             status_code=429,
             content={"detail": "Demasiadas solicitudes. Intenta mas tarde."}
         )
+        response.headers["Retry-After"] = str(limiter.window_seconds)
+        return response
     
     response = await call_next(request)
     return response
@@ -233,6 +235,14 @@ class SecurityHeaders:
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         
+        #HSTS solo en produccion (sinencias de http dispararia el header en local)
+        if settings.is_production:
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        
+        #no cachear respuestas con datos sensibles (auth, chat)
+        if request.url.path.startswith(("/auth", "/chat", "/ws")):
+            response.headers["Cache-Control"] = "no-store"
+        
         #content security policy - construido dinamicamente
         csp_policy = SecurityHeaders._build_csp_policy()
         response.headers["Content-Security-Policy"] = csp_policy
@@ -246,8 +256,8 @@ class RequestLogger:
     async def log_requests(request: Request, call_next):
         start_time = time.time()
         
-        #log de solicitud entrante
-        app_logger.info(f"Request: {request.method} {request.url}")
+        #log de solicitud entrante (solo path, sin query params para no exponer datos)
+        app_logger.info(f"Request: {request.method} {request.url.path}")
         
         try:
             response = await call_next(request)
