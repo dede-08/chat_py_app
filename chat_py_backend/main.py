@@ -212,8 +212,10 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 
 
 # servir archivos estaticos (uploads)
+# el mount debe coincidir con el prefijo que se usa en avatar_url (/uploads/avatars/{archivo}),
+# no con "/uploads", o StaticFiles resuelve un directorio duplicado (uploads/avatars/avatars/...)
 os.makedirs(settings.upload_dir, exist_ok=True)
-app.mount("/uploads", StaticFiles(directory=settings.upload_dir), name="uploads")
+app.mount("/uploads/avatars", StaticFiles(directory=settings.upload_dir), name="uploads")
 
 # incluir routers
 app.include_router(auth.router)

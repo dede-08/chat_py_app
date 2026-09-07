@@ -46,6 +46,37 @@ async def test_validate_refresh_token_queries_by_hash(monkeypatch):
     assert query["is_revoked"] is False
 
 
+async def test_validate_refresh_token_naive_utc_not_expired(monkeypatch):
+    import database.connection as db_conn
+    from services.refresh_token_service import refresh_token_service
+
+    mock_refresh = AsyncMock()
+    # mongo devuelve datetimes sin tzinfo (naive UTC)
+    mock_refresh.find_one.return_value = {
+        "_id": "tok-1",
+        "expires_at": datetime.now(UTC).replace(tzinfo=None) + timedelta(days=1),
+    }
+    monkeypatch.setattr(db_conn, "refresh_tokens_collection", mock_refresh)
+
+    assert await refresh_token_service.validate_refresh_token("jwt-token", "user@test.com") is True
+
+
+async def test_validate_refresh_token_naive_utc_expired(monkeypatch):
+    import database.connection as db_conn
+    from services.refresh_token_service import refresh_token_service
+
+    mock_refresh = AsyncMock()
+    mock_refresh.find_one.return_value = {
+        "_id": "tok-1",
+        "expires_at": datetime.now(UTC).replace(tzinfo=None) - timedelta(days=1),
+    }
+    monkeypatch.setattr(db_conn, "refresh_tokens_collection", mock_refresh)
+
+    assert await refresh_token_service.validate_refresh_token("jwt-token", "user@test.com") is False
+    # se marca como revocado
+    assert mock_refresh.update_one.call_args[0][1] == {"$set": {"is_revoked": True}}
+
+
 async def test_revoke_refresh_token_queries_by_hash(monkeypatch):
     import database.connection as db_conn
     from services.refresh_token_service import refresh_token_service

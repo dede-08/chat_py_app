@@ -72,7 +72,11 @@ class RefreshTokenService:
                 return False
 
             # verificar si el token ha expirado
-            if token_doc.get("expires_at") < datetime.now(UTC):
+            # MongoDB guarda los datetimes como UTC naive al leerlos; normalizarlos a aware
+            expires_at = token_doc.get("expires_at")
+            if isinstance(expires_at, datetime) and expires_at.tzinfo is None:
+                expires_at = expires_at.replace(tzinfo=UTC)
+            if expires_at and expires_at < datetime.now(UTC):
                 # marcar como revocado si esta expirado
                 await db_conn.refresh_tokens_collection.update_one(
                     {"_id": token_doc["_id"]}, {"$set": {"is_revoked": True}}

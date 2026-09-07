@@ -10,7 +10,8 @@ def create_access_token(data: dict):
     """Crear access token JWT con expiración corta"""
     to_encode = data.copy()
     expire = datetime.now(UTC) + timedelta(minutes=settings.jwt_expire_minutes)
-    to_encode.update({"exp": expire, "type": "access"})
+    # jti unico para evitar dos tokens identicos emitidos dentro del mismo segundo
+    to_encode.update({"exp": expire, "type": "access", "jti": secrets.token_urlsafe(16)})
     return jwt.encode(to_encode, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
 
@@ -18,7 +19,9 @@ def create_refresh_token(data: dict):
     """Crear refresh token JWT con expiración larga"""
     to_encode = data.copy()
     expire = datetime.now(UTC) + timedelta(days=settings.refresh_token_expire_days)
-    to_encode.update({"exp": expire, "type": "refresh"})
+    # jti unico: indispensable porque el hash sha256 del token es la clave unica en la BD,
+    # y sin jti dos refrescos en el mismo segundo generan tokens identicos (colision de indice)
+    to_encode.update({"exp": expire, "type": "refresh", "jti": secrets.token_urlsafe(16)})
     return jwt.encode(to_encode, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
 
