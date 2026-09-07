@@ -1,5 +1,6 @@
 import logger from './logger';
 import http from './httpClient';
+import { AxiosError } from 'axios';
 import authService from './authService';
 import { buildAuthorizedWsUrl } from './wsClient';
 import { handleAxiosError } from '../utils/errorHandler';
@@ -274,7 +275,7 @@ class ChatService {
             const response = await http.get<ChatMessage[]>(`/chat/history/${otherUserEmail}?limit=${limit}`);
             return response.data;
         } catch (error) {
-            const info = handleAxiosError(error as any, { operation: 'getChatHistory', otherUserEmail });
+            const info = handleAxiosError(error as AxiosError, { operation: 'getChatHistory', otherUserEmail });
             logger.error('Error al obtener historial de chat', new Error(info.error), { operation: 'getChatHistory', otherUserEmail });
             throw new Error(info.error);
         }
@@ -285,7 +286,7 @@ class ChatService {
             const response = await http.get<ChatRoom[]>(`/chat/rooms`);
             return response.data;
         } catch (error) {
-            const info = handleAxiosError(error as any, { operation: 'getChatRooms' });
+            const info = handleAxiosError(error as AxiosError, { operation: 'getChatRooms' });
             logger.error('Error al obtener salas de chat', new Error(info.error), { operation: 'getChatRooms' });
             throw new Error(info.error);
         }
@@ -296,7 +297,7 @@ class ChatService {
             const response = await http.get<User[]>(`/chat/users`);
             return response.data;
         } catch (error) {
-            const info = handleAxiosError(error as any, { operation: 'getUsers' });
+            const info = handleAxiosError(error as AxiosError, { operation: 'getUsers' });
             logger.error('Error al obtener usuarios', new Error(info.error), { operation: 'getUsers' });
             throw new Error(info.error);
         }
@@ -307,18 +308,18 @@ class ChatService {
             const response = await http.get<{ unread_count: number }>(`/chat/unread-count`);
             return response.data.unread_count;
         } catch (error) {
-            const info = handleAxiosError(error as any, { operation: 'getUnreadCount' });
+            const info = handleAxiosError(error as AxiosError, { operation: 'getUnreadCount' });
             logger.error('Error al obtener conteo de mensajes no leídos', new Error(info.error), { operation: 'getUnreadCount' });
             throw new Error(info.error);
         }
     }
 
-    async markMessagesAsRead(senderEmail: string): Promise<{ success: boolean }> {
+    async markMessagesAsRead(senderEmail: string): Promise<{ message: string }> {
         try {
-            const response = await http.post<{ success: boolean }>(`/chat/mark-read/${senderEmail}`);
+            const response = await http.post<{ message: string }>(`/chat/mark-read/${senderEmail}`);
             return response.data;
         } catch (error) {
-            const info = handleAxiosError(error as any, { operation: 'markMessagesAsRead', senderEmail });
+            const info = handleAxiosError(error as AxiosError, { operation: 'markMessagesAsRead', senderEmail });
             logger.error('Error al marcar mensajes como leídos', new Error(info.error), { operation: 'markMessagesAsRead', senderEmail });
             throw new Error(info.error);
         }

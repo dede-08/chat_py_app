@@ -5,6 +5,7 @@ export interface LoginResponse {
   message: string;
   email: string;
   username?: string;
+  avatar_url?: string | null;
 }
 
 export interface RefreshTokenResponse {

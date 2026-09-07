@@ -35,7 +35,13 @@ http.interceptors.response.use(
 
     const isAuthEndpoint = url.includes('/auth/login') || url.includes('/auth/refresh');
 
-    if (status === 401 && !originalRequest._retry && !isAuthEndpoint) {
+    // El backend usa 403 (cookie auth) cuando el access token falta o expiró,
+    // asi que el refresh debe dispararse tambien con 403, no solo con 401.
+    // Excepcion: si el error indica email no confirmado, no conviene refrescar.
+    const detail = (error.response?.data as { detail?: string } | undefined)?.detail;
+    const requiresConfirmation = typeof detail === 'string' && detail.includes('confirmad');
+
+    if ((status === 401 || status === 403) && !requiresConfirmation && !originalRequest._retry && !isAuthEndpoint) {
       if (isRefreshing && refreshPromise) {
         return refreshPromise
           .then(() => http(originalRequest))

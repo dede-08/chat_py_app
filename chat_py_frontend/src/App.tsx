@@ -27,7 +27,9 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
       }
       const result = await authService.getUserProfile();
       if (isErrorResponse(result)) {
-        await authService.logoutUser();
+        // sin logout destructivo: si el token expiró, el interceptor ya intento
+        // el refresh (y limpio + redirigio si fallo); si fue un error de red,
+        // no revocamos una sesion que sigue siendo valida.
         setStatus('unauthenticated');
         return;
       }

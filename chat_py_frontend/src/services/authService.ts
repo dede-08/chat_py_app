@@ -53,7 +53,7 @@ export const loginUser = async (data: LoginData): Promise<ApiResponse<LoginRespo
     //guardar datos de usuario en localStorage
     //las cookies httpOnly las establece el backend y el navegador las envia en cada request
     const username = response.data.username || response.data.email || 'Usuario';
-    authService.saveUserData(response.data.email, username, null);
+    authService.saveUserData(response.data.email, username, response.data.avatar_url ?? null);
     
     logger.info('Login exitoso', { email: response.data.email });
     return createSuccessResponse(response.data);

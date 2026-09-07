@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { AxiosError } from 'axios';
+import { CheckCircle2, XCircle } from 'lucide-react';
 import authService from '../services/authService';
 import './ConfirmEmailPage.css';
 
@@ -33,7 +34,11 @@ const ConfirmEmailPage = () => {
             <span className="sr-only">Confirmando...</span>
           </div>
         )}
-        {status !== 'loading' && <div className={`icon ${status}`}>{status === 'success' ? '?' : '?'}</div>}
+        {status !== 'loading' && (
+          <div className={`icon ${status}`}>
+            {status === 'success' ? <CheckCircle2 className="w-16 h-16" /> : <XCircle className="w-16 h-16" />}
+          </div>
+        )}
         <h2 className="mt-3">{status === 'loading' ? 'Confirmando tu correo...' : status === 'success' ? 'Confirmación Exitosa!' : 'Error de Confirmación'}</h2>
         <p className="mt-2">{message}</p>
         {status !== 'loading' && (

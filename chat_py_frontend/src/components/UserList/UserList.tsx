@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RefreshCw, Wifi, WifiOff, Users } from 'lucide-react';
 import logger from '../../services/logger';
@@ -10,7 +10,7 @@ const UserList = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const reloadUsers = async () => {
+  const reloadUsers = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -21,11 +21,11 @@ const UserList = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [loadUsers]);
 
   useEffect(() => {
     reloadUsers();
-  }, []);
+  }, [reloadUsers]);
 
   return (
     <div className="w-80 flex-shrink-0 flex flex-col glass-panel rounded-2xl overflow-hidden">
