@@ -33,7 +33,7 @@ jobs:
         run: ruff check .
 
       - name: Ejecutar tests
-        run: pytest tests -q
+        run: python -m pytest tests -q
         env:
           JWT_SECRET: "ci-test-secret-with-at-least-32-characters!!"
           ENVIRONMENT: "development"
