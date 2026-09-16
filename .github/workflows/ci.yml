@@ -40,6 +40,7 @@ jobs:
           ENVIRONMENT: "development"
           MONGO_URL: "mongodb://localhost:27017"
           DB_NAME: "chatpy_ci"
+          MAIL_FROM: "noreply@example.com"
 
   frontend:
     name: Frontend (type-check + build)

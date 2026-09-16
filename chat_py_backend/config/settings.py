@@ -55,9 +55,9 @@ class Settings(BaseSettings):
     environment: str = "development"
 
     # Configuracion de correo
-    mail_username: str = "[EMAIL_ADDRESS]"
-    mail_password: str = "[PASSWORD]"
-    mail_from: EmailStr = "[EMAIL_ADDRESS]"
+    mail_username: str = "noreply@example.com"
+    mail_password: str = "change-me"
+    mail_from: EmailStr = "noreply@example.com"
     mail_port: int = 587
     mail_server: str = "smtp.gmail.com"
     mail_starttls: bool = True
