@@ -85,7 +85,13 @@ const ChatArea = () => {
     }, 1000);
   };
 
-  const formatTime = (ts: string) => new Date(ts).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+  const formatTime = (ts: string) => {
+    // Mongo/Pydantic puede devolver timestamps sin zona horaria (naive).
+    // Si no tiene sufijo Z ni offset, se asume UTC para evitar desfase de horas.
+    const hasTz = /[zZ]$|[+-]\d{2}:?\d{2}$/.test(ts);
+    const normalized = hasTz ? ts : `${ts}Z`;
+    return new Date(normalized).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+  };
 
   if (!selectedUser) {
     return (

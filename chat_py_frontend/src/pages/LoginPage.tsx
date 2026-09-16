@@ -1,8 +1,8 @@
 import { useState, useEffect, type ChangeEvent, type FormEvent } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Mail, Lock, LogIn, MessageSquare } from 'lucide-react';
-import { loginUser, isAuthenticated } from '../services/authService';
+import { Mail, Lock, LogIn } from 'lucide-react';
+import { loginUser } from '../services/authService';
 import { isErrorResponse } from '../utils/errorHandler';
 import logger from '../services/logger';
 import { isValidEmail } from '../utils/validators';
@@ -16,7 +16,6 @@ interface LoginFormData {
 const LoginPage = () => {
   const [formData, setFormData] = useState<LoginFormData>({ email: '', password: '' });
   const [isLoading, setIsLoading] = useState(false);
-  const [alreadyAuthenticated, setAlreadyAuthenticated] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [generalError, setGeneralError] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
@@ -24,7 +23,6 @@ const LoginPage = () => {
   const location = useLocation();
 
   useEffect(() => {
-    if (isAuthenticated()) setAlreadyAuthenticated(true);
     const state = location.state as { message?: string } | null;
     if (state?.message) {
       setInfoMessage(state.message);
@@ -68,30 +66,6 @@ const LoginPage = () => {
       setIsLoading(false);
     }
   };
-
-  if (alreadyAuthenticated) {
-    return (
-      <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
-        <div className="bg-shape bg-blue-500/20 top-10 left-10 w-96 h-96" />
-        <div className="bg-shape bg-purple-500/20 bottom-10 right-10 w-96 h-96" />
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="glass-panel p-8 rounded-2xl w-full max-w-md text-center">
-          <div className="mx-auto bg-blue-500/10 p-4 rounded-full w-20 h-20 flex items-center justify-center mb-4 border border-blue-500/20">
-            <MessageSquare className="w-10 h-10 text-blue-400" />
-          </div>
-          <h2 className="text-2xl font-bold mb-2">Ya estás conectado</h2>
-          <p className="text-slate-400 mb-6">Parece que ya tienes una sesión activa en este dispositivo.</p>
-          <div className="space-y-3">
-            <button onClick={() => navigate('/chat')} className="premium-btn">
-              Ir a mis chats
-            </button>
-            <button onClick={() => setAlreadyAuthenticated(false)} className="premium-btn-secondary">
-              Iniciar otra cuenta
-            </button>
-          </div>
-        </motion.div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden py-10 px-4">
