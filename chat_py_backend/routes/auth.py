@@ -224,6 +224,7 @@ async def login(user: UserLogin, response: Response):
             "message": "Login exitoso",
             "email": db_user["email"],
             "username": db_user["username"],
+            "avatar_url": db_user.get("avatar_url"),
         }
     except HTTPException:
         raise
