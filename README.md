@@ -33,14 +33,35 @@ npm run dev
 
 Abre [http://localhost:5173](http://localhost:5173). El proxy de Vite redirige `/auth`, `/chat`, `/ws` y `/uploads` al backend en el puerto 8000.
 
-### 3. Con Docker (opcional)
+### 3. Con Docker (stack completo)
 
 ```bash
-# Desde la raíz del proyecto
+# Desde la raíz del proyecto. JWT_SECRET es obligatorio (mínimo 32 caracteres):
+export JWT_SECRET="$(python -c 'import secrets; print(secrets.token_urlsafe(48))')"  # Linux/macOS
+# $env:JWT_SECRET = ...  # PowerShell: 64+ caracteres aleatorios
+
 docker compose up --build
 ```
 
-Servicios: MongoDB (`27017`), backend (`8000`), frontend (`5173`).
+Servicios: MongoDB (solo `127.0.0.1:27017`), backend (`8000`), frontend (`5173`).
+Los datos persisten en los volúmenes `mongo_data` y `backend_uploads`.
+
+#### Variables para producción
+
+| Variable | Efecto |
+|----------|--------|
+| `JWT_SECRET` | **Obligatoria**. Sin ella el stack no arranca. Nunca uses el valor de ejemplo |
+| `MAIL_USERNAME` / `MAIL_PASSWORD` | SMTP real (p. ej. Gmail + app password). Sin esto nadie recibe el correo de confirmación y **nadie puede activar su cuenta** |
+| `ENVIRONMENT=production` | Activa HSTS y cookies `Secure` + `SameSite=None` |
+| `FRONTEND_URL` / `ALLOWED_ORIGINS` | Dominio real (los enlaces de confirmación usan `FRONTEND_URL`; el dominio debe estar en CORS) |
+
+> **HTTPS es requisito en producción**: con `ENVIRONMENT=production` las cookies llevan el flag
+> `Secure` y el navegador las rechaza sin TLS (el login no persistiría). Expón el stack
+> detrás de un proxy con certificado (Caddy, Nginx o Traefik).
+>
+> **Uvicorn en 1 worker**: el chat en tiempo real guarda las conexiones en memoria por
+> proceso. No añadas `--workers N` o los mensajes entre procesos no se entregarán
+> (ver "Arquitectura y notas" en el README del backend).
 
 ## Características
 

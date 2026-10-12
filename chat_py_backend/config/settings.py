@@ -18,17 +18,11 @@ class Settings(BaseSettings):
     refresh_token_expire_days: int = 7  # 7 días de expiración para refresh tokens
 
     # CORS
+    # Coma-separado por env (pydantic-settings solo acepta JSON para list[str],
+    # así que el campo es str y se parsea en cors_origins).
     # Valores por defecto solo para desarrollo local
     frontend_url: str = "http://localhost:5173"
-    allowed_origins: list[str] = [
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:5173",
-        "http://localhost:8000",
-        "http://127.0.0.1:8000",
-        "null",  # Para file:// protocol
-    ]
+    allowed_origins: str = ""
 
     # Servidor
     host: str = "0.0.0.0"
@@ -69,12 +63,6 @@ class Settings(BaseSettings):
             raise ValueError("JWT_SECRET debe tener al menos 32 caracteres")
         return v
 
-    @field_validator("allowed_origins", mode="before")
-    def parse_cors_origins(cls, v):
-        if isinstance(v, str):
-            return [origin.strip() for origin in v.split(",")]
-        return v or []
-
     @property
     def is_production(self) -> bool:
         return self.environment == "production"
@@ -82,9 +70,23 @@ class Settings(BaseSettings):
     @property
     def cors_origins(self) -> list[str]:
         """Obtener origenes permitidos para CORS"""
-        origins = {self.frontend_url}
-        if self.allowed_origins:
-            origins.update(self.allowed_origins)
+        origins = {
+            self.frontend_url,
+            # Valores por defecto solo para desarrollo local
+            "http://localhost:3000",
+            "http://localhost:5173",
+            "http://127.0.0.1:3000",
+            "http://127.0.0.1:5173",
+            "http://localhost:8000",
+            "http://127.0.0.1:8000",
+            "null",  # Para file:// protocol
+        }
+        if self.allowed_origins.strip():
+            origins.update(
+                origin.strip()
+                for origin in self.allowed_origins.split(",")
+                if origin.strip()
+            )
         return list(origins)
 
 

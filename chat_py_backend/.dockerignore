@@ -1,0 +1,24 @@
+# Entorno virtual local (binarios de Windows, cientos de MB)
+venv/
+.venv/
+
+# Bytecode y cachés de Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Secretos y configuración local: NUNCA hornear en la imagen.
+# Se inyectan por environment: en docker-compose.yml
+.env
+
+# Datos y logs locales (en el contenedor se crean vacíos y
+# uploads/ se monta como volumen backend_uploads)
+logs/
+uploads/
+*.log
+
+# Metadata de git
+.git/

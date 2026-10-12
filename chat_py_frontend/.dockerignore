@@ -1,0 +1,14 @@
+# node_modules local (binarios de Windows) sobrescribiría el npm ci de Linux
+# y rompería dependencias nativas como esbuild
+node_modules/
+
+# Build local (en el contenedor se sirve con vite dev + proxy)
+dist/
+
+# Configuración local: se inyecta por environment: en docker-compose.yml
+.env
+.env.local
+
+# Logs y metadata
+*.log
+.git/
